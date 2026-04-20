@@ -1,0 +1,121 @@
+{
+  "videoConfig": {
+    "durationInFrames": 1800,
+    "fps": 30,
+    "brandColor": "#4f46e5",
+    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "bgm": "cinematic"
+  },
+  "assets": {
+    "screenshots": {
+      "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
+      "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+    },
+    "sourceTexts": [
+      "ship production-grade ai workflows in minutes",
+      "connect your data, run agents, see results",
+      "one-click data sync",
+      "connect 40+ sources",
+      "managed agents",
+      "serverless, autoscaling",
+      "audit trail",
+      "every action logged",
+      "trusted by teams at acme, globex, and initech",
+      "soc 2 type ii certified"
+    ]
+  },
+  "scenes": [
+    {
+      "sceneId": 1,
+      "type": "HeroRealShot",
+      "durationInFrames": 240,
+      "entryAnimation": "fade",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "ship production-grade ai workflows in minutes",
+        "subtitle": "connect your data, run agents, see results",
+        "screenshotKey": "viewport"
+      }
+    },
+    {
+      "sceneId": 2,
+      "type": "FeatureCallout",
+      "durationInFrames": 240,
+      "entryAnimation": "slideLeft",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "one-click data sync",
+        "description": "connect 40+ sources",
+        "layout": "leftImage"
+      }
+    },
+    {
+      "sceneId": 3,
+      "type": "FeatureCallout",
+      "durationInFrames": 240,
+      "entryAnimation": "slideRight",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "managed agents",
+        "description": "serverless, autoscaling",
+        "layout": "rightImage"
+      }
+    },
+    {
+      "sceneId": 4,
+      "type": "FeatureCallout",
+      "durationInFrames": 240,
+      "entryAnimation": "slideLeft",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "audit trail",
+        "description": "every action logged",
+        "layout": "leftImage"
+      }
+    },
+    {
+      "sceneId": 5,
+      "type": "TextPunch",
+      "durationInFrames": 180,
+      "entryAnimation": "zoomIn",
+      "exitAnimation": "fade",
+      "props": {
+        "text": "soc 2 type ii certified",
+        "emphasis": "primary"
+      }
+    },
+    {
+      "sceneId": 6,
+      "type": "SmoothScroll",
+      "durationInFrames": 360,
+      "entryAnimation": "fade",
+      "exitAnimation": "fade",
+      "props": {
+        "screenshotKey": "fullPage",
+        "speed": "medium"
+      }
+    },
+    {
+      "sceneId": 7,
+      "type": "TextPunch",
+      "durationInFrames": 150,
+      "entryAnimation": "fade",
+      "exitAnimation": "fade",
+      "props": {
+        "text": "trusted by teams at acme, globex, and initech",
+        "emphasis": "secondary"
+      }
+    },
+    {
+      "sceneId": 8,
+      "type": "CTA",
+      "durationInFrames": 150,
+      "entryAnimation": "zoomIn",
+      "exitAnimation": "fade",
+      "props": {
+        "headline": "ship production-grade ai workflows in minutes",
+        "url": "https://example-saas.com"
+      }
+    }
+  ]
+}

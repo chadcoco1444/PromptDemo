@@ -1,0 +1,25 @@
+{
+  "url": "https://example-shop.com",
+  "fetchedAt": 1734000000000,
+  "screenshots": {
+    "viewport": "s3://promptdemo-dev/fixtures/shop-viewport.jpg"
+  },
+  "brand": {
+    "primaryColor": "#db2777",
+    "logoUrl": "s3://promptdemo-dev/fixtures/shop-logo.png",
+    "fontFamily": "Poppins",
+    "fontFamilySupported": true
+  },
+  "sourceTexts": [
+    "designed in tokyo, made for everyday",
+    "free shipping over $50",
+    "30-day returns, no questions asked"
+  ],
+  "features": [
+    { "title": "Limited drop", "description": "Only 500 units" },
+    { "title": "Carbon-neutral shipping", "description": "We offset every parcel" }
+  ],
+  "fallbacks": [{ "field": "secondaryColor", "reason": "not detected", "replacedWith": "#1a1a1a" }],
+  "tier": "B",
+  "trackUsed": "playwright"
+}

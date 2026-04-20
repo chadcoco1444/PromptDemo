@@ -1,0 +1,31 @@
+{
+  "url": "https://example-nobrand.com",
+  "fetchedAt": 1734000000000,
+  "screenshots": {
+    "viewport": "s3://promptdemo-dev/fixtures/nobrand-viewport.jpg",
+    "fullPage": "s3://promptdemo-dev/fixtures/nobrand-full.jpg"
+  },
+  "brand": {
+    "primaryColor": "#10b981",
+    "fontFamily": "Inter",
+    "fontFamilySupported": true
+  },
+  "sourceTexts": [
+    "build faster",
+    "ship weekly",
+    "your team, twice the output"
+  ],
+  "features": [
+    { "title": "Ship weekly", "description": "Zero-config deploys" },
+    { "title": "Built-in analytics", "description": "Know what to ship next" }
+  ],
+  "fallbacks": [
+    {
+      "field": "logoUrl",
+      "reason": "no img with logo alt, no header img, no favicon",
+      "replacedWith": "domain-initial generated logo at render time"
+    }
+  ],
+  "tier": "B",
+  "trackUsed": "playwright"
+}

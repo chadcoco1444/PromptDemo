@@ -1,0 +1,22 @@
+{
+  "url": "https://example-docs.com",
+  "fetchedAt": 1734000000000,
+  "screenshots": {},
+  "brand": {
+    "fontFamily": "JetBrains Mono",
+    "fontFamilySupported": true
+  },
+  "sourceTexts": [
+    "api reference",
+    "quickstart in under 5 minutes",
+    "bring your own model"
+  ],
+  "features": [{ "title": "TypeScript-first", "description": "Full type inference" }],
+  "fallbacks": [
+    { "field": "primaryColor", "reason": "WAF blocked playwright, fell to cheerio", "replacedWith": "#1a1a1a" },
+    { "field": "logoUrl", "reason": "no img with logo alt", "replacedWith": "domain-initial generated" },
+    { "field": "screenshots", "reason": "cheerio cannot screenshot", "replacedWith": "all RealShot scenes downgraded to Stylized" }
+  ],
+  "tier": "B",
+  "trackUsed": "cheerio"
+}

@@ -1,0 +1,29 @@
+{
+  "url": "https://example-saas.com",
+  "fetchedAt": 1734000000000,
+  "screenshots": {
+    "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
+    "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+  },
+  "brand": {
+    "primaryColor": "#4f46e5",
+    "secondaryColor": "#a78bfa",
+    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "fontFamily": "Inter",
+    "fontFamilySupported": true
+  },
+  "sourceTexts": [
+    "ship production-grade ai workflows in minutes",
+    "connect your data, run agents, see results",
+    "trusted by teams at acme, globex, and initech",
+    "soc 2 type ii certified"
+  ],
+  "features": [
+    { "title": "One-click data sync", "description": "Connect 40+ sources", "iconHint": "plug" },
+    { "title": "Managed agents", "description": "Serverless, autoscaling", "iconHint": "robot" },
+    { "title": "Audit trail", "description": "Every action logged", "iconHint": "shield" }
+  ],
+  "fallbacks": [],
+  "tier": "A",
+  "trackUsed": "playwright"
+}

@@ -1,0 +1,97 @@
+{
+  "videoConfig": {
+    "durationInFrames": 900,
+    "fps": 30,
+    "brandColor": "#4f46e5",
+    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "bgm": "tech"
+  },
+  "assets": {
+    "screenshots": {
+      "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
+      "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+    },
+    "sourceTexts": [
+      "ship production-grade ai workflows in minutes",
+      "connect your data, run agents, see results",
+      "one-click data sync",
+      "connect 40+ sources",
+      "managed agents",
+      "serverless, autoscaling",
+      "audit trail",
+      "every action logged",
+      "trusted by teams at acme, globex, and initech"
+    ]
+  },
+  "scenes": [
+    {
+      "sceneId": 1,
+      "type": "HeroRealShot",
+      "durationInFrames": 150,
+      "entryAnimation": "fade",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "ship production-grade ai workflows in minutes",
+        "subtitle": "connect your data, run agents, see results",
+        "screenshotKey": "viewport"
+      }
+    },
+    {
+      "sceneId": 2,
+      "type": "FeatureCallout",
+      "durationInFrames": 180,
+      "entryAnimation": "slideLeft",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "one-click data sync",
+        "description": "connect 40+ sources",
+        "layout": "leftImage"
+      }
+    },
+    {
+      "sceneId": 3,
+      "type": "FeatureCallout",
+      "durationInFrames": 180,
+      "entryAnimation": "slideRight",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "managed agents",
+        "description": "serverless, autoscaling",
+        "layout": "rightImage"
+      }
+    },
+    {
+      "sceneId": 4,
+      "type": "TextPunch",
+      "durationInFrames": 120,
+      "entryAnimation": "zoomIn",
+      "exitAnimation": "fade",
+      "props": {
+        "text": "trusted by teams at acme, globex, and initech",
+        "emphasis": "primary"
+      }
+    },
+    {
+      "sceneId": 5,
+      "type": "SmoothScroll",
+      "durationInFrames": 180,
+      "entryAnimation": "fade",
+      "exitAnimation": "fade",
+      "props": {
+        "screenshotKey": "fullPage",
+        "speed": "medium"
+      }
+    },
+    {
+      "sceneId": 6,
+      "type": "CTA",
+      "durationInFrames": 90,
+      "entryAnimation": "zoomIn",
+      "exitAnimation": "fade",
+      "props": {
+        "headline": "ship production-grade ai workflows in minutes",
+        "url": "https://example-saas.com"
+      }
+    }
+  ]
+}

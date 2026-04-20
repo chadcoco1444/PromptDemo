@@ -1,0 +1,27 @@
+{
+  "url": "https://example-customfont.com",
+  "fetchedAt": 1734000000000,
+  "screenshots": {
+    "viewport": "s3://promptdemo-dev/fixtures/cf-viewport.jpg"
+  },
+  "brand": {
+    "primaryColor": "#ef4444",
+    "logoUrl": "s3://promptdemo-dev/fixtures/cf-logo.png",
+    "fontFamily": "Acme Sans Proprietary",
+    "fontFamilySupported": false
+  },
+  "sourceTexts": [
+    "a type foundry for ambitious brands",
+    "custom typefaces, licensed per workspace"
+  ],
+  "features": [{ "title": "Custom typefaces", "description": "Licensed per workspace" }],
+  "fallbacks": [
+    {
+      "field": "fontFamily",
+      "reason": "Acme Sans Proprietary not in @remotion/google-fonts whitelist",
+      "replacedWith": "Inter (default)"
+    }
+  ],
+  "tier": "B",
+  "trackUsed": "playwright"
+}

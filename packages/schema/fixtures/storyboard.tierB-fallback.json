@@ -1,0 +1,64 @@
+{
+  "videoConfig": {
+    "durationInFrames": 900,
+    "fps": 30,
+    "brandColor": "#1a1a1a",
+    "bgm": "minimal"
+  },
+  "assets": {
+    "screenshots": {},
+    "sourceTexts": [
+      "api reference",
+      "quickstart in under 5 minutes",
+      "bring your own model",
+      "typescript-first"
+    ]
+  },
+  "scenes": [
+    {
+      "sceneId": 1,
+      "type": "TextPunch",
+      "durationInFrames": 240,
+      "entryAnimation": "fade",
+      "exitAnimation": "fade",
+      "props": {
+        "text": "quickstart in under 5 minutes",
+        "emphasis": "primary"
+      }
+    },
+    {
+      "sceneId": 2,
+      "type": "FeatureCallout",
+      "durationInFrames": 270,
+      "entryAnimation": "slideLeft",
+      "exitAnimation": "fade",
+      "props": {
+        "title": "typescript-first",
+        "description": "bring your own model",
+        "layout": "topDown"
+      }
+    },
+    {
+      "sceneId": 3,
+      "type": "TextPunch",
+      "durationInFrames": 240,
+      "entryAnimation": "fade",
+      "exitAnimation": "fade",
+      "props": {
+        "text": "api reference",
+        "emphasis": "secondary"
+      }
+    },
+    {
+      "sceneId": 4,
+      "type": "CTA",
+      "durationInFrames": 150,
+      "entryAnimation": "zoomIn",
+      "exitAnimation": "fade",
+      "props": {
+        "headline": "bring your own model",
+        "url": "https://example-docs.com"
+      }
+    }
+  ]
+}
