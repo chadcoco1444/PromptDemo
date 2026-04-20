@@ -3,6 +3,11 @@
 import { createConnection } from 'node:net';
 import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 
+function errMsg(err) {
+  if (!err) return 'unknown error';
+  return err.message || err.code || err.name || String(err);
+}
+
 const checks = [];
 
 function checkTcp(name, host, port, timeoutMs = 1500) {
@@ -18,7 +23,7 @@ function checkTcp(name, host, port, timeoutMs = 1500) {
     sock.setTimeout(timeoutMs);
     sock.once('connect', () => finish(true, `reachable at ${host}:${port}`));
     sock.once('timeout', () => finish(false, `timeout after ${timeoutMs}ms`));
-    sock.once('error', (err) => finish(false, err.message));
+    sock.once('error', (err) => finish(false, errMsg(err)));
   });
 }
 
@@ -38,7 +43,7 @@ async function checkMinioBucket() {
     await s3.send(new HeadBucketCommand({ Bucket: bucket }));
     return { name: 'MinIO bucket', ok: true, msg: `${endpoint}/${bucket} exists` };
   } catch (err) {
-    return { name: 'MinIO bucket', ok: false, msg: err.message };
+    return { name: 'MinIO bucket', ok: false, msg: errMsg(err) };
   }
 }
 
