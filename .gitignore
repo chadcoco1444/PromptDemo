@@ -4,8 +4,12 @@ build
 .next
 out
 coverage
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
 .env
 .env.local
+.env*.local
 *.log
 .DS_Store
 pnpm-lock.yaml
@@ -13,8 +17,15 @@ pnpm-lock.yaml
 .turbo
 .vitest-cache
 playwright/.cache
+playwright-report/
+test-results/
 # keep workspace file
 !promptdemo.code-workspace
 # render artifacts
 /tmp
 /out-videos
+# editor / IDE
+.idea/
+.vscode/
+# pack output
+*.tgz
