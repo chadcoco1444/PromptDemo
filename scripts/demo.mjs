@@ -34,12 +34,15 @@ const C = {
   blue: '\x1b[34m', magenta: '\x1b[35m', cyan: '\x1b[36m',
 };
 
+// Each service gets its own PORT env var so worker healthz endpoints don't collide
+// locally. In Cloud Run each service runs on its own instance, so PORT=8080 is fine
+// there — this override is dev-only.
 const SERVICES = [
-  { name: 'crawler',    filter: '@promptdemo/worker-crawler',    color: C.red,     kind: 'worker' },
-  { name: 'storyboard', filter: '@promptdemo/worker-storyboard', color: C.green,   kind: 'worker' },
-  { name: 'render',     filter: '@promptdemo/worker-render',     color: C.blue,    kind: 'worker' },
-  { name: 'api',        filter: '@promptdemo/api',                color: C.yellow,  kind: 'http', url: 'http://localhost:3000/healthz' },
-  { name: 'web',        filter: '@promptdemo/web',                color: C.magenta, kind: 'http', url: 'http://localhost:3001' },
+  { name: 'crawler',    filter: '@promptdemo/worker-crawler',    color: C.red,     kind: 'worker', port: 8081 },
+  { name: 'storyboard', filter: '@promptdemo/worker-storyboard', color: C.green,   kind: 'worker', port: 8082 },
+  { name: 'render',     filter: '@promptdemo/worker-render',     color: C.blue,    kind: 'worker', port: 8083 },
+  { name: 'api',        filter: '@promptdemo/api',                color: C.yellow,  kind: 'http',   port: 3000, url: 'http://localhost:3000/healthz' },
+  { name: 'web',        filter: '@promptdemo/web',                color: C.magenta, kind: 'http',   port: 3001, url: 'http://localhost:3001' },
 ];
 
 // --- .env loader ---
@@ -165,14 +168,19 @@ async function waitForInfra() {
 }
 
 // --- Service lifecycle ---
+function serviceEnv(svc) {
+  // Each service gets its own PORT (avoids healthz clash between 3 workers).
+  return { ...process.env, PORT: String(svc.port) };
+}
+
 function spawnService(svc) {
   const log = logPath(svc.name);
-  appendFileSync(log, `\n===== start ${new Date().toISOString()} =====\n`);
+  appendFileSync(log, `\n===== start ${new Date().toISOString()} (PORT=${svc.port}) =====\n`);
   const stdout = openSync(log, 'a');
   const stderr = openSync(log, 'a');
 
   const child = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
-    env: process.env,
+    env: serviceEnv(svc),
     cwd: REPO_ROOT,
     detached: true,
     stdio: ['ignore', stdout, stderr],
@@ -180,7 +188,7 @@ function spawnService(svc) {
   });
   child.unref();
   writePid(svc.name, child.pid);
-  console.log(`${svc.color}[${svc.name}]${C.reset} started (pid ${child.pid}, log: ${log})`);
+  console.log(`${svc.color}[${svc.name}]${C.reset} started (pid ${child.pid}, PORT=${svc.port}, log: ${log})`);
 }
 
 async function startAll() {
@@ -364,7 +372,7 @@ async function runForeground() {
 
   const procs = SERVICES.map((svc) => {
     const p = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
-      env: process.env, shell: IS_WINDOWS, stdio: ['ignore', 'pipe', 'pipe'],
+      env: serviceEnv(svc), shell: IS_WINDOWS, stdio: ['ignore', 'pipe', 'pipe'],
     });
     const prefix = `${svc.color}[${svc.name.padEnd(10)}]${C.reset}`;
     const pipe = (s) => {
