@@ -32,6 +32,28 @@ services:
       exit 0;
       "
 
+  # Feature 4 Auth + History. Runs auto-migrations on first boot by mounting
+  # db/migrations/*.sql into docker-entrypoint-initdb.d (Postgres runs any .sql
+  # in there on an EMPTY data volume, once). To re-apply migrations on a dirty
+  # volume: `docker compose -f docker-compose.dev.yaml down -v` then up again.
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: promptdemo
+      POSTGRES_PASSWORD: promptdemo
+      POSTGRES_DB: promptdemo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U promptdemo -d promptdemo']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   redis-data:
   minio-data:
+  postgres-data:
