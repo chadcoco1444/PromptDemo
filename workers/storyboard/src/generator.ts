@@ -8,6 +8,70 @@ import { adjustDuration, adjustStoryboardDuration } from './validation/durationA
 import type { ClaudeClient } from './claude/claudeClient.js';
 
 const MAX_ATTEMPTS = 3;
+const DURATION_FRAMES: Record<10 | 30 | 60, number> = { 10: 300, 30: 900, 60: 1800 };
+const DEFAULT_BRAND_COLOR = '#1a1a1a';
+const DEFAULT_BGM = 'minimal' as const;
+
+/**
+ * Fill in deterministic Storyboard fields that Claude consistently under-specifies:
+ *   - videoConfig.{durationInFrames, fps, brandColor, logoUrl}  (deterministic from input)
+ *   - videoConfig.bgm  (defaulted if Claude missed it)
+ *   - assets.{screenshots, sourceTexts}  (must equal crawlResult exactly)
+ *
+ * Claude retains authority over: scenes[], videoConfig.bgm (if present).
+ */
+/**
+ * Collected text whitelist the extractive check validates against. Mirrors what
+ * buildUserMessage shows Claude: raw sourceTexts + feature titles + feature
+ * descriptions. Deduped, in insertion order.
+ */
+function buildSourceTextPool(crawlResult: CrawlResult): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (s: string | undefined) => {
+    if (!s) return;
+    if (seen.has(s)) return;
+    seen.add(s);
+    out.push(s);
+  };
+  for (const t of crawlResult.sourceTexts) push(t);
+  for (const f of crawlResult.features) {
+    push(f.title);
+    push(f.description);
+  }
+  return out;
+}
+
+function enrichFromCrawlResult(
+  candidate: unknown,
+  input: { crawlResult: CrawlResult; duration: 10 | 30 | 60 }
+): unknown {
+  if (!candidate || typeof candidate !== 'object') return candidate;
+  const obj = candidate as Record<string, unknown>;
+  const videoConfig = (obj.videoConfig && typeof obj.videoConfig === 'object')
+    ? (obj.videoConfig as Record<string, unknown>)
+    : {};
+
+  const brand = input.crawlResult.brand;
+  const enriched: Record<string, unknown> = {
+    ...obj,
+    videoConfig: {
+      // defaults first (overridden by Claude's picks if present)
+      bgm: DEFAULT_BGM,
+      ...videoConfig,
+      // deterministic overrides (Claude cannot change these)
+      durationInFrames: DURATION_FRAMES[input.duration],
+      fps: 30,
+      brandColor: brand.primaryColor ?? DEFAULT_BRAND_COLOR,
+      ...(brand.logoUrl ? { logoUrl: brand.logoUrl } : {}),
+    },
+    assets: {
+      screenshots: input.crawlResult.screenshots,
+      sourceTexts: buildSourceTextPool(input.crawlResult),
+    },
+  };
+  return enriched;
+}
 
 export type GenerateResult =
   | { kind: 'ok'; storyboard: Storyboard; attempts: number }
@@ -48,10 +112,16 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
       continue;
     }
 
+    // Enrich with deterministic fields the crawler already knows — keeps Claude
+    // responsible only for scenes[] + bgm choice.
+    let candidate: unknown = enrichFromCrawlResult(parsed.value, {
+      crawlResult: input.crawlResult,
+      duration: input.duration,
+    });
+
     // Pre-zod duration normalization: StoryboardSchema enforces strict sum
     // equality, so any drift within the 5% tolerance must be auto-prorated
     // before Zod runs. Drift over tolerance is reported back as feedback.
-    let candidate: unknown = parsed.value;
     if (
       candidate &&
       typeof candidate === 'object' &&
