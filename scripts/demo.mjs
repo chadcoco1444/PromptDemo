@@ -438,20 +438,24 @@ async function statusAll() {
     const up = await isServiceUp(svc);
     const pid = readPid(svc.name);
     const pidTag = pid ? ` (spawned via pid ${pid})` : '';
-    const health = up && svc.url ? (await httpOk(svc.url, 1500) ? ' / healthy' : ' / not responding') : '';
+    // Swap localhost → 127.0.0.1 in the health URL to dodge IPv6 resolution
+    // (Fastify + Next both bind IPv4-only by default on Windows).
+    const healthUrl = up && svc.url ? svc.url.replace('localhost', '127.0.0.1') : null;
+    const health = healthUrl ? (await httpOk(healthUrl, 1500) ? ' / healthy' : ' / not responding') : '';
     const tag = up ? `${C.green}UP${C.reset}${pidTag}${health}` : `${C.red}DOWN${C.reset}`;
     console.log(`  ${svc.color}${svc.name.padEnd(11)}${C.reset} ${tag}`);
   }
 }
 
 /**
- * Port-based liveness check. Reliable on Windows where spawn-chain PIDs die
- * while the real server keeps listening. For http services with a health URL,
- * prefer httpOk (distinguishes "listening but crashed" from "fully up").
+ * Port-based liveness check. Always uses 127.0.0.1 explicitly — Node's fetch
+ * and DNS stack on Windows can try ::1 first on "localhost", and most of our
+ * services bind only to IPv4, so a hostname-based probe returns false even
+ * when the service is actually listening. Primary signal is the TCP socket;
+ * the health URL is only used for the richer "/ healthy" suffix in status.
  */
 async function isServiceUp(svc) {
-  if (svc.url) return httpOk(svc.url, 1500);
-  return tcpCheck('localhost', svc.port);
+  return tcpCheck('127.0.0.1', svc.port);
 }
 
 async function runTest() {
