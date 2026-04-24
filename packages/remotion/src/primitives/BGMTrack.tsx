@@ -1,14 +1,6 @@
 import React from 'react';
-import { Audio, staticFile } from 'remotion';
 
 export type BgmMood = 'upbeat' | 'cinematic' | 'minimal' | 'tech' | 'none';
-
-const TRACK_FILE: Record<Exclude<BgmMood, 'none'>, string> = {
-  upbeat: 'bgm/upbeat.mp3',
-  cinematic: 'bgm/cinematic.mp3',
-  minimal: 'bgm/minimal.mp3',
-  tech: 'bgm/tech.mp3',
-};
 
 export interface BGMTrackProps {
   mood: BgmMood;
@@ -16,20 +8,17 @@ export interface BGMTrackProps {
   volume?: number;
 }
 
-export const BGMTrack: React.FC<BGMTrackProps> = ({ mood, durationInFrames, volume = 0.25 }) => {
-  if (mood === 'none') return null;
-  const file = TRACK_FILE[mood];
-  const fadeFrames = 20;
-  return (
-    <Audio
-      src={staticFile(file)}
-      volume={(frame) => {
-        if (frame < fadeFrames) return volume * (frame / fadeFrames);
-        if (frame > durationInFrames - fadeFrames) {
-          return volume * ((durationInFrames - frame) / fadeFrames);
-        }
-        return volume;
-      }}
-    />
-  );
+// BGM disabled until the user ships mp3 files to packages/remotion/src/assets/bgm/.
+// Remotion's bundler statically registers every staticFile() reference at
+// bundle time; if we keep staticFile('bgm/tech.mp3') in source, Remotion will
+// 404 at render even when mood='none'. Returning null unconditionally removes
+// the static reference so the bundler doesn't register the asset at all.
+//
+// To re-enable BGM:
+//   1. Drop royalty-free mp3s into packages/remotion/src/assets/bgm/
+//   2. Restore the previous implementation (see git history before this commit)
+//      with the conditional Audio + staticFile block.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const BGMTrack: React.FC<BGMTrackProps> = (_props) => {
+  return null;
 };
