@@ -323,14 +323,19 @@ async function stopAll() {
     if (pid && isAlive(pid)) {
       try {
         if (IS_WINDOWS) {
-          // /T kills the whole tree — catches any grandchild the direct-node
-          // spawn may have started (tsx spawns an inner node process for the
-          // watched program; next spawns a bundler worker).
+          // /T kills the whole tree — Windows has no reliable process-group
+          // semantics, so the parent's death does NOT cascade. Without /T,
+          // tsx's inner watcher-worker node and next's bundler worker survive
+          // as zombies holding ports.
           spawnSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
         } else {
-          // Negative pid = process group kill (child was detached, which puts
-          // it in a new process group on POSIX).
-          process.kill(-pid, 'SIGTERM');
+          // POSIX: positive pid kill. tsx and next handle SIGTERM gracefully
+          // on their own children, so tree-kill is unnecessary. Using -pid
+          // (process-group kill) would work — `detached: true` makes Node
+          // call `setsid()` so the child IS a group leader — but the extra
+          // complexity (ESRCH if the group already exited, EPERM if the
+          // signal crosses a session boundary) buys nothing here.
+          process.kill(pid, 'SIGTERM');
         }
         console.log(`${svc.color}[${svc.name}]${C.reset} stopped (pid ${pid})`);
         stopped++;
@@ -628,7 +633,7 @@ Cross-check against the followup spec at `docs/superpowers/followups/2026-04-24-
 | `demo clean-all` nuclear option for legacy zombies | Task 4 |
 | Drop PowerShell bridge entirely | Task 2 (delete `spawnServiceWindows`) + Task 5 (trim comments) |
 | Keep windowsHide for CREATE_NO_WINDOW on descendants | Task 2 (spawn options include `windowsHide: true`) |
-| POSIX process-group kill still works | Task 3 — `process.kill(-pid, 'SIGTERM')` on POSIX branch |
+| POSIX parent-kill is sufficient (no tree-kill needed) | Task 3 — `process.kill(pid, 'SIGTERM')` on POSIX, tsx/next handle their own children cleanly |
 | `status` uses port-based probe (already correct) | unchanged from current `isServiceUp` |
 | Cross-platform: Windows + macOS + Linux | Task 1 uses `require.resolve` which works everywhere; Task 2 spawn args are OS-agnostic (only `windowsHide` is Windows-only, harmless on POSIX) |
 | Log file append with EBUSY retry — keep | Simplified in Task 2: single-shot try/catch (no retry needed because real PIDs no longer leave zombie log handles) |
