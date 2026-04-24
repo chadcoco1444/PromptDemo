@@ -202,6 +202,10 @@ async function startAll() {
   dockerUp();
   await waitForInfra();
 
+  // Pre-flight port sweep: clean up any orphans from a previous crashed run
+  // so EADDRINUSE doesn't kill our fresh spawns.
+  reapPorts('[start]');
+
   for (const svc of SERVICES) {
     const existing = readPid(svc.name);
     if (existing && isAlive(existing)) {
@@ -221,6 +225,59 @@ async function startAll() {
   console.log(`  ${C.dim}pnpm demo status${C.reset} | ${C.dim}pnpm demo test${C.reset} | ${C.dim}pnpm demo logs${C.reset} | ${C.dim}pnpm demo stop${C.reset}`);
   console.log('');
   console.log(`${C.dim}[info]${C.reset} first startup is slow: workers install chromium/redis/bullmq, next install google-fonts — watch logs for "worker started".`);
+}
+
+/**
+ * Find PIDs listening on a given TCP port. Cross-platform.
+ * Windows uses `netstat -ano` (no extra install); POSIX uses `lsof`.
+ */
+function findPidsOnPort(port) {
+  if (IS_WINDOWS) {
+    const r = spawnSync('netstat', ['-ano'], { encoding: 'utf8', shell: false });
+    const out = r.stdout ?? '';
+    const pids = new Set();
+    for (const line of out.split(/\r?\n/)) {
+      if (!line.includes('LISTENING')) continue;
+      const tokens = line.trim().split(/\s+/);
+      if (tokens.length < 5) continue;
+      const local = tokens[1]; // e.g. "0.0.0.0:3001" or "[::]:3001"
+      const portMatch = local.match(/:(\d+)$/);
+      if (!portMatch || Number(portMatch[1]) !== port) continue;
+      const pid = tokens[tokens.length - 1];
+      if (/^\d+$/.test(pid) && pid !== '0') pids.add(pid);
+    }
+    return [...pids];
+  }
+  const r = spawnSync('sh', ['-c', `lsof -ti :${port} 2>/dev/null`], { encoding: 'utf8' });
+  return (r.stdout ?? '').split(/\s+/).filter((s) => /^\d+$/.test(s));
+}
+
+function killPid(pid) {
+  try {
+    if (IS_WINDOWS) {
+      spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore' });
+    } else {
+      process.kill(Number(pid), 'SIGKILL');
+    }
+    return true;
+  } catch { return false; }
+}
+
+function reapPorts(label) {
+  let killed = 0;
+  for (const svc of SERVICES) {
+    const pids = findPidsOnPort(svc.port);
+    for (const pid of pids) {
+      if (killPid(pid)) {
+        console.log(`${svc.color}[${svc.name}]${C.reset} killed orphan on :${svc.port} (pid ${pid})`);
+        killed++;
+      }
+    }
+  }
+  if (killed === 0) {
+    console.log(`${C.dim}${label}${C.reset} no orphans on service ports`);
+  }
+  return killed;
 }
 
 async function stopAll() {
@@ -245,9 +302,14 @@ async function stopAll() {
     removePid(svc.name);
   }
 
-  if (stopped > 0) await sleep(2000);
+  if (stopped > 0) await sleep(1500);
+
+  // Kill-by-port pass: catches orphans that our PID tracking missed (e.g. detached
+  // Next.js workers on Windows where the spawn chain loses the real PID).
+  reapPorts('[stop]');
+
   dockerDown();
-  console.log(`\n${C.bold}Stopped.${C.reset} ${stopped} services were running.`);
+  console.log(`\n${C.bold}Stopped.${C.reset} ${stopped} tracked services killed; port sweep done.`);
 }
 
 async function statusAll() {
@@ -368,6 +430,9 @@ async function runForeground() {
   dockerUp();
   await waitForInfra();
 
+  // Pre-flight port sweep — orphans from previous crashed runs die here.
+  reapPorts('[run]');
+
   console.log(`${C.bold}[dev-demo]${C.reset} starting 5 services in foreground. Ctrl-C to stop.\n`);
 
   const procs = SERVICES.map((svc) => {
@@ -397,6 +462,8 @@ async function runForeground() {
     for (const p of procs) if (!p.killed) p.kill('SIGTERM');
     setTimeout(() => {
       for (const p of procs) if (!p.killed) p.kill('SIGKILL');
+      // Final sweep — catches grand-children that SIGKILL didn't cascade to.
+      reapPorts('[shutdown]');
       dockerDown();
       process.exit(0);
     }, 3000);
