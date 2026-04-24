@@ -32,3 +32,5 @@ test-results/
 # Non-checked-in media assets (user supplies locally / via secrets store)
 packages/remotion/src/assets/bgm/*.mp3
 deploy/.env.deploy
+# local demo state (PIDs + logs from scripts/demo.mjs)
+.tmp/

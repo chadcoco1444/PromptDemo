@@ -13,7 +13,8 @@
     "lint": "pnpm -r run lint",
     "infra:up": "docker compose -f docker-compose.dev.yaml up -d",
     "infra:down": "docker compose -f docker-compose.dev.yaml down",
-    "infra:check": "node scripts/infra-check.mjs"
+    "infra:check": "node scripts/infra-check.mjs",
+    "demo": "node scripts/demo.mjs"
   },
   "devDependencies": {
     "typescript": "5.5.4",
