@@ -626,4 +626,7 @@ const arg = process.argv[3];
       help();
       process.exit(1);
   }
-})();
+})().catch((err) => {
+  console.error(`\n${C.red}[demo] fatal${C.reset}:`, err?.stack || err);
+  process.exit(1);
+});
