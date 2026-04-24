@@ -1,7 +1,17 @@
 # Demo Orchestration Rewrite — Followup
 
 **Created:** 2026-04-24
-**Status:** Deferred — not blocking Feature 2 or deploy
+**Status:** **RESOLVED** (core issues) — implemented 2026-04-24 via `docs/superpowers/plans/2026-04-24-demo-orchestration-rewrite.md`, tag `v2.0.0-demo-rewrite`. Option B shipped (direct node spawn, skip pnpm.cmd middleman). End-to-end `pnpm demo test` passes: 5/5 services UP, real PIDs tracked, `stop` kills cleanly, no zombie accumulation, 60s video roundtrip.
+
+## Known issue remaining (non-blocking)
+
+**Terminal visibility on Windows.** `pnpm demo start` still pops 5 visible-but-empty console windows (4 `node.exe` + 1 `next-server`). `windowsHide: true` hides the parent node.exe we spawn, but `tsx watch`'s internal child-node spawn and Next.js's bundler-worker fork don't inherit the hide flag, so their grandchildren create visible consoles with no way to suppress from the launcher side. Impact:
+
+- Services work correctly; consoles are empty (stdio goes to log files).
+- `pnpm demo stop` closes all 5 windows cleanly along with the processes.
+- Purely visual noise, no functional regression.
+
+Fix path (deferred): Windows Job Object with `JOB_OBJECT_LIMIT_UI_LIMIT` + `JOB_OBJECT_UILIMIT_DESKTOP` via a native helper (`ffi-napi` or a small companion EXE). Estimated 4-6 hours, fragile across Windows versions, not worth blocking feature work on.
 
 ## Problem
 
