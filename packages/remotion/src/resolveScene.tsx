@@ -33,15 +33,21 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
         />
       );
     }
-    case 'FeatureCallout':
+    case 'FeatureCallout': {
+      // Use the viewport screenshot as the panel image when available — falls
+      // back to the stylized FakePanel dashboard if the crawler couldn't capture
+      // one (Tier-B fallback).
+      const imageSrc = resolver(assets.screenshots.viewport);
       return (
         <FeatureCallout
           title={scene.props.title}
           description={scene.props.description}
           layout={scene.props.layout}
           theme={theme}
+          {...(imageSrc ? { imageSrc } : {})}
         />
       );
+    }
     case 'TextPunch':
       return <TextPunch text={scene.props.text} emphasis={scene.props.emphasis} theme={theme} />;
     case 'SmoothScroll': {

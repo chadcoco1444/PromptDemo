@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill } from 'remotion';
+import { AbsoluteFill, Img } from 'remotion';
 import { AnimatedText } from '../primitives/AnimatedText';
 import type { BrandTheme } from '../utils/brandTheme';
 
@@ -8,30 +8,69 @@ export interface FeatureCalloutProps {
   description: string;
   layout: 'leftImage' | 'rightImage' | 'topDown';
   theme: BrandTheme;
+  /** Resolved http(s) URL of the viewport screenshot. When present, replaces
+   *  the stylized FakePanel with a real screenshot of the source site. */
+  imageSrc?: string;
 }
 
-export const FeatureCallout: React.FC<FeatureCalloutProps> = ({ title, description, layout, theme }) => (
-  <AbsoluteFill style={{ background: theme.bg, color: '#111' }}>
-    <AbsoluteFill
-      style={{
-        padding: 80,
-        display: 'flex',
-        flexDirection: layout === 'topDown' ? 'column' : 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 60,
-      }}
-    >
-      {layout === 'rightImage' ? <FakePanel theme={theme} /> : null}
-      <div style={{ flex: 1, maxWidth: 560 }}>
-        <AnimatedText text={title} style={{ fontSize: 48, fontWeight: 700, color: theme.primary }} />
-        <div style={{ marginTop: 24 }}>
-          <AnimatedText text={description} delayFrames={12} style={{ fontSize: 24, lineHeight: 1.4 }} />
+export const FeatureCallout: React.FC<FeatureCalloutProps> = ({
+  title,
+  description,
+  layout,
+  theme,
+  imageSrc,
+}) => {
+  const panel = imageSrc ? <ImagePanel src={imageSrc} theme={theme} /> : <FakePanel theme={theme} />;
+  return (
+    <AbsoluteFill style={{ background: theme.bg, color: '#111' }}>
+      <AbsoluteFill
+        style={{
+          padding: 80,
+          display: 'flex',
+          flexDirection: layout === 'topDown' ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 60,
+        }}
+      >
+        {layout === 'rightImage' ? panel : null}
+        <div style={{ flex: 1, maxWidth: 560 }}>
+          <AnimatedText text={title} style={{ fontSize: 48, fontWeight: 700, color: theme.primary }} />
+          <div style={{ marginTop: 24 }}>
+            <AnimatedText text={description} delayFrames={12} style={{ fontSize: 24, lineHeight: 1.4 }} />
+          </div>
         </div>
-      </div>
-      {layout !== 'rightImage' ? <FakePanel theme={theme} /> : null}
+        {layout !== 'rightImage' ? panel : null}
+      </AbsoluteFill>
     </AbsoluteFill>
-  </AbsoluteFill>
+  );
+};
+
+// Real screenshot panel — same shadow/border as FakePanel so the visual
+// language is consistent across scenes.
+const ImagePanel: React.FC<{ src: string; theme: BrandTheme }> = ({ src, theme }) => (
+  <div
+    style={{
+      width: 520,
+      height: 340,
+      borderRadius: 14,
+      overflow: 'hidden',
+      boxShadow: '0 30px 60px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.08)',
+      background: theme.primaryDark,
+      position: 'relative',
+    }}
+  >
+    <Img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    {/* subtle top-edge highlight to match the rest of the design system */}
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.06), transparent 30%)',
+        pointerEvents: 'none',
+      }}
+    />
+  </div>
 );
 
 // Mock UI placeholder: gradient background + abstracted dashboard-style elements
