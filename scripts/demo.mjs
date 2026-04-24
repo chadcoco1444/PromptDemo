@@ -80,10 +80,17 @@ function applyDefaults() {
     NODE_ENV: 'development',
     NEXT_PUBLIC_API_BASE: 'http://localhost:3000',
     NEXT_PUBLIC_S3_ENDPOINT: 'http://localhost:9000',
+    // Feature 4 Postgres default — matches docker-compose.dev.yaml. Only
+    // actually consumed when AUTH_ENABLED=true, but harmless otherwise.
+    DATABASE_URL: 'postgresql://promptdemo:promptdemo@localhost:5432/promptdemo',
   };
   for (const [k, v] of Object.entries(defaults)) {
     if (!process.env[k]) process.env[k] = v;
   }
+}
+
+function authEnabled() {
+  return process.env.AUTH_ENABLED === 'true';
 }
 
 function ensureDirs() {
@@ -191,17 +198,37 @@ function cleanRemotionBundles() {
 }
 
 async function waitForInfra() {
-  console.log(`${C.cyan}[infra]${C.reset} waiting for Redis + MinIO...`);
-  for (let i = 0; i < 30; i++) {
-    const redisOk = await tcpCheck('localhost', 6379);
-    const minioOk = await httpOk('http://localhost:9000/minio/health/ready', 1000);
-    if (redisOk && minioOk) {
+  const needPostgres = authEnabled();
+  const label = needPostgres ? 'Redis + MinIO + Postgres' : 'Redis + MinIO';
+  console.log(`${C.cyan}[infra]${C.reset} waiting for ${label}...`);
+  // Postgres takes longer to boot on first run (it runs /docker-entrypoint-initdb.d
+  // migrations). Extend the wait to 60s when we need it.
+  const maxAttempts = needPostgres ? 60 : 30;
+  for (let i = 0; i < maxAttempts; i++) {
+    const redisOk = await tcpCheck('127.0.0.1', 6379);
+    const minioOk = await httpOk('http://127.0.0.1:9000/minio/health/ready', 1000);
+    const pgOk = needPostgres ? await tcpCheck('127.0.0.1', 5432) : true;
+    if (redisOk && minioOk && pgOk) {
       console.log(`${C.cyan}[infra]${C.reset} ready`);
       return;
+    }
+    // Helpful progress indicator every 5s
+    if (i > 0 && i % 5 === 0) {
+      const missing = [
+        !redisOk && 'redis',
+        !minioOk && 'minio',
+        needPostgres && !pgOk && 'postgres',
+      ].filter(Boolean).join(', ');
+      console.log(`${C.dim}[infra]${C.reset} still waiting on: ${missing} (${i}s)`);
     }
     await sleep(1000);
   }
   console.warn(`${C.yellow}[infra]${C.reset} timed out waiting for infra; proceeding anyway`);
+  if (needPostgres) {
+    console.warn(
+      `${C.yellow}[infra]${C.reset} hint: if Postgres never came up, check \`docker compose -f docker-compose.dev.yaml logs postgres\``
+    );
+  }
 }
 
 // --- Service lifecycle ---
@@ -486,10 +513,14 @@ async function stopAll() {
 
 async function statusAll() {
   console.log(`${C.bold}Infra:${C.reset}`);
-  const redisOk = await tcpCheck('localhost', 6379);
-  const minioOk = await httpOk('http://localhost:9000/minio/health/ready', 1000);
-  console.log(`  Redis   ${redisOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}`);
-  console.log(`  MinIO   ${minioOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}`);
+  const redisOk = await tcpCheck('127.0.0.1', 6379);
+  const minioOk = await httpOk('http://127.0.0.1:9000/minio/health/ready', 1000);
+  console.log(`  Redis     ${redisOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}`);
+  console.log(`  MinIO     ${minioOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}`);
+  if (authEnabled()) {
+    const pgOk = await tcpCheck('127.0.0.1', 5432);
+    console.log(`  Postgres  ${pgOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}${pgOk ? '' : ` ${C.dim}(AUTH_ENABLED=true requires Postgres — docker compose up -d postgres)${C.reset}`}`);
+  }
 
   console.log(`\n${C.bold}Services:${C.reset}`);
   for (const svc of SERVICES) {
