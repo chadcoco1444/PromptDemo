@@ -1,2 +1,93 @@
-// Bootstrapped in Task 2.12. Kept minimal so typecheck passes.
-console.log('storyboard worker bootstrap pending');
+import Anthropic from '@anthropic-ai/sdk';
+import { Worker, type Job } from 'bullmq';
+import { Redis as IORedis } from 'ioredis';
+import { z } from 'zod';
+import { CrawlResultSchema, type Storyboard } from '@promptdemo/schema';
+import { makeS3Client, putObject, buildKey, s3ConfigFromEnv, getObjectJson } from './s3/s3Client.js';
+import { generateStoryboard } from './generator.js';
+import { createClaudeClient } from './claude/claudeClient.js';
+import { loadMockStoryboard } from './mockMode.js';
+
+const JobPayload = z.object({
+  jobId: z.string().min(1),
+  crawlResultUri: z.string().startsWith('s3://'),
+  intent: z.string().min(1),
+  duration: z.union([z.literal(10), z.literal(30), z.literal(60)]),
+  hint: z.string().optional(),
+  previousStoryboardUri: z.string().startsWith('s3://').optional(),
+});
+type JobPayload = z.infer<typeof JobPayload>;
+
+const env = process.env;
+const redisUrl = env.REDIS_URL ?? 'redis://localhost:6379';
+const mockMode = env.MOCK_MODE === 'true';
+const model = env.CLAUDE_MODEL ?? 'claude-sonnet-4-6';
+const maxTokens = Number(env.CLAUDE_MAX_TOKENS ?? '4096');
+
+const s3Cfg = s3ConfigFromEnv(env);
+const s3 = makeS3Client(s3Cfg);
+const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+
+const anthropic = mockMode
+  ? null
+  : new Anthropic({ apiKey: env.ANTHROPIC_API_KEY ?? (() => { throw new Error('ANTHROPIC_API_KEY unset'); })() });
+
+const claude = anthropic ? createClaudeClient({ sdk: anthropic, model, maxTokens }) : null;
+
+const worker = new Worker<JobPayload>(
+  'storyboard',
+  async (job: Job<JobPayload>) => {
+    const payload = JobPayload.parse(job.data);
+
+    let storyboard: Storyboard;
+    if (mockMode) {
+      storyboard = await loadMockStoryboard(payload.duration);
+    } else {
+      if (!claude) throw new Error('claude client not initialized');
+      const crawlResult = CrawlResultSchema.parse(await getObjectJson(s3, payload.crawlResultUri));
+      const previous = payload.previousStoryboardUri
+        ? await getObjectJson<Storyboard>(s3, payload.previousStoryboardUri)
+        : undefined;
+      const res = await generateStoryboard({
+        claude,
+        crawlResult,
+        intent: payload.intent,
+        duration: payload.duration,
+        ...(payload.hint ? { hint: payload.hint } : {}),
+        ...(previous ? { previousStoryboard: previous } : {}),
+      });
+      if (res.kind === 'error') throw new Error(res.message);
+      storyboard = res.storyboard;
+    }
+
+    const storyboardKey = buildKey(payload.jobId, 'storyboard.json');
+    const storyboardUri = await putObject(
+      s3,
+      s3Cfg.bucket,
+      storyboardKey,
+      Buffer.from(JSON.stringify(storyboard, null, 2)),
+      'application/json'
+    );
+    return { storyboardUri };
+  },
+  {
+    connection,
+    concurrency: 4, // IO-bound on Claude API; no heavy CPU per job
+    lockDuration: 60_000,
+  }
+);
+
+worker.on('failed', (job, err) => {
+  console.error('[storyboard] job failed', { jobId: job?.id, err: err.message });
+});
+
+const shutdown = async () => {
+  console.log('[storyboard] shutting down');
+  await worker.close();
+  await connection.quit();
+  process.exit(0);
+};
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+console.log(`[storyboard] worker started, queue=storyboard, mock=${mockMode}`);
