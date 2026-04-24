@@ -1,7 +1,8 @@
 import React from 'react';
-import { AbsoluteFill, Img } from 'remotion';
+import { AbsoluteFill } from 'remotion';
 import { AnimatedText } from '../primitives/AnimatedText';
 import type { BrandTheme } from '../utils/brandTheme';
+import { ImagePanel } from './variants/ImagePanel';
 
 export interface FeatureCalloutProps {
   title: string;
@@ -45,33 +46,6 @@ export const FeatureCallout: React.FC<FeatureCalloutProps> = ({
     </AbsoluteFill>
   );
 };
-
-// Real screenshot panel — same shadow/border as FakePanel so the visual
-// language is consistent across scenes.
-const ImagePanel: React.FC<{ src: string; theme: BrandTheme }> = ({ src, theme }) => (
-  <div
-    style={{
-      width: 520,
-      height: 340,
-      borderRadius: 14,
-      overflow: 'hidden',
-      boxShadow: '0 30px 60px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.08)',
-      background: theme.primaryDark,
-      position: 'relative',
-    }}
-  >
-    <Img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-    {/* subtle top-edge highlight to match the rest of the design system */}
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.06), transparent 30%)',
-        pointerEvents: 'none',
-      }}
-    />
-  </div>
-);
 
 // Mock UI placeholder: gradient background + abstracted dashboard-style elements
 // (header row, data bars, stat cards). No real text — just shape placeholders —
