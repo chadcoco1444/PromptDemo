@@ -1,6 +1,7 @@
 import './globals.css';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthButton } from '../components/AuthButton';
+import { UsageIndicator } from '../components/UsageIndicator';
 import { THEME_PRELUDE_SCRIPT } from '../lib/theme';
 
 export const metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               PromptDemo
             </a>
             <div className="ml-auto flex items-center gap-3">
+              <UsageIndicator />
               <AuthButton />
               <ThemeToggle />
             </div>

@@ -15,6 +15,7 @@ function build(opts: { requireUserIdHeader?: boolean } = {}) {
     crawlQueue: crawl as any,
     storyboardQueue: storyboard as any,
     requireUserIdHeader: opts.requireUserIdHeader ?? false,
+    creditPool: null, // pricing disabled in these existing tests; F5 gate tested separately
     now: () => 1000,
     nanoid: () => 'abc123',
   });

@@ -12,6 +12,19 @@ export interface OrchestratorConfig {
   broker: Broker;
   renderCap?: number;
   now?: () => number;
+  /**
+   * Called when a job terminates in 'failed'. Receives the failed stage and
+   * error code so the caller can decide on partial refunds per Amendment C.
+   * Kept as a callback (not a pg.Pool) so orchestrator stays free of DB deps
+   * and the refund tests can assert against a spy.
+   */
+  onJobFailed?: (args: {
+    jobId: string;
+    userId: string | undefined;
+    stage: 'crawl' | 'storyboard' | 'render';
+    errorCode: string;
+    duration: 10 | 30 | 60;
+  }) => Promise<void> | void;
 }
 
 // BullMQ 5.x QueueEvents delivers `returnvalue` as either a parsed object
@@ -66,6 +79,15 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
         error: { code: 'CRAWL_FAILED', message: failedReason ?? 'unknown', retryable: false },
       })
     );
+    if (cfg.onJobFailed) {
+      await cfg.onJobFailed({
+        jobId,
+        userId: current.userId,
+        stage: 'crawl',
+        errorCode: 'CRAWL_FAILED',
+        duration: current.input.duration,
+      });
+    }
   });
 
   cfg.queues.storyboardEvents.on('completed', async ({ jobId, returnvalue }) => {
@@ -110,6 +132,15 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
         error: { code: 'STORYBOARD_GEN_FAILED', message: failedReason ?? 'unknown', retryable: false },
       })
     );
+    if (cfg.onJobFailed) {
+      await cfg.onJobFailed({
+        jobId,
+        userId: current.userId,
+        stage: 'storyboard',
+        errorCode: 'STORYBOARD_GEN_FAILED',
+        duration: current.input.duration,
+      });
+    }
   });
 
   cfg.queues.renderEvents.on('active', async ({ jobId }) => {
@@ -135,6 +166,15 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
         error: { code: 'RENDER_FAILED', message: failedReason ?? 'unknown', retryable: false },
       })
     );
+    if (cfg.onJobFailed) {
+      await cfg.onJobFailed({
+        jobId,
+        userId: current.userId,
+        stage: 'render',
+        errorCode: 'RENDER_FAILED',
+        duration: current.input.duration,
+      });
+    }
   });
 
   return async () => {

@@ -30,6 +30,12 @@ export async function AuthButton() {
       >
         History
       </Link>
+      <Link
+        href="/billing"
+        className="text-sm text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 rounded transition-colors"
+      >
+        Billing
+      </Link>
       {session.user.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

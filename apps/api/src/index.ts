@@ -8,6 +8,8 @@ import { makeDualWriteJobStore } from './jobStoreDual.js';
 import { makeQueueBundle, closeQueueBundle } from './queues.js';
 import { makeBroker } from './sse/broker.js';
 import { startOrchestrator } from './orchestrator/index.js';
+import { refundForJob } from './credits/store.js';
+import { calculateCost, calculateRefund } from './credits/ledger.js';
 
 const cfg = loadConfig();
 const redis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
@@ -19,12 +21,17 @@ const redis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
 //     history for /api/users/me/jobs.
 //   - Otherwise → Redis-only (pre-auth mode, identical to v1 behavior).
 const authEnabled = process.env.AUTH_ENABLED === 'true' && !!process.env.DATABASE_URL;
+const pricingEnabled = authEnabled && process.env.PRICING_ENABLED === 'true';
 let store: JobStore;
 let shutdownPool: (() => Promise<void>) | null = null;
+// Pool shared between the job-store mirror and the credits gate — one pool,
+// two consumers, drained together on shutdown.
+let pgPoolForCredits: import('pg').Pool | null = null;
 if (authEnabled) {
   // Lazy import so the Redis-only path doesn't pull in pg.
   const { Pool } = await import('pg');
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  pgPoolForCredits = pool;
   shutdownPool = () => pool.end();
   const pgStore = makePostgresJobStore({
     pool,
@@ -33,6 +40,9 @@ if (authEnabled) {
   const redisStore = makeJobStore(redis);
   store = makeDualWriteJobStore({ primary: redisStore, mirror: pgStore });
   console.log('[apps/api] AUTH_ENABLED + DATABASE_URL present → DualWriteJobStore active');
+  if (pricingEnabled) {
+    console.log('[apps/api] PRICING_ENABLED=true → credit gate + concurrency cap active on POST /api/jobs');
+  }
 } else {
   store = makeJobStore(redis);
   console.log('[apps/api] AUTH_ENABLED=false → Redis-only job store');
@@ -71,14 +81,32 @@ const app = await build({
   fetchJson,
   rateLimitPerMinute: cfg.RATE_LIMIT_PER_MINUTE,
   requireUserIdHeader: authEnabled,
+  creditPool: pricingEnabled ? pgPoolForCredits : null,
 });
 
-const stopOrchestrator = await startOrchestrator({
+const orchestratorOpts: Parameters<typeof startOrchestrator>[0] = {
   queues,
   store,
   broker,
   renderCap: cfg.RENDER_QUEUE_CAP,
-});
+};
+if (pricingEnabled && pgPoolForCredits) {
+  const pool = pgPoolForCredits;
+  orchestratorOpts.onJobFailed = async ({ jobId, userId, stage, errorCode, duration }) => {
+    if (!userId) return; // anonymous job, nothing to refund
+    const parsedUserId = Number(userId);
+    if (!Number.isFinite(parsedUserId)) return;
+    const originalCost = calculateCost(duration);
+    const refundSeconds = calculateRefund(stage, errorCode, originalCost);
+    if (refundSeconds <= 0) return;
+    try {
+      await refundForJob(pool, { userId: parsedUserId, jobId, refundSeconds });
+    } catch (err) {
+      console.error('[apps/api] refundForJob failed:', { jobId, err });
+    }
+  };
+}
+const stopOrchestrator = await startOrchestrator(orchestratorOpts);
 
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 

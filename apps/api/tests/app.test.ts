@@ -16,6 +16,7 @@ describe('api app', () => {
       storyboardQueue: storyboard,
       broker,
       fetchJson: async () => null,
+      creditPool: null,
       logger: false,
     });
 
@@ -46,6 +47,7 @@ describe('api app', () => {
       storyboardQueue: storyboard,
       broker,
       fetchJson: async () => null,
+      creditPool: null,
       rateLimitPerMinute: 2,
       logger: false,
     });
@@ -77,6 +79,7 @@ describe('api app', () => {
       storyboardQueue: storyboard,
       broker,
       fetchJson: async () => null,
+      creditPool: null,
       logger: false,
     });
     const r = await app.inject({ method: 'GET', url: '/healthz' });

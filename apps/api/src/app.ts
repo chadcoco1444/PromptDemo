@@ -3,6 +3,7 @@ import rateLimit from '@fastify/rate-limit';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import type { Queue } from 'bullmq';
+import type { Pool } from 'pg';
 import type { JobStore } from './jobStore.js';
 import type { Broker } from './sse/broker.js';
 import { postJobRoute } from './routes/postJob.js';
@@ -23,6 +24,12 @@ export interface BuildOpts {
    * client-supplied X-User-Id at the ingress layer before it reaches apps/api.
    */
   requireUserIdHeader?: boolean;
+  /**
+   * When set, POST /api/jobs runs the Feature 5 credit gate: concurrency
+   * check + balance check + debit + audit log, all in one Postgres
+   * transaction. Omit to disable pricing (behaves identically to v1).
+   */
+  creditPool?: Pool | null;
   logger?: boolean;
 }
 
@@ -45,6 +52,7 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
     crawlQueue: opts.crawlQueue,
     storyboardQueue: opts.storyboardQueue,
     requireUserIdHeader: opts.requireUserIdHeader ?? false,
+    creditPool: opts.creditPool ?? null,
   });
   await app.register(getJobRoute, { store: opts.store });
   await app.register(getStoryboardRoute, { store: opts.store, fetchJson: opts.fetchJson });
