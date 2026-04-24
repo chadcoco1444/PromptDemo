@@ -337,6 +337,44 @@ function reapPorts(label) {
   return killed;
 }
 
+/**
+ * Nuclear option for cleaning up legacy zombies. Enumerates every process
+ * whose command line touches this repo or our service filters, kills them.
+ * Intended for one-time use when migrating from the pre-rewrite spawn model;
+ * `stop` handles the normal case.
+ */
+async function cleanAll() {
+  if (!IS_WINDOWS) {
+    // POSIX: use pgrep -f; simpler than our Windows path.
+    const r = spawnSync('sh', ['-c', `pgrep -f '@promptdemo/|${REPO_ROOT}' | xargs -r kill -9`], {
+      stdio: 'inherit',
+    });
+    console.log(`${C.bold}clean-all:${C.reset} POSIX sweep ${r.status === 0 ? 'complete' : 'exited nonzero'}`);
+  } else {
+    // Windows: enumerate via PowerShell + Get-CimInstance.
+    const ps = [
+      `$matches = Get-CimInstance Win32_Process | Where-Object {`,
+      `  $_.CommandLine -and (`,
+      `    $_.CommandLine -match '@promptdemo/' -or`,
+      `    $_.CommandLine -match [regex]::Escape('${REPO_ROOT.replace(/\\/g, '\\\\')}')`,
+      `  )`,
+      `}`,
+      `$matches | ForEach-Object { Write-Output ("killing pid=" + $_.ProcessId + " cmd=" + $_.CommandLine.Substring(0, [Math]::Min(80, $_.CommandLine.Length))); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`,
+      `Write-Output ("total=" + $matches.Count)`,
+    ].join('\n');
+    const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], {
+      stdio: 'inherit',
+      windowsHide: true,
+    });
+    if (r.status !== 0) {
+      console.warn(`${C.yellow}clean-all:${C.reset} PowerShell sweep exited ${r.status}`);
+    }
+  }
+  // Wipe pid files so next start has a clean slate.
+  for (const svc of SERVICES) removePid(svc.name);
+  console.log(`${C.bold}clean-all:${C.reset} done`);
+}
+
 async function stopAll() {
   let stopped = 0;
   let stalePids = 0;
@@ -584,6 +622,7 @@ function help() {
 Commands:
   ${C.green}start${C.reset}      Docker up + spawn 5 services in background
   ${C.red}stop${C.reset}       Kill background services + Docker down
+  ${C.red}clean-all${C.reset}  Nuclear option — kill every node/cmd touching this repo or @promptdemo/* filters. Use after upgrading from a broken demo state.
   ${C.cyan}status${C.reset}     Check infra + service health
   ${C.yellow}test${C.reset}       End-to-end smoke: POST /api/jobs, poll until done
              Override via env: TEST_URL, TEST_INTENT, TEST_DURATION, TEST_TIMEOUT_S
@@ -605,6 +644,7 @@ const arg = process.argv[3];
   switch (cmd) {
     case 'start':   await startAll(); break;
     case 'stop':    await stopAll(); break;
+    case 'clean-all': await cleanAll(); break;
     case 'status':  await statusAll(); break;
     case 'test':    await runTest(); break;
     case 'logs':    tailLogs(arg); break;
