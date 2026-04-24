@@ -391,6 +391,11 @@ async function cleanAll(arg) {
     // (VS Code, Cursor, JetBrains) that have the repo path in their argv.
     const ps = [
       `$procsToKill = Get-CimInstance Win32_Process | Where-Object {`,
+      // Exclude the PowerShell running this very sweep: our own CommandLine
+      // contains '@promptdemo/' (it's the pattern we're searching for), so
+      // without this guard the sweep Stop-Processes itself mid-loop and
+      // exits with -1 before finishing the kill list.
+      `  $_.ProcessId -ne $PID -and`,
       `  $_.CommandLine -and`,
       `  $_.Name -in @('node.exe', 'pnpm.exe', 'tsx.exe', 'cmd.exe', 'powershell.exe') -and`,
       `  (`,
