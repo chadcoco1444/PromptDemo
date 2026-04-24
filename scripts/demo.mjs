@@ -343,24 +343,39 @@ function reapPorts(label) {
  * Intended for one-time use when migrating from the pre-rewrite spawn model;
  * `stop` handles the normal case.
  */
-async function cleanAll() {
+async function cleanAll(arg) {
+  if (arg !== '--yes' && !process.env.DEMO_CLEAN_ALL_CONFIRM) {
+    console.error(`${C.red}clean-all is destructive${C.reset} — SIGKILLs any node/pnpm/tsx process touching this repo or @promptdemo/*. Re-run with \`--yes\` or DEMO_CLEAN_ALL_CONFIRM=1.`);
+    process.exit(1);
+  }
+  // Wipe pid files FIRST so a self-kill of the orchestrator can't leave them stale.
+  for (const svc of SERVICES) removePid(svc.name);
   if (!IS_WINDOWS) {
-    // POSIX: use pgrep -f; simpler than our Windows path.
-    const r = spawnSync('sh', ['-c', `pgrep -f '@promptdemo/|${REPO_ROOT}' | xargs -r kill -9`], {
+    // POSIX: pkill handles empty-match natively (exit 1 = no-match, fine here).
+    // BSD xargs on macOS lacks the GNU no-run-if-empty flag, so the old pgrep pipeline was not portable. The combined
+    // regex forces a node/pnpm/tsx process-name prefix AND the repo/filter pattern,
+    // avoiding false-positives on editors whose argv happens to contain the repo path.
+    const pattern = `(node|pnpm|tsx).*(@promptdemo/|${REPO_ROOT})`;
+    const r = spawnSync('sh', ['-c', `pkill -9 -f '${pattern}'`], {
       stdio: 'inherit',
     });
-    console.log(`${C.bold}clean-all:${C.reset} POSIX sweep ${r.status === 0 ? 'complete' : 'exited nonzero'}`);
+    // pkill exits 0 on match, 1 on no-match — both are acceptable for our sweep.
+    console.log(`${C.bold}clean-all:${C.reset} POSIX sweep ${r.status === 0 || r.status === 1 ? 'complete' : 'exited nonzero'}`);
   } else {
     // Windows: enumerate via PowerShell + Get-CimInstance.
+    // Process-name allowlist (node/pnpm/tsx) prevents false-positives on editors
+    // (VS Code, Cursor, JetBrains) that have the repo path in their argv.
     const ps = [
-      `$matches = Get-CimInstance Win32_Process | Where-Object {`,
-      `  $_.CommandLine -and (`,
+      `$procsToKill = Get-CimInstance Win32_Process | Where-Object {`,
+      `  $_.CommandLine -and`,
+      `  $_.Name -in @('node.exe', 'pnpm.exe', 'tsx.exe') -and`,
+      `  (`,
       `    $_.CommandLine -match '@promptdemo/' -or`,
       `    $_.CommandLine -match [regex]::Escape('${REPO_ROOT.replace(/\\/g, '\\\\')}')`,
       `  )`,
       `}`,
-      `$matches | ForEach-Object { Write-Output ("killing pid=" + $_.ProcessId + " cmd=" + $_.CommandLine.Substring(0, [Math]::Min(80, $_.CommandLine.Length))); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`,
-      `Write-Output ("total=" + $matches.Count)`,
+      `$procsToKill | ForEach-Object { Write-Output ("killing pid=" + $_.ProcessId + " cmd=" + $_.CommandLine.Substring(0, [Math]::Min(80, $_.CommandLine.Length))); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`,
+      `Write-Output ("total=" + $procsToKill.Count)`,
     ].join('\n');
     const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], {
       stdio: 'inherit',
@@ -370,8 +385,6 @@ async function cleanAll() {
       console.warn(`${C.yellow}clean-all:${C.reset} PowerShell sweep exited ${r.status}`);
     }
   }
-  // Wipe pid files so next start has a clean slate.
-  for (const svc of SERVICES) removePid(svc.name);
   console.log(`${C.bold}clean-all:${C.reset} done`);
 }
 
@@ -622,7 +635,8 @@ function help() {
 Commands:
   ${C.green}start${C.reset}      Docker up + spawn 5 services in background
   ${C.red}stop${C.reset}       Kill background services + Docker down
-  ${C.red}clean-all${C.reset}  Nuclear option — kill every node/cmd touching this repo or @promptdemo/* filters. Use after upgrading from a broken demo state.
+  ${C.red}clean-all${C.reset}  Nuclear option — kill every node/pnpm/tsx touching this repo or @promptdemo/* filters. Use after upgrading from a broken demo state.
+             Destructive: requires ${C.bold}--yes${C.reset} arg or DEMO_CLEAN_ALL_CONFIRM=1 env var.
   ${C.cyan}status${C.reset}     Check infra + service health
   ${C.yellow}test${C.reset}       End-to-end smoke: POST /api/jobs, poll until done
              Override via env: TEST_URL, TEST_INTENT, TEST_DURATION, TEST_TIMEOUT_S
@@ -644,7 +658,7 @@ const arg = process.argv[3];
   switch (cmd) {
     case 'start':   await startAll(); break;
     case 'stop':    await stopAll(); break;
-    case 'clean-all': await cleanAll(); break;
+    case 'clean-all': await cleanAll(arg); break;
     case 'status':  await statusAll(); break;
     case 'test':    await runTest(); break;
     case 'logs':    tailLogs(arg); break;
