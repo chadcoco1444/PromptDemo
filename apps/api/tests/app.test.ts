@@ -9,9 +9,11 @@ describe('api app', () => {
     const store = makeJobStore(new RedisMock() as any);
     const broker = makeBroker();
     const crawl = { add: vi.fn().mockResolvedValue({ id: 'q' }) } as any;
+    const storyboard = { add: vi.fn().mockResolvedValue({ id: 'q2' }) } as any;
     const app = await build({
       store,
       crawlQueue: crawl,
+      storyboardQueue: storyboard,
       broker,
       fetchJson: async () => null,
       logger: false,
@@ -37,9 +39,11 @@ describe('api app', () => {
     const store = makeJobStore(new RedisMock() as any);
     const broker = makeBroker();
     const crawl = { add: vi.fn().mockResolvedValue({ id: 'q' }) } as any;
+    const storyboard = { add: vi.fn().mockResolvedValue({ id: 'q2' }) } as any;
     const app = await build({
       store,
       crawlQueue: crawl,
+      storyboardQueue: storyboard,
       broker,
       fetchJson: async () => null,
       rateLimitPerMinute: 2,
@@ -66,9 +70,11 @@ describe('api app', () => {
     const store = makeJobStore(new RedisMock() as any);
     const broker = makeBroker();
     const crawl = { add: vi.fn().mockResolvedValue({ id: 'q' }) } as any;
+    const storyboard = { add: vi.fn().mockResolvedValue({ id: 'q2' }) } as any;
     const app = await build({
       store,
       crawlQueue: crawl,
+      storyboardQueue: storyboard,
       broker,
       fetchJson: async () => null,
       logger: false,

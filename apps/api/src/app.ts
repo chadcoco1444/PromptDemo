@@ -13,9 +13,16 @@ import { streamRoute } from './routes/stream.js';
 export interface BuildOpts {
   store: JobStore;
   crawlQueue: Queue;
+  storyboardQueue: Queue;
   broker: Broker;
   fetchJson: (uri: string) => Promise<unknown>;
   rateLimitPerMinute?: number;
+  /**
+   * When true, POST /api/jobs rejects requests without X-User-Id. Enabled
+   * automatically when AUTH_ENABLED=true in env. Production must strip any
+   * client-supplied X-User-Id at the ingress layer before it reaches apps/api.
+   */
+  requireUserIdHeader?: boolean;
   logger?: boolean;
 }
 
@@ -33,7 +40,12 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
     skipOnError: false,
   });
 
-  await app.register(postJobRoute, { store: opts.store, crawlQueue: opts.crawlQueue });
+  await app.register(postJobRoute, {
+    store: opts.store,
+    crawlQueue: opts.crawlQueue,
+    storyboardQueue: opts.storyboardQueue,
+    requireUserIdHeader: opts.requireUserIdHeader ?? false,
+  });
   await app.register(getJobRoute, { store: opts.store });
   await app.register(getStoryboardRoute, { store: opts.store, fetchJson: opts.fetchJson });
   await app.register(streamRoute, { store: opts.store, broker: opts.broker });

@@ -38,6 +38,9 @@ const ErrorSchema = z.object({
 export const JobSchema = z.object({
   jobId: z.string().min(1),
   parentJobId: z.string().min(1).optional(),
+  // Only populated when AUTH_ENABLED=true + the trusted apps/web proxy set
+  // X-User-Id. Anonymous jobs (pre-auth mode) omit this.
+  userId: z.string().min(1).optional(),
   status: JobStatusSchema,
   stage: JobStageSchema,
   progress: z.number().int().min(0).max(100),

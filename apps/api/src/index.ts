@@ -2,14 +2,42 @@ import { Redis } from 'ioredis';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { build } from './app.js';
 import { loadConfig } from './config.js';
-import { makeJobStore } from './jobStore.js';
+import { makeJobStore, type JobStore } from './jobStore.js';
+import { makePostgresJobStore } from './jobStorePostgres.js';
+import { makeDualWriteJobStore } from './jobStoreDual.js';
 import { makeQueueBundle, closeQueueBundle } from './queues.js';
 import { makeBroker } from './sse/broker.js';
 import { startOrchestrator } from './orchestrator/index.js';
 
 const cfg = loadConfig();
 const redis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
-const store = makeJobStore(redis);
+
+// Job store selection:
+//   - AUTH_ENABLED=true + DATABASE_URL present → Redis (primary) + Postgres
+//     (mirror) via DualWriteJobStore. Reads stay Redis-backed during the
+//     v2.0 transition (Amendment A); Postgres accumulates user-attributed
+//     history for /api/users/me/jobs.
+//   - Otherwise → Redis-only (pre-auth mode, identical to v1 behavior).
+const authEnabled = process.env.AUTH_ENABLED === 'true' && !!process.env.DATABASE_URL;
+let store: JobStore;
+let shutdownPool: (() => Promise<void>) | null = null;
+if (authEnabled) {
+  // Lazy import so the Redis-only path doesn't pull in pg.
+  const { Pool } = await import('pg');
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  shutdownPool = () => pool.end();
+  const pgStore = makePostgresJobStore({
+    pool,
+    resolveUserId: async (job) => (job as { userId?: string }).userId ?? null,
+  });
+  const redisStore = makeJobStore(redis);
+  store = makeDualWriteJobStore({ primary: redisStore, mirror: pgStore });
+  console.log('[apps/api] AUTH_ENABLED + DATABASE_URL present → DualWriteJobStore active');
+} else {
+  store = makeJobStore(redis);
+  console.log('[apps/api] AUTH_ENABLED=false → Redis-only job store');
+}
+
 const queues = makeQueueBundle(redis);
 const broker = makeBroker();
 
@@ -38,9 +66,11 @@ async function fetchJson(uri: string): Promise<unknown> {
 const app = await build({
   store,
   crawlQueue: queues.crawl,
+  storyboardQueue: queues.storyboard,
   broker,
   fetchJson,
   rateLimitPerMinute: cfg.RATE_LIMIT_PER_MINUTE,
+  requireUserIdHeader: authEnabled,
 });
 
 const stopOrchestrator = await startOrchestrator({
@@ -56,6 +86,7 @@ const shutdown = async () => {
   await app.close();
   await stopOrchestrator();
   await closeQueueBundle(queues);
+  if (shutdownPool) await shutdownPool();
   await redis.quit();
   process.exit(0);
 };

@@ -6,7 +6,7 @@ beforeEach(() => {
 });
 
 describe('createJob', () => {
-  it('POSTs the input and returns jobId on 201', async () => {
+  it('routes through the /api/jobs/create proxy by default (same-origin)', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       status: 201,
       ok: true,
@@ -14,12 +14,29 @@ describe('createJob', () => {
     }) as any;
     const res = await createJob(
       { url: 'https://x.com', intent: 'x', duration: 30 },
-      'http://api'
+      'http://api',
     );
     expect(res).toEqual({ jobId: 'abc' });
     expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/jobs/create',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('bypasses the proxy when useProxy=false (testing-only escape hatch)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 201,
+      ok: true,
+      json: async () => ({ jobId: 'abc' }),
+    }) as any;
+    await createJob(
+      { url: 'https://x.com', intent: 'x', duration: 30 },
+      'http://api',
+      { useProxy: false },
+    );
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       'http://api/api/jobs',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 

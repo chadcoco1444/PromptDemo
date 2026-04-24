@@ -1,10 +1,23 @@
 import { JobSchema, JobInputSchema, type Job, type JobInput } from './types';
 
-export async function createJob(input: JobInput, apiBase: string): Promise<{ jobId: string }> {
+export async function createJob(
+  input: JobInput,
+  apiBase: string,
+  /**
+   * Routes through apps/web's /api/jobs/create proxy by default (same-origin).
+   * The proxy adds X-User-Id when a session is active and forwards to apps/api.
+   * Pass a non-same-origin `apiBase` to bypass the proxy (testing only —
+   * apps/api wouldn't know the user).
+   */
+  options: { useProxy?: boolean } = {},
+): Promise<{ jobId: string }> {
   const parsed = JobInputSchema.parse(input);
-  const res = await fetch(`${apiBase}/api/jobs`, {
+  const useProxy = options.useProxy ?? true;
+  const url = useProxy ? '/api/jobs/create' : `${apiBase}/api/jobs`;
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
+    credentials: 'include', // needed for the proxy to see auth cookies
     body: JSON.stringify(parsed),
   });
   if (!res.ok) {

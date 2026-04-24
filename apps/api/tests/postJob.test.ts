@@ -4,13 +4,21 @@ import RedisMock from 'ioredis-mock';
 import { postJobRoute } from '../src/routes/postJob.js';
 import { makeJobStore } from '../src/jobStore.js';
 
-function build() {
+function build(opts: { requireUserIdHeader?: boolean } = {}) {
   const app = Fastify();
   const redis = new RedisMock();
   const store = makeJobStore(redis as any);
   const crawl = { add: vi.fn().mockResolvedValue({ id: 'q1' }) };
-  app.register(postJobRoute, { store, crawlQueue: crawl as any, now: () => 1000, nanoid: () => 'abc123' });
-  return { app, crawl, store };
+  const storyboard = { add: vi.fn().mockResolvedValue({ id: 'q2' }) };
+  app.register(postJobRoute, {
+    store,
+    crawlQueue: crawl as any,
+    storyboardQueue: storyboard as any,
+    requireUserIdHeader: opts.requireUserIdHeader ?? false,
+    now: () => 1000,
+    nanoid: () => 'abc123',
+  });
+  return { app, crawl, storyboard, store };
 }
 
 describe('POST /api/jobs', () => {
@@ -28,7 +36,7 @@ describe('POST /api/jobs', () => {
     expect(crawl.add).toHaveBeenCalledWith(
       'crawl',
       expect.objectContaining({ jobId: 'abc123' }),
-      { jobId: 'abc123' }
+      { jobId: 'abc123' },
     );
   });
 
@@ -38,18 +46,134 @@ describe('POST /api/jobs', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('honors parentJobId + hint in payload', async () => {
-    const { app, crawl } = build();
+  it('rejects parentJobId that does not exist with 404', async () => {
+    const { app, crawl, storyboard } = build();
     const res = await app.inject({
       method: 'POST',
       url: '/api/jobs',
-      payload: { url: 'https://x.com', intent: 'x', duration: 10, parentJobId: 'parent', hint: 'faster' },
+      payload: { url: 'https://x.com', intent: 'x', duration: 10, parentJobId: 'does-not-exist' },
+    });
+    expect(res.statusCode).toBe(404);
+    expect(crawl.add).not.toHaveBeenCalled();
+    expect(storyboard.add).not.toHaveBeenCalled();
+  });
+
+  it('rejects parentJobId whose crawl has not completed with 409', async () => {
+    const { app, crawl, storyboard, store } = build();
+    await store.create({
+      jobId: 'parent',
+      status: 'crawling',
+      stage: 'crawl',
+      progress: 50,
+      input: { url: 'https://x.com', intent: 'x', duration: 30 },
+      fallbacks: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'x', duration: 10, parentJobId: 'parent' },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(crawl.add).not.toHaveBeenCalled();
+    expect(storyboard.add).not.toHaveBeenCalled();
+  });
+
+  it('skip-crawl path when parent has a complete crawlResultUri', async () => {
+    const { app, crawl, storyboard, store } = build();
+    await store.create({
+      jobId: 'parent',
+      status: 'done',
+      stage: 'render',
+      progress: 100,
+      input: { url: 'https://x.com', intent: 'x', duration: 30 },
+      crawlResultUri: 's3://bucket/crawl.json' as any,
+      fallbacks: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'faster pace', duration: 10, parentJobId: 'parent', hint: 'faster' },
     });
     expect(res.statusCode).toBe(201);
-    expect(crawl.add).toHaveBeenCalledWith(
-      'crawl',
-      expect.objectContaining({ jobId: 'abc123', url: 'https://x.com' }),
-      { jobId: 'abc123' }
+    expect(res.json()).toEqual({ jobId: 'abc123', skippedCrawl: true });
+    expect(crawl.add).not.toHaveBeenCalled();
+    expect(storyboard.add).toHaveBeenCalledWith(
+      'generate',
+      expect.objectContaining({
+        jobId: 'abc123',
+        crawlResultUri: 's3://bucket/crawl.json',
+        intent: 'faster pace',
+        duration: 10,
+        hint: 'faster',
+      }),
+      { jobId: 'abc123' },
     );
+    const persisted = await store.get('abc123');
+    expect(persisted?.status).toBe('generating');
+    expect(persisted?.stage).toBe('storyboard');
+    expect(persisted?.crawlResultUri).toBe('s3://bucket/crawl.json');
+  });
+
+  it('SECURITY: even if the client tries to pass crawlResultUri in payload it is ignored', async () => {
+    // parentJobId lookup is server-authoritative; client-side fields beyond
+    // the JobInput schema are already stripped by Zod's parse, but this
+    // regression guard asserts that behavior holds.
+    const { app, crawl, storyboard, store } = build();
+    await store.create({
+      jobId: 'parent',
+      status: 'done',
+      stage: 'render',
+      progress: 100,
+      input: { url: 'https://x.com', intent: 'x', duration: 30 },
+      crawlResultUri: 's3://legit/crawl.json' as any,
+      fallbacks: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: {
+        url: 'https://x.com',
+        intent: 'regen',
+        duration: 10,
+        parentJobId: 'parent',
+        // Malicious: try to inject a different crawl result URI
+        crawlResultUri: 's3://attacker-owned/evil.json',
+      } as any,
+    });
+    // Verify the enqueued job used the server-looked-up URI, not the malicious payload
+    expect(storyboard.add).toHaveBeenCalledWith(
+      'generate',
+      expect.objectContaining({ crawlResultUri: 's3://legit/crawl.json' }),
+      expect.any(Object),
+    );
+  });
+
+  it('requires X-User-Id when requireUserIdHeader=true', async () => {
+    const { app } = build({ requireUserIdHeader: true });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'x', duration: 10 },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('accepts X-User-Id when provided and attaches it to the stored job', async () => {
+    const { app, store } = build({ requireUserIdHeader: true });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'x', duration: 10 },
+      headers: { 'X-User-Id': 'user-42' },
+    });
+    expect(res.statusCode).toBe(201);
+    const persisted = await store.get('abc123');
+    expect((persisted as { userId?: string } | null)?.userId).toBe('user-42');
   });
 });
