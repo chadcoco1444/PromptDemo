@@ -1,8 +1,11 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
+import type { FeatureVariant } from '@promptdemo/schema';
 import { AnimatedText } from '../primitives/AnimatedText';
 import type { BrandTheme } from '../utils/brandTheme';
 import { ImagePanel } from './variants/ImagePanel';
+import { KenBurnsPanel } from './variants/KenBurnsPanel';
+import { CollagePanel } from './variants/CollagePanel';
 import { DashboardPanel } from './variants/DashboardPanel';
 
 export interface FeatureCalloutProps {
@@ -10,9 +13,13 @@ export interface FeatureCalloutProps {
   description: string;
   layout: 'leftImage' | 'rightImage' | 'topDown';
   theme: BrandTheme;
-  /** Resolved http(s) URL of the viewport screenshot. When present, replaces
-   *  the stylized FakePanel with a real screenshot of the source site. */
-  imageSrc?: string;
+  /** Optional with 'image' default; matches schema .default('image'). */
+  variant?: FeatureVariant;
+  /** Resolved viewport screenshot URL — required by image/collage variants (collage
+   *  also accepts fullPage; the dispatcher routes by variant). */
+  viewportSrc?: string;
+  /** Resolved fullPage screenshot URL — required by kenBurns and collage. */
+  fullPageSrc?: string;
 }
 
 export const FeatureCallout: React.FC<FeatureCalloutProps> = ({
@@ -20,9 +27,11 @@ export const FeatureCallout: React.FC<FeatureCalloutProps> = ({
   description,
   layout,
   theme,
-  imageSrc,
+  variant = 'image',
+  viewportSrc,
+  fullPageSrc,
 }) => {
-  const panel = imageSrc ? <ImagePanel src={imageSrc} theme={theme} /> : <DashboardPanel theme={theme} />;
+  const panel = renderPanel(variant, { theme, viewportSrc, fullPageSrc });
   return (
     <AbsoluteFill style={{ background: theme.bg, color: '#111' }}>
       <AbsoluteFill
@@ -47,3 +56,25 @@ export const FeatureCallout: React.FC<FeatureCalloutProps> = ({
     </AbsoluteFill>
   );
 };
+
+function renderPanel(
+  variant: FeatureVariant,
+  ctx: { theme: BrandTheme; viewportSrc?: string | undefined; fullPageSrc?: string | undefined }
+): React.ReactElement {
+  switch (variant) {
+    case 'kenBurns':
+      if (ctx.fullPageSrc) return <KenBurnsPanel src={ctx.fullPageSrc} theme={ctx.theme} />;
+      // Fallback: fullPage missing (shouldn't happen — selector guards this) — degrade to image.
+      if (ctx.viewportSrc) return <ImagePanel src={ctx.viewportSrc} theme={ctx.theme} />;
+      return <DashboardPanel theme={ctx.theme} />;
+    case 'collage':
+      if (ctx.fullPageSrc) return <CollagePanel src={ctx.fullPageSrc} theme={ctx.theme} />;
+      if (ctx.viewportSrc) return <ImagePanel src={ctx.viewportSrc} theme={ctx.theme} />;
+      return <DashboardPanel theme={ctx.theme} />;
+    case 'image':
+      if (ctx.viewportSrc) return <ImagePanel src={ctx.viewportSrc} theme={ctx.theme} />;
+      return <DashboardPanel theme={ctx.theme} />;
+    case 'dashboard':
+      return <DashboardPanel theme={ctx.theme} />;
+  }
+}
