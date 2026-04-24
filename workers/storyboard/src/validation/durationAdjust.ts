@@ -11,7 +11,13 @@ export type AdjustResult<T extends MinimalBoard> =
   | { kind: 'ok'; storyboard: T }
   | { kind: 'retry'; reason: string; sum: number; target: number };
 
-const TOLERANCE = 0.05;
+// 10% tolerance: up to this drift gets silently prorated so users never see
+// STORYBOARD_GEN_FAILED for mild Claude math errors. Wider than the previous
+// 5% because Claude routinely drifts 5-9% on 60s videos and the proration is
+// visually imperceptible at that range (uniform scene compression). Over 10%
+// typically means Claude duplicated a scene or mis-planned significantly, so
+// a retry with feedback is better than silently compressing by 15%+.
+const TOLERANCE = 0.10;
 
 export function adjustDuration<T extends MinimalBoard>(sb: T): AdjustResult<T> {
   const target = sb.videoConfig.durationInFrames;
@@ -22,7 +28,7 @@ export function adjustDuration<T extends MinimalBoard>(sb: T): AdjustResult<T> {
   if (pctOff > TOLERANCE) {
     return {
       kind: 'retry',
-      reason: `scenes sum ${sum} differs from target ${target} by ${(pctOff * 100).toFixed(1)}%, which exceeds the 5% auto-correct tolerance`,
+      reason: `scenes sum ${sum} differs from target ${target} by ${(pctOff * 100).toFixed(1)}%, which exceeds the ${(TOLERANCE * 100).toFixed(0)}% auto-correct tolerance`,
       sum,
       target,
     };
