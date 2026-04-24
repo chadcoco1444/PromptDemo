@@ -1,8 +1,7 @@
 'use client';
 
 import { useJobStream } from '../lib/useJobStream';
-import { ProgressBar } from './ProgressBar';
-import { StageLabel } from './StageLabel';
+import { StageRail } from './StageRail';
 import { VideoResult } from './VideoResult';
 import { ErrorCard } from './ErrorCard';
 
@@ -24,17 +23,8 @@ export function JobStatus({ streamUrl, jobId, resolveVideoUrl }: JobStatusProps)
   }
 
   return (
-    <div className="space-y-3" aria-live="polite">
-      <div className="flex justify-between items-center">
-        <StageLabel stage={state.stage} />
-        <span className="text-sm text-slate-500">Job {jobId}</span>
-      </div>
-      <ProgressBar pct={state.progress} />
-      {state.status === 'waiting_render_slot' && state.queuedPosition ? (
-        <div className="text-sm text-slate-600">
-          Queued — position {state.queuedPosition} (renders are serialized)
-        </div>
-      ) : null}
+    <div aria-live="polite">
+      <StageRail state={state} jobId={jobId} />
     </div>
   );
 }

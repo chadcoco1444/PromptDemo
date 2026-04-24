@@ -11,7 +11,7 @@ export default function Home() {
     <main className="max-w-2xl mx-auto p-8 space-y-8">
       <header>
         <h1 className="text-3xl font-semibold">Turn any URL into a demo video</h1>
-        <p className="text-slate-600 mt-2">
+        <p className="text-gray-600 dark:text-gray-400 mt-2">
           Paste a product URL, describe what to emphasize, and get a 10/30/60-second demo rendered with Remotion.
         </p>
       </header>

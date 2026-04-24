@@ -13,20 +13,17 @@ export interface JobFormProps {
   parentJobId?: string;
 }
 
+const INPUT_CLASSES =
+  'w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent transition-colors';
+
 export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
   const [url, setUrl] = useState('');
   const [intent, setIntent] = useState(initialHint ?? '');
   const [duration, setDuration] = useState<10 | 30 | 60>(30);
   const [error, setError] = useState<string | null>(null);
+  const [shakeNonce, setShakeNonce] = useState(0); // re-trigger shake anim on each invalid submit
   const [pending, setPending] = useState(false);
 
-  // Read the browser locale in the useState initializer so the very first
-  // client render uses the correct language — avoids the "Flash of English"
-  // for zh users. The server render always sees `undefined` and resolves to
-  // 'en', so there is an expected hydration mismatch on the chip-row subtree
-  // for zh users; suppressHydrationWarning on the wrapping div tells React
-  // not to complain. This is the standard pragmatic pattern for locale-
-  // dependent client-only UI in Next.js App Router.
   const [locale, setLocale] = useState<SupportedLocale>(() =>
     detectLocale(typeof navigator !== 'undefined' ? navigator.language : undefined)
   );
@@ -53,6 +50,7 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
     if (!parsed.success) {
       const urlIssue = parsed.error.issues.find((i) => i.path[0] === 'url');
       setError(urlIssue ? 'Please enter a valid URL' : parsed.error.issues[0]?.message ?? 'Invalid input');
+      setShakeNonce((n) => n + 1); // bump to restart CSS animation
       return;
     }
     setPending(true);
@@ -60,14 +58,19 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
       await onSubmit(parsed.data);
     } catch (err) {
       setError((err as Error).message);
+      setShakeNonce((n) => n + 1);
       setPending(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 max-w-xl"
+      // keying by shakeNonce on the error div below; form itself stable
+    >
       <div>
-        <label htmlFor="url" className="block text-sm font-medium mb-1">
+        <label htmlFor="url" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
           URL
         </label>
         <input
@@ -76,11 +79,11 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://your-product.com"
-          className="w-full rounded border px-3 py-2"
+          className={INPUT_CLASSES}
         />
       </div>
       <div>
-        <label htmlFor="intent" className="block text-sm font-medium mb-1">
+        <label htmlFor="intent" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
           Intent
         </label>
         <textarea
@@ -88,21 +91,15 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
           value={intent}
           onChange={(e) => setIntent(e.target.value)}
           placeholder="What should the video emphasize?"
-          className="w-full rounded border px-3 py-2 h-24"
+          className={`${INPUT_CLASSES} h-24`}
         />
         <div className="mt-2 flex items-start gap-3" suppressHydrationWarning>
           <button
             type="button"
             onClick={toggleLocale}
-            className="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 font-medium text-gray-700 hover:bg-gray-50 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+            className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-900 active:scale-95 transition-transform"
             aria-label="Toggle preset language"
             title="Switch preset language"
-            // Server may derive a different locale than client (Node 22+
-            // now populates navigator.language from OS locale), so the
-            // button TEXT can legitimately differ. suppressHydrationWarning
-            // on the button itself is required because the attribute only
-            // propagates one level deep — the wrapper div's copy doesn't
-            // reach the button's text child.
             suppressHydrationWarning
           >
             {locale === 'en' ? '中' : 'EN'}
@@ -113,25 +110,33 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
         </div>
       </div>
       <div>
-        <label htmlFor="duration" className="block text-sm font-medium mb-1">
+        <label htmlFor="duration" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
           Duration
         </label>
         <select
           id="duration"
           value={duration}
           onChange={(e) => setDuration(Number(e.target.value) as 10 | 30 | 60)}
-          className="rounded border px-3 py-2"
+          className={`${INPUT_CLASSES} w-auto`}
         >
           <option value={10}>10s</option>
           <option value={30}>30s</option>
           <option value={60}>60s</option>
         </select>
       </div>
-      {error ? <div className="text-red-600 text-sm">{error}</div> : null}
+      {error ? (
+        <div
+          key={shakeNonce}
+          role="alert"
+          className="text-red-600 dark:text-red-400 text-sm animate-shake-x"
+        >
+          {error}
+        </div>
+      ) : null}
       <button
         type="submit"
         disabled={pending}
-        className="bg-brand-500 hover:bg-brand-700 disabled:opacity-50 text-white px-5 py-2 rounded"
+        className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-md font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 active:scale-[0.98] transition-all duration-150"
       >
         {pending ? 'Creating…' : 'Create video'}
       </button>
