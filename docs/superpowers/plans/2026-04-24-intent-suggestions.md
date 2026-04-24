@@ -651,7 +651,7 @@ Replace the full contents of `apps/web/src/components/JobForm.tsx` with:
 ```tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { JobInputSchema, type JobInput } from '../lib/types';
 import { IntentPresets } from './IntentPresets';
 import { applyPreset, type IntentPreset } from '../lib/intentPresets';
@@ -671,11 +671,16 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  // SSR-safe default; refine from navigator on mount.
-  const [locale, setLocale] = useState<SupportedLocale>('en');
-  useEffect(() => {
-    setLocale(detectLocale(typeof navigator !== 'undefined' ? navigator.language : undefined));
-  }, []);
+  // Read the browser locale in the useState initializer so the very first
+  // client render uses the correct language — avoids the "Flash of English"
+  // for zh users. The server render always sees `undefined` and resolves to
+  // 'en', so there is an expected hydration mismatch on the chip-row subtree
+  // for zh users; suppressHydrationWarning on the wrapping div tells React
+  // not to complain. This is the standard pragmatic pattern for locale-
+  // dependent client-only UI in Next.js App Router.
+  const [locale] = useState<SupportedLocale>(() =>
+    detectLocale(typeof navigator !== 'undefined' ? navigator.language : undefined)
+  );
 
   function handlePresetSelect(preset: IntentPreset) {
     setIntent((current) => applyPreset(current, preset));
@@ -732,7 +737,7 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
           placeholder="What should the video emphasize?"
           className="w-full rounded border px-3 py-2 h-24"
         />
-        <div className="mt-2">
+        <div className="mt-2" suppressHydrationWarning>
           <IntentPresets locale={locale} onSelect={handlePresetSelect} />
         </div>
       </div>
@@ -765,7 +770,7 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
 ```
 
 Key changes from the prior version:
-- New `useEffect` to refine `locale` from `navigator.language` after mount (keeps SSR render deterministic).
+- Locale is read from `navigator.language` directly inside `useState`'s lazy initializer so the first client paint already has the correct language. Server render resolves to `'en'` (no `navigator`), client hydration may resolve to `'zh'` — the two legitimately differ for zh users. `suppressHydrationWarning` on the wrapping `<div>` tells React to accept that divergence on the chip subtree instead of logging a warning or fighting the client value. This eliminates the "Flash of English" that a `useEffect`-based refinement would create.
 - New `handlePresetSelect` using the functional setState (`setIntent((current) => ...)`) so two rapid clicks in the same tick compose correctly.
 - `<IntentPresets>` rendered in a `div.mt-2` immediately below the textarea, inside the same wrapping `<div>` as the textarea so the label-to-chip-row vertical relationship is visually clear.
 
@@ -841,7 +846,8 @@ Cross-check against `docs/superpowers/specs/2026-04-24-promptdemo-v2-design.md` 
 | Chip click completes in <50ms (no network) | `applyPreset` is pure sync; `sendBeacon` is fire-and-forget and does not block the click handler |
 | Double-clicking same chip does not duplicate preset text | Task 1 `applyPreset` dedup via `current.includes(preset.body)` + 3 dedup/allow tests |
 | Preset text appears verbatim in submitted `input.intent` | Task 5 "submitting after preset click" integration test |
-| Chip labels detect `navigator.language` for en vs zh | Task 2 `detectLocale` + Task 5 `useEffect` |
+| Chip labels detect `navigator.language` for en vs zh | Task 2 `detectLocale` + Task 5 `useState` lazy init (first-paint correct, no Flash-of-English) |
+| No hydration warning / visual flicker for zh users | `suppressHydrationWarning` on chip-row wrapper div in Task 5 |
 | Underlying preset body always English | Task 1 test guards against CJK in body; `applyPreset` marker uses `labels.en` regardless of locale |
 | Storyboard system prompt not touched | Excluded from File Structure; no task modifies `workers/storyboard/src/prompts/` |
 | Telemetry for chip click-through rate (prune later) | Task 3 `trackIntentPresetSelected` + Task 5 call site in `handlePresetSelect` |
