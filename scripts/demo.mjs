@@ -212,42 +212,69 @@ function serviceEnv(svc) {
 function spawnService(svc) {
   const log = logPath(svc.name);
   appendFileSync(log, `\n===== start ${new Date().toISOString()} (PORT=${svc.port}) =====\n`);
+
+  if (IS_WINDOWS) {
+    spawnServiceWindows(svc, log);
+    return;
+  }
+
   const stdout = openSync(log, 'a');
   const stderr = openSync(log, 'a');
-
-  // On Windows, the combination of
-  //   (a) spawning .cmd files requires shell:true on Node 24+ (CVE-2024-27980 hardening),
-  //   (b) shell:true + detached:true + windowsHide:true does NOT actually hide cmd consoles,
-  //   (c) spawning pnpm.cmd with shell:false throws EINVAL on Node 24,
-  // leaves one reliable path: spawn cmd.exe DIRECTLY (it's a .exe so shell:false is OK) and
-  // pass the pnpm invocation as args. With windowsHide:true the CreateProcess call gets
-  // CREATE_NO_WINDOW and no console is created.
-  let child;
-  if (IS_WINDOWS) {
-    child = spawn(
-      'cmd.exe',
-      ['/d', '/s', '/c', 'pnpm', '--filter', svc.filter, 'dev'],
-      {
-        env: serviceEnv(svc),
-        cwd: REPO_ROOT,
-        detached: true,
-        stdio: ['ignore', stdout, stderr],
-        shell: false,
-        windowsHide: true,
-      }
-    );
-  } else {
-    child = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
-      env: serviceEnv(svc),
-      cwd: REPO_ROOT,
-      detached: true,
-      stdio: ['ignore', stdout, stderr],
-      shell: false,
-    });
-  }
+  const child = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
+    env: serviceEnv(svc),
+    cwd: REPO_ROOT,
+    detached: true,
+    stdio: ['ignore', stdout, stderr],
+    shell: false,
+  });
   child.unref();
   writePid(svc.name, child.pid);
   console.log(`${svc.color}[${svc.name}]${C.reset} started (pid ${child.pid}, PORT=${svc.port}, log: ${log})`);
+}
+
+// Windows-only path. Node's spawn({detached, windowsHide}) sets STARTF_USESHOWWINDOW
+// +SW_HIDE, which hides the immediate cmd.exe console, but grandchildren spawned by
+// pnpm.cmd (node, tsx, next) inherit console state inconsistently on Node 22+ and
+// some of them flash visible consoles during startup. The canonical Windows API
+// flag to suppress all console creation for the process AND its descendants is
+// CREATE_NO_WINDOW, which Node exposes via System.Diagnostics.ProcessStartInfo
+// (CreateNoWindow=true + UseShellExecute=false). Bridging through a one-shot
+// PowerShell invocation is the only reliable way from Node to set that flag.
+function spawnServiceWindows(svc, log) {
+  // PS single-quote escape: double any ' inside the string.
+  const psQuote = (s) => `'${String(s).replace(/'/g, "''")}'`;
+  // Inside cmd.exe's arg string, wrap paths with spaces in double quotes.
+  const cmdArgs = `/c pnpm --filter ${svc.filter} dev 1>>"${log}" 2>&1`;
+  const psScript = [
+    '$ErrorActionPreference = "Stop"',
+    '$psi = New-Object System.Diagnostics.ProcessStartInfo',
+    `$psi.FileName = ${psQuote('cmd.exe')}`,
+    `$psi.Arguments = ${psQuote(cmdArgs)}`,
+    `$psi.WorkingDirectory = ${psQuote(REPO_ROOT)}`,
+    '$psi.CreateNoWindow = $true',
+    '$psi.UseShellExecute = $false',
+    '$psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden',
+    '$p = [System.Diagnostics.Process]::Start($psi)',
+    'Write-Output $p.Id',
+  ].join('; ');
+
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript], {
+    env: serviceEnv(svc),
+    cwd: REPO_ROOT,
+    windowsHide: true,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    console.error(`${svc.color}[${svc.name}]${C.reset} ${C.red}failed to start${C.reset}: ${result.stderr || result.stdout || 'unknown error'}`);
+    return;
+  }
+  const pid = Number(String(result.stdout).trim().split(/\r?\n/).pop());
+  if (!Number.isFinite(pid) || pid <= 0) {
+    console.error(`${svc.color}[${svc.name}]${C.reset} ${C.red}could not parse pid${C.reset}: ${result.stdout}`);
+    return;
+  }
+  writePid(svc.name, pid);
+  console.log(`${svc.color}[${svc.name}]${C.reset} started (pid ${pid}, PORT=${svc.port}, log: ${log})`);
 }
 
 async function startAll() {
