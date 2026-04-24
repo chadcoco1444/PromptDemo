@@ -38,6 +38,9 @@ importers:
       '@remotion/renderer':
         specifier: 4.0.218
         version: 4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@remotion/transitions':
+        specifier: 4.0.218
+        version: 4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -904,6 +907,9 @@ packages:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
 
+  '@remotion/paths@4.0.218':
+    resolution: {integrity: sha512-iWiK/wlsh0Oqs+KWqtJmSsafOnt7xAOearZomnvwf69NHC1kpvG+q23ohlQASarKD3irY9tnWNUW/pP/YxbsFw==}
+
   '@remotion/player@4.0.218':
     resolution: {integrity: sha512-an6IsPdBQ38drGFNi0QBoHjxYEDV8e/cG3YTVhhgpaEYy+d4gJMbppLXd1eLmPaClCsMgBY4rViigu4saAYA1w==}
     peerDependencies:
@@ -912,6 +918,12 @@ packages:
 
   '@remotion/renderer@4.0.218':
     resolution: {integrity: sha512-+NlCzKqPQHtfks2HXLKK3PUvGJXi76f+snke4vN7oeQR7CknEXiwXia1WtvQZoacYP8f+5BqZ+R0R9/+Irur6w==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
+  '@remotion/shapes@4.0.218':
+    resolution: {integrity: sha512-0b9oY2hZ63AaF5iWIrRA9VQ7pcvl/byvvKoLbp2R3hLs/4r0CMq0oWGGmJLeyZXLyoKPuoSURNclA7UiwZOjug==}
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
@@ -927,6 +939,12 @@ packages:
 
   '@remotion/studio@4.0.218':
     resolution: {integrity: sha512-jmZ8IC0g+xiZEqyCR3/EZhngeXdlyCK9DU0gHtyJPE8ObmBx1Gf4BA+5t7dPntiDRz/av/KkHvoGoiu5V8bQzg==}
+
+  '@remotion/transitions@4.0.218':
+    resolution: {integrity: sha512-8S9qraOZFKsrcWywYGs88eXyXZ35FmjPYOjfJRgUtNWFQr5+kepifu9nuxIHc6co/+22UcXIiHs092bcKD8SPw==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   '@rollup/rollup-android-arm-eabi@4.60.2':
     resolution: {integrity: sha512-dnlp69efPPg6Uaw2dVqzWRfAWRnYVb1XJ8CyyhIbZeaq4CA5/mLeZ1IEt9QqQxmbdvagjLIm2ZL8BxXv5lH4Yw==}
@@ -3427,6 +3445,8 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       remotion: 4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
+  '@remotion/paths@4.0.218': {}
+
   '@remotion/player@4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       react: 18.3.1
@@ -3455,6 +3475,12 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@remotion/shapes@4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@remotion/paths': 4.0.218
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
 
   '@remotion/streaming@4.0.218': {}
 
@@ -3504,6 +3530,14 @@ snapshots:
       - react-dom
       - supports-color
       - utf-8-validate
+
+  '@remotion/transitions@4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@remotion/paths': 4.0.218
+      '@remotion/shapes': 4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      remotion: 4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
   '@rollup/rollup-android-arm-eabi@4.60.2':
     optional: true
