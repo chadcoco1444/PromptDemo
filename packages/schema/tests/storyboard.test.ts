@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { StoryboardSchema } from '../src/storyboard.js';
+import { StoryboardSchema, SceneSchema } from '../src/storyboard.js';
 
 const minimalValid = {
   videoConfig: {
@@ -93,6 +93,86 @@ describe('StoryboardSchema', () => {
       videoConfig: { ...minimalValid.videoConfig, bgm: 'none' },
     });
     expect(parsed.videoConfig.bgm).toBe('none');
+  });
+});
+
+describe('FeatureCalloutSchema variant', () => {
+  it('defaults variant to "image" when field absent (v1 backward compat)', () => {
+    const parsed = SceneSchema.parse({
+      sceneId: 1,
+      type: 'FeatureCallout',
+      durationInFrames: 120,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: { title: 'T', description: 'D', layout: 'leftImage' },
+    });
+    if (parsed.type !== 'FeatureCallout') throw new Error('narrow failed');
+    expect(parsed.props.variant).toBe('image');
+  });
+
+  it('accepts the four v2.0 variants', () => {
+    for (const variant of ['image', 'kenBurns', 'collage', 'dashboard'] as const) {
+      const parsed = SceneSchema.parse({
+        sceneId: 1,
+        type: 'FeatureCallout',
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { title: 'T', description: 'D', layout: 'leftImage', variant },
+      });
+      if (parsed.type !== 'FeatureCallout') throw new Error('narrow failed');
+      expect(parsed.props.variant).toBe(variant);
+    }
+  });
+
+  it('rejects variant "bento" in v2.0 (deferred to v2.1)', () => {
+    expect(() =>
+      SceneSchema.parse({
+        sceneId: 1,
+        type: 'FeatureCallout',
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { title: 'T', description: 'D', layout: 'leftImage', variant: 'bento' },
+      })
+    ).toThrow();
+  });
+
+  it('accepts imageRegion with yOffset and zoom in bounds', () => {
+    const parsed = SceneSchema.parse({
+      sceneId: 1,
+      type: 'FeatureCallout',
+      durationInFrames: 120,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: {
+        title: 'T',
+        description: 'D',
+        layout: 'leftImage',
+        variant: 'kenBurns',
+        imageRegion: { yOffset: 0.3, zoom: 1.2 },
+      },
+    });
+    if (parsed.type !== 'FeatureCallout') throw new Error('narrow failed');
+    expect(parsed.props.imageRegion).toEqual({ yOffset: 0.3, zoom: 1.2 });
+  });
+
+  it('rejects imageRegion.zoom outside [1, 2]', () => {
+    expect(() =>
+      SceneSchema.parse({
+        sceneId: 1,
+        type: 'FeatureCallout',
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          title: 'T',
+          description: 'D',
+          layout: 'leftImage',
+          imageRegion: { yOffset: 0.5, zoom: 2.5 },
+        },
+      })
+    ).toThrow();
   });
 });
 

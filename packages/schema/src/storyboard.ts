@@ -59,6 +59,13 @@ const HeroStylizedSchema = z.object({
   }),
 });
 
+const FeatureVariantSchema = z.enum(['image', 'kenBurns', 'collage', 'dashboard']);
+
+const ImageRegionSchema = z.object({
+  yOffset: z.number().min(0).max(1),
+  zoom: z.number().min(1).max(2),
+});
+
 const FeatureCalloutSchema = z.object({
   ...sceneBase,
   type: z.literal('FeatureCallout'),
@@ -67,6 +74,8 @@ const FeatureCalloutSchema = z.object({
     description: z.string().min(1),
     layout: z.enum(['leftImage', 'rightImage', 'topDown']),
     iconHint: z.string().optional(),
+    variant: FeatureVariantSchema.default('image'),
+    imageRegion: ImageRegionSchema.optional(),
   }),
 });
 
@@ -185,3 +194,6 @@ export const StoryboardSchema = z
 
 export type Scene = z.infer<typeof SceneSchema>;
 export type Storyboard = z.infer<typeof StoryboardSchema>;
+
+export { FeatureVariantSchema };
+export type FeatureVariant = z.infer<typeof FeatureVariantSchema>;
