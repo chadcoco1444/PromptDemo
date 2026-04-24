@@ -1,0 +1,34 @@
+{
+  "name": "@promptdemo/remotion",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/Root.tsx",
+  "scripts": {
+    "dev": "remotion studio src/Root.tsx",
+    "render:10s": "remotion render src/Root.tsx MainComposition out.mp4",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@promptdemo/schema": "workspace:*",
+    "@remotion/bundler": "4.0.218",
+    "@remotion/cli": "4.0.218",
+    "@remotion/google-fonts": "4.0.218",
+    "@remotion/renderer": "4.0.218",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.218",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@testing-library/react": "16.0.1",
+    "@types/node": "20.14.10",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.0",
+    "jsdom": "25.0.1",
+    "typescript": "5.5.4",
+    "vitest": "2.1.1"
+  }
+}
