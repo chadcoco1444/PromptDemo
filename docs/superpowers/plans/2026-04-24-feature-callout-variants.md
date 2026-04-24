@@ -583,7 +583,17 @@ describe('KenBurnsPanel', () => {
 Run: `pnpm --filter @promptdemo/remotion test -- featureCalloutVariants.test.tsx`
 Expected: FAIL — module not found.
 
-- [ ] **Step 2: Implement the component**
+- [ ] **Step 2: Implement the component (GPU-composited transforms only)**
+
+**Performance rule:** do NOT animate `object-position`, `top`, `left`, `width`, or `height`
+— each of those triggers layout + paint on every frame, and on a 4K fullPage
+screenshot Chromium will drop frames during Remotion rendering. Use `transform:
+translate3d(...) scale(...)` exclusively so the GPU compositor handles the animation
+and the pixel buffer is never re-rasterized mid-scene.
+
+Implementation approach: `<Img>` is rendered at its natural aspect ratio inside a
+fixed-size clipping container. Panning = translating the image upward in Y;
+zooming = uniform scale. Both are compounded into a single `transform` string.
 
 Create `packages/remotion/src/scenes/variants/KenBurnsPanel.tsx`:
 
@@ -597,25 +607,32 @@ export interface KenBurnsPanelProps {
   theme: BrandTheme;
   /** 0 = start of scene; values outside [0, durationInFrames] clamp. */
   startFrame?: number;
-  durationFrames?: number;
 }
+
+const PANEL_WIDTH = 560;
+const PANEL_HEIGHT = 360;
+// Render the image at 2x panel height so there is room to pan vertically.
+const IMG_HEIGHT_MULTIPLIER = 2;
 
 export const KenBurnsPanel: React.FC<KenBurnsPanelProps> = ({ src, theme, startFrame = 0 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const local = Math.max(0, frame - startFrame);
   const duration = Math.max(1, durationInFrames - startFrame);
-
   const progress = Math.min(1, local / duration);
+
   const scale = interpolate(progress, [0, 1], [1.0, 1.15], { extrapolateRight: 'clamp' });
-  // object-position vertical: 0% → 100% sweep
-  const yPct = interpolate(progress, [0, 1], [0, 100], { extrapolateRight: 'clamp' });
+  // translateY in pixels relative to the clipping container. Pan sweeps the image
+  // upward so the viewer sees top → bottom of the fullPage over the scene.
+  // 0 at start → -(overflow) at end. overflow = IMG_HEIGHT - PANEL_HEIGHT.
+  const overflow = PANEL_HEIGHT * (IMG_HEIGHT_MULTIPLIER - 1);
+  const translateY = interpolate(progress, [0, 1], [0, -overflow], { extrapolateRight: 'clamp' });
 
   return (
     <div
       style={{
-        width: 560,
-        height: 360,
+        width: PANEL_WIDTH,
+        height: PANEL_HEIGHT,
         borderRadius: 14,
         overflow: 'hidden',
         boxShadow: '0 30px 60px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.08)',
@@ -627,11 +644,14 @@ export const KenBurnsPanel: React.FC<KenBurnsPanelProps> = ({ src, theme, startF
         src={src}
         style={{
           width: '100%',
-          height: '100%',
+          height: `${PANEL_HEIGHT * IMG_HEIGHT_MULTIPLIER}px`,
           objectFit: 'cover',
-          objectPosition: `50% ${yPct}%`,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
+          // Single compound transform = single GPU compositor pass per frame.
+          // translate3d() promotes the layer; scale() compounds with zero layout cost.
+          transform: `translate3d(0, ${translateY}px, 0) scale(${scale})`,
+          transformOrigin: 'center top',
+          willChange: 'transform',
+          display: 'block',
         }}
       />
       <div
@@ -646,6 +666,12 @@ export const KenBurnsPanel: React.FC<KenBurnsPanelProps> = ({ src, theme, startF
   );
 };
 ```
+
+Key guarantees enforced in code:
+- `translate3d(0, Y, 0)` (not `translateY(Y)`) to guarantee GPU layer promotion across all Chromium versions.
+- `willChange: 'transform'` hints the compositor early — no surprise paints on frame 1.
+- `transformOrigin: 'center top'` keeps the zoom anchored at the top of the image so translate + scale compose cleanly (no jitter around frame 0).
+- Container `overflow: hidden` clips; `<Img>` is rendered taller than the container and translated — no `object-position` animation anywhere.
 
 - [ ] **Step 3: Run test**
 
@@ -688,6 +714,13 @@ Run: FAIL (module missing).
 
 Create `packages/remotion/src/scenes/variants/CollagePanel.tsx`:
 
+**Performance note:** same rule as KenBurns — no `object-position` animation. Each
+slice's Y-offset is baked into a **static** `transform: translate3d(0, -Npx, 0)` on
+the `<Img>` (static means no per-frame recomputation; offset is derived once from
+the slice index). Per-frame animation is limited to `transform: translate3d(Xpx, 0, 0)`
++ opacity on the wrapper div. `opacity` and `transform` are the only two properties
+Chromium can composite on the GPU without layout/paint.
+
 ```tsx
 import React from 'react';
 import { Img, useCurrentFrame, interpolate, spring, useVideoConfig } from 'remotion';
@@ -698,15 +731,21 @@ export interface CollagePanelProps {
   theme: BrandTheme;
 }
 
+const PANEL_HEIGHT = 360;
+// Render each slice's <Img> at 3x panel height so we can crop a different region by translation.
+const IMG_HEIGHT_MULTIPLIER = 3;
+const IMG_HEIGHT = PANEL_HEIGHT * IMG_HEIGHT_MULTIPLIER;
+
 const SLICES = [
   { yOffset: 0.0 },   // top slice
   { yOffset: 0.4 },   // middle slice
-  { yOffset: 0.85 },  // bottom slice
+  { yOffset: 0.85 },  // bottom slice (clamped: 0.85 * (IMG_HEIGHT - PANEL_HEIGHT))
 ];
 
 export const CollagePanel: React.FC<CollagePanelProps> = ({ src, theme }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const maxTranslate = IMG_HEIGHT - PANEL_HEIGHT; // crop window travel distance
 
   return (
     <div
@@ -714,7 +753,7 @@ export const CollagePanel: React.FC<CollagePanelProps> = ({ src, theme }) => {
         display: 'flex',
         gap: 14,
         width: 580,
-        height: 360,
+        height: PANEL_HEIGHT,
         position: 'relative',
       }}
     >
@@ -726,6 +765,9 @@ export const CollagePanel: React.FC<CollagePanelProps> = ({ src, theme }) => {
           config: { damping: 14, stiffness: 110 },
         });
         const translateX = interpolate(progress, [0, 1], [40, 0]);
+        // Per-slice static Y-offset: negative pixels to pull the image up so the
+        // slice's target region is visible through the container's overflow clip.
+        const sliceTranslateY = -(slice.yOffset * maxTranslate);
         return (
           <div
             key={i}
@@ -737,16 +779,20 @@ export const CollagePanel: React.FC<CollagePanelProps> = ({ src, theme }) => {
               boxShadow: '0 20px 40px rgba(0,0,0,0.24), inset 0 0 0 1px rgba(255,255,255,0.08)',
               background: theme.primaryDark,
               opacity: progress,
-              transform: `translateX(${translateX}px)`,
+              transform: `translate3d(${translateX}px, 0, 0)`,
+              willChange: 'transform, opacity',
             }}
           >
             <Img
               src={src}
               style={{
                 width: '100%',
-                height: '100%',
+                height: `${IMG_HEIGHT}px`,
                 objectFit: 'cover',
-                objectPosition: `50% ${slice.yOffset * 100}%`,
+                // Static transform — baked per-slice, no per-frame recompute.
+                transform: `translate3d(0, ${sliceTranslateY}px, 0)`,
+                transformOrigin: 'center top',
+                display: 'block',
               }}
             />
           </div>
@@ -1239,8 +1285,8 @@ Cross-check against `docs/superpowers/specs/2026-04-24-promptdemo-v2-design.md` 
 | Selection algorithm (5-branch tree from Amendment D) | Task 2 `pick()` function matches the algorithm verbatim |
 | Zod schema ships 4 variants only (bento deferred) | Task 1 enum has exactly `['image', 'kenBurns', 'collage', 'dashboard']`; test rejects `bento` |
 | `imageRegion` optional prop | Task 1 schema + test |
-| KenBurns = CSS transform + Remotion `interpolate` | Task 5 uses `interpolate` for scale + objectPosition |
-| Collage = 3 Y-slices, staggered fade+slideRight at 4-frame offsets | Task 6, 4-frame offset, spring-based slide |
+| KenBurns = CSS transform + Remotion `interpolate` | Task 5 uses compound `translate3d() scale()` only — GPU-composited, no `object-position` / layout-triggering props |
+| Collage = 3 Y-slices, staggered fade+slideRight at 4-frame offsets | Task 6, 4-frame offset, spring-based slide; slice Y-offsets baked into static `translate3d()` per slice (no per-frame `object-position`) |
 | Dashboard unchanged from v1 (luminance-guarded gradient + mock UI) | Task 7 is a verbatim move; no color logic change |
 | Tier-B fallback renders without errors | Task 2 "no viewport → dashboard" branch; Task 8 dispatcher fallbacks |
 | System prompt must NOT mention variant | Explicitly called out in File Structure; Task 3 leaves prompt files untouched |
