@@ -1,33 +1,68 @@
 -- PromptDemo v2.0 Feature 4 initial schema.
 -- Runs once on first Postgres boot (docker-compose mounts /docker-entrypoint-initdb.d).
--- To rerun: docker compose -f docker-compose.dev.yaml down -v && up -d.
+-- To rerun after schema changes: docker compose -f docker-compose.dev.yaml down -v && up -d.
 --
--- Schema tracks: users (from OAuth), subscriptions (tier + Stripe refs),
--- credits (balance in render-seconds — user-visible unit per v2.0 spec
--- Amendment C), credit_transactions (immutable audit log), and jobs (the
--- persisted job record — replaces the Redis job:<id> hash once we cut over).
+-- Split into two concerns:
+--   1. NextAuth required tables (users / accounts / sessions /
+--      verification_token) — the @auth/pg-adapter queries them by exact
+--      canonical shape. DO NOT rename columns or change types here.
+--   2. PromptDemo domain tables (subscriptions / credits /
+--      credit_transactions / jobs) — FK to users.id (INTEGER) as added on
+--      top of the NextAuth users table.
 --
--- Auth session rows are managed by NextAuth's @auth/pg-adapter using the
--- tables named `accounts`, `sessions`, and `verification_tokens` — those are
--- created at runtime by the adapter's init migration, not here.
+-- Progress intentionally omitted from jobs per v2.0 Amendment A (Redis-only).
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Users -----------------------------------------------------------
+-- ========== NextAuth required tables (@auth/pg-adapter) ==========
+
 CREATE TABLE IF NOT EXISTS users (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email           TEXT UNIQUE NOT NULL,
-  email_verified  TIMESTAMPTZ,
-  name            TEXT,
+  id              SERIAL PRIMARY KEY,
+  name            VARCHAR(255),
+  email           VARCHAR(255) UNIQUE,
+  "emailVerified" TIMESTAMPTZ,
   image           TEXT,
-  preferences     JSONB NOT NULL DEFAULT '{}'::jsonb, -- locale, theme, etc.
+  -- PromptDemo extensions:
+  preferences     JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Subscriptions ---------------------------------------------------
+CREATE TABLE IF NOT EXISTS accounts (
+  id                  SERIAL PRIMARY KEY,
+  "userId"            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type                VARCHAR(255) NOT NULL,
+  provider            VARCHAR(255) NOT NULL,
+  "providerAccountId" VARCHAR(255) NOT NULL,
+  refresh_token       TEXT,
+  access_token        TEXT,
+  expires_at          BIGINT,
+  id_token            TEXT,
+  scope               TEXT,
+  session_state       TEXT,
+  token_type          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts ("userId");
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id             SERIAL PRIMARY KEY,
+  "userId"       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires        TIMESTAMPTZ NOT NULL,
+  "sessionToken" VARCHAR(255) NOT NULL UNIQUE
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions ("userId");
+
+CREATE TABLE IF NOT EXISTS verification_token (
+  identifier TEXT NOT NULL,
+  expires    TIMESTAMPTZ NOT NULL,
+  token      TEXT NOT NULL,
+  PRIMARY KEY (identifier, token)
+);
+
+-- ========== PromptDemo domain tables ==========
+
 CREATE TABLE IF NOT EXISTS subscriptions (
-  user_id                 UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  user_id                 INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   tier                    TEXT NOT NULL CHECK (tier IN ('free', 'pro', 'max')) DEFAULT 'free',
   stripe_customer_id      TEXT,
   stripe_subscription_id  TEXT,
@@ -37,18 +72,19 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 CREATE INDEX IF NOT EXISTS idx_subs_stripe_customer ON subscriptions (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
 
--- Credits (balance denominated in render-seconds per v2.0 Amendment C) ----
+-- Balance denominated in render-SECONDS per v2.0 Amendment C (not credits —
+-- user-visible math is seconds from day one).
 CREATE TABLE IF NOT EXISTS credits (
-  user_id          UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  user_id          INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   balance          INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0),
   last_refresh_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Credit transactions (immutable audit log) -----------------------
+-- Immutable audit log for every credit movement.
 CREATE TABLE IF NOT EXISTS credit_transactions (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   job_id         TEXT,
   delta          INTEGER NOT NULL, -- negative = debit, positive = refund/refresh
   reason         TEXT NOT NULL CHECK (reason IN ('debit', 'refund', 'refresh', 'grant', 'overage')),
@@ -58,16 +94,17 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
 CREATE INDEX IF NOT EXISTS idx_txn_user_time ON credit_transactions (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_txn_job ON credit_transactions (job_id) WHERE job_id IS NOT NULL;
 
--- Jobs (replaces Redis job:<id> hash once AUTH_ENABLED + READ_FROM_POSTGRES are both true) ----
+-- Jobs — replaces Redis job:<id> once dual-write + read-cutover both land.
+-- Progress stays Redis-only per v2.0 Amendment A.
 CREATE TABLE IF NOT EXISTS jobs (
-  id                TEXT PRIMARY KEY, -- existing nanoid format
-  user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id                TEXT PRIMARY KEY,
+  user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   parent_job_id     TEXT REFERENCES jobs(id),
   status            TEXT NOT NULL CHECK (status IN (
     'queued','crawling','generating','waiting_render_slot','rendering','done','failed'
   )),
   stage             TEXT CHECK (stage IN ('crawl','storyboard','render')),
-  input             JSONB NOT NULL, -- { url, intent, duration, hint?, parentJobId? }
+  input             JSONB NOT NULL,
   crawl_result_uri  TEXT,
   storyboard_uri    TEXT,
   video_url         TEXT,
@@ -83,11 +120,8 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status_updated ON jobs (status, updated_at D
 CREATE INDEX IF NOT EXISTS idx_jobs_parent ON jobs (parent_job_id) WHERE parent_job_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_jobs_intent_fts ON jobs USING GIN (to_tsvector('english', input->>'intent'));
 
--- NOTE: `progress %` intentionally lives in Redis only (per v2.0 Amendment A).
--- Render workers emit ~5 progress updates/sec; writing those to Postgres would
--- produce WAL storms. The `jobs` table records status/stage transitions only.
+-- ========== Updated-at triggers ==========
 
--- Updated-at trigger helpers for pgx/drizzle/etc. --------------------
 CREATE OR REPLACE FUNCTION touch_updated_at() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at := now();
