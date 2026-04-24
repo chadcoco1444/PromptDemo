@@ -6,6 +6,10 @@ export {
   SceneSchema,
   SCENE_TYPES,
   V1_MVP_SCENE_TYPES,
+  FeatureVariantSchema,
+  ImageRegionSchema,
   type Storyboard,
   type Scene,
+  type FeatureVariant,
+  type ImageRegion,
 } from './storyboard';

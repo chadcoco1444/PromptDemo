@@ -174,6 +174,60 @@ describe('FeatureCalloutSchema variant', () => {
       })
     ).toThrow();
   });
+
+  it('accepts imageRegion at inclusive min boundary (yOffset=0, zoom=1)', () => {
+    const parsed = SceneSchema.parse({
+      sceneId: 1,
+      type: 'FeatureCallout',
+      durationInFrames: 120,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: {
+        title: 'T',
+        description: 'D',
+        layout: 'leftImage',
+        imageRegion: { yOffset: 0, zoom: 1 },
+      },
+    });
+    if (parsed.type !== 'FeatureCallout') throw new Error('narrow failed');
+    expect(parsed.props.imageRegion).toEqual({ yOffset: 0, zoom: 1 });
+  });
+
+  it('rejects imageRegion.yOffset outside [0, 1]', () => {
+    expect(() =>
+      SceneSchema.parse({
+        sceneId: 1,
+        type: 'FeatureCallout',
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          title: 'T',
+          description: 'D',
+          layout: 'leftImage',
+          imageRegion: { yOffset: 1.1, zoom: 1.2 },
+        },
+      })
+    ).toThrow();
+  });
+
+  it('rejects imageRegion.zoom below 1', () => {
+    expect(() =>
+      SceneSchema.parse({
+        sceneId: 1,
+        type: 'FeatureCallout',
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          title: 'T',
+          description: 'D',
+          layout: 'leftImage',
+          imageRegion: { yOffset: 0.5, zoom: 0.5 },
+        },
+      })
+    ).toThrow();
+  });
 });
 
 // helper: fabricate a minimal scene of any type that fills duration 900

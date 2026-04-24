@@ -197,3 +197,5 @@ export type Storyboard = z.infer<typeof StoryboardSchema>;
 
 export { FeatureVariantSchema };
 export type FeatureVariant = z.infer<typeof FeatureVariantSchema>;
+export { ImageRegionSchema };
+export type ImageRegion = z.infer<typeof ImageRegionSchema>;
