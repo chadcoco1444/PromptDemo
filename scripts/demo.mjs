@@ -209,9 +209,28 @@ function serviceEnv(svc) {
   return { ...process.env, PORT: String(svc.port) };
 }
 
+// Windows holds file handles on detached children's log files briefly after we
+// kill the orphan via TerminateProcess (reapPorts). If we race the handle
+// release with appendFileSync we get EBUSY. Retry 10x at 100ms = 1s max, then
+// give up quietly — the child will open the log in append mode anyway so the
+// only thing we lose is the "===== start ... =====" marker line.
+function appendHeaderWithRetry(log, header) {
+  for (let i = 0; i < 10; i++) {
+    try {
+      appendFileSync(log, header);
+      return true;
+    } catch (err) {
+      if (err?.code !== 'EBUSY' && err?.code !== 'EPERM') throw err;
+      const until = Date.now() + 100;
+      while (Date.now() < until) { /* busy-wait 100ms (sync spawn flow) */ }
+    }
+  }
+  return false;
+}
+
 function spawnService(svc) {
   const log = logPath(svc.name);
-  appendFileSync(log, `\n===== start ${new Date().toISOString()} (PORT=${svc.port}) =====\n`);
+  appendHeaderWithRetry(log, `\n===== start ${new Date().toISOString()} (PORT=${svc.port}) =====\n`);
 
   if (IS_WINDOWS) {
     spawnServiceWindows(svc, log);
