@@ -3,10 +3,20 @@ import type { Storyboard } from '@promptdemo/schema';
 export interface RendererSdk {
   bundle(opts: { entryPoint: string }): Promise<string>;
   getCompositions(
-    bundled: string
-  ): Promise<Array<{ id: string; durationInFrames: number; fps: number; width: number; height: number }>>;
+    bundled: string,
+    opts?: { inputProps?: unknown }
+  ): Promise<
+    Array<{ id: string; durationInFrames: number; fps: number; width: number; height: number; defaultProps?: unknown }>
+  >;
   renderMedia(opts: {
-    composition: { id: string; durationInFrames: number; fps: number; width: number; height: number };
+    composition: {
+      id: string;
+      durationInFrames: number;
+      fps: number;
+      width: number;
+      height: number;
+      defaultProps?: unknown;
+    };
     serveUrl: string;
     codec: 'h264';
     outputLocation: string;
@@ -25,13 +35,20 @@ export interface RenderInput {
 
 export async function renderComposition(input: RenderInput): Promise<void> {
   const bundled = await input.sdk.bundle({ entryPoint: input.entryPoint });
-  const comps = await input.sdk.getCompositions(bundled);
+  // Pass inputProps to getCompositions too — Remotion 4.x may use composition's
+  // defaultProps as the base; giving it our inputProps here ensures the
+  // returned composition metadata reflects the actual render configuration.
+  const comps = await input.sdk.getCompositions(bundled, { inputProps: input.inputProps });
   const comp = comps.find((c) => c.id === input.compositionId);
   if (!comp) throw new Error(`composition id not found: ${input.compositionId}`);
-  // Override durationInFrames with inputProps (client can change video length per job)
+  // Override both durationInFrames AND defaultProps. The defaultProps override
+  // is belt-and-braces for Remotion 4.x's inputProps/defaultProps merge quirk:
+  // MainComposition will read props from defaultProps (which we overwrite to
+  // equal our inputProps) regardless of how renderMedia chooses to merge.
   const composition = {
     ...comp,
     durationInFrames: input.inputProps.videoConfig.durationInFrames,
+    defaultProps: input.inputProps,
   };
   await input.sdk.renderMedia({
     composition,
@@ -50,7 +67,7 @@ export async function defaultSdk(): Promise<RendererSdk> {
   ]);
   return {
     bundle: (opts) => bundle(opts),
-    getCompositions: (s) => getCompositions(s) as any,
+    getCompositions: (s, o) => getCompositions(s, o as any) as any,
     renderMedia: (opts) => renderMedia(opts as any),
   };
 }
