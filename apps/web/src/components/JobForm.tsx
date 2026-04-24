@@ -97,6 +97,13 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
             className="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 font-medium text-gray-700 hover:bg-gray-50 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
             aria-label="Toggle preset language"
             title="Switch preset language"
+            // Server may derive a different locale than client (Node 22+
+            // now populates navigator.language from OS locale), so the
+            // button TEXT can legitimately differ. suppressHydrationWarning
+            // on the button itself is required because the attribute only
+            // propagates one level deep — the wrapper div's copy doesn't
+            // reach the button's text child.
+            suppressHydrationWarning
           >
             {locale === 'en' ? '中' : 'EN'}
           </button>
