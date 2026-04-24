@@ -215,14 +215,19 @@ function spawnService(svc) {
   const stdout = openSync(log, 'a');
   const stderr = openSync(log, 'a');
 
-  const child = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
+  // On Windows: invoke pnpm.cmd directly (no shell wrapper). With shell:true,
+  // Node spawns cmd.exe → cmd spawns pnpm.cmd → cmd hosts its own console.
+  // `windowsHide: true` on that outer cmd.exe is unreliable when combined with
+  // detached:true. Calling `pnpm.cmd` directly + shell:false lets CreateProcess
+  // use the NO_WINDOW flag from windowsHide correctly. Node auto-resolves .cmd
+  // on PATH (pnpm via corepack/nvm is on it).
+  const executable = IS_WINDOWS ? 'pnpm.cmd' : 'pnpm';
+  const child = spawn(executable, ['--filter', svc.filter, 'dev'], {
     env: serviceEnv(svc),
     cwd: REPO_ROOT,
     detached: true,
     stdio: ['ignore', stdout, stderr],
-    shell: IS_WINDOWS,
-    // Hide the new cmd.exe console that Windows spawns per detached child,
-    // so `pnpm demo start` doesn't flash 5 windows. Logs still go to files.
+    shell: false,
     windowsHide: true,
   });
   child.unref();
