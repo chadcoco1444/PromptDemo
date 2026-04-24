@@ -363,14 +363,23 @@ async function stopAll() {
         console.log(`${svc.color}[${svc.name}]${C.reset} stopped (pid ${pid})`);
         stopped++;
       } catch (err) {
-        console.warn(`${svc.color}[${svc.name}]${C.reset} kill failed: ${err.message}`);
+        console.warn(
+          `${svc.color}[${svc.name}]${C.reset} kill failed for pid ${pid}: ${err.message}`
+        );
       }
     } else if (pid) {
+      // Per-service attribution — if stale pids become frequent, the user
+      // needs to know which service's pidfile lagged, not just a count.
+      console.log(`${svc.color}[${svc.name}]${C.reset} stale pid ${pid}; cleaning up`);
       stalePids++;
     }
     removePid(svc.name);
   }
 
+  // 500ms is calibrated for tsx/next to release port bindings after SIGTERM
+  // or taskkill /T. If `reaped > 0` shows up routinely in the summary, bump
+  // this number — don't silence the signal; the whole point of the rewrite
+  // is that reaped should be 0 on healthy stops.
   if (stopped > 0) await sleep(500);
 
   // Safety net: catches zombies from pre-rewrite runs (where we tracked dead
