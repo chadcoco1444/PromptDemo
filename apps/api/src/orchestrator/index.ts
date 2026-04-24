@@ -35,13 +35,17 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     if (!current) return;
     const parsed = JSON.parse(String(returnvalue)) as { crawlResultUri: S3Uri };
     await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:completed', crawlResultUri: parsed.crawlResultUri }));
-    await cfg.queues.storyboard.add('generate', {
-      jobId,
-      crawlResultUri: parsed.crawlResultUri,
-      intent: current.input.intent,
-      duration: current.input.duration,
-      ...(current.input.hint ? { hint: current.input.hint } : {}),
-    });
+    await cfg.queues.storyboard.add(
+      'generate',
+      {
+        jobId,
+        crawlResultUri: parsed.crawlResultUri,
+        intent: current.input.intent,
+        duration: current.input.duration,
+        ...(current.input.hint ? { hint: current.input.hint } : {}),
+      },
+      { jobId } // pin BullMQ jobId = app jobId so downstream QueueEvents hand us the right id
+    );
   });
 
   cfg.queues.crawlEvents.on('failed', async ({ jobId, failedReason }) => {
@@ -70,12 +74,16 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
         canRender: !defer,
       })
     );
-    await cfg.queues.render.add('render', {
-      jobId,
-      storyboardUri: parsed.storyboardUri,
-      sourceUrl: current.input.url,
-      duration: current.input.duration,
-    });
+    await cfg.queues.render.add(
+      'render',
+      {
+        jobId,
+        storyboardUri: parsed.storyboardUri,
+        sourceUrl: current.input.url,
+        duration: current.input.duration,
+      },
+      { jobId }
+    );
     if (defer) {
       cfg.broker.publish(jobId, {
         event: 'queued',

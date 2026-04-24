@@ -33,7 +33,9 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
       createdAt,
       updatedAt: createdAt,
     });
-    await opts.crawlQueue.add('crawl', { jobId, url: input.url });
+    // Pass our app jobId as the BullMQ jobId so QueueEvents.on('completed', ({ jobId }))
+    // hands us back the id we use to look up the job record in Redis.
+    await opts.crawlQueue.add('crawl', { jobId, url: input.url }, { jobId });
     return reply.code(201).send({ jobId });
   });
 };
