@@ -1,0 +1,43 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: render
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      serviceAccountName: promptdemo-render@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      containerConcurrency: 1
+      timeoutSeconds: 600
+      containers:
+      - image: ${IMAGE_RENDER}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: REDIS_URL
+          value: redis://${REDIS_HOST}:${REDIS_PORT}
+        - name: S3_ENDPOINT
+          value: https://storage.googleapis.com
+        - name: S3_REGION
+          value: auto
+        - name: S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: S3_BUCKET
+          value: ${GCS_BUCKET_NAME}
+        - name: S3_ACCESS_KEY_ID
+          valueFrom: { secretKeyRef: { name: gcs-hmac-access-id, key: latest } }
+        - name: S3_SECRET_ACCESS_KEY
+          valueFrom: { secretKeyRef: { name: gcs-hmac-secret, key: latest } }
+        resources:
+          limits:
+            cpu: "4"
+            memory: 4Gi

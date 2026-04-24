@@ -1,0 +1,45 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: storyboard
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+    spec:
+      serviceAccountName: promptdemo-storyboard@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      containerConcurrency: 1
+      timeoutSeconds: 300
+      containers:
+      - image: ${IMAGE_STORYBOARD}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: REDIS_URL
+          value: redis://${REDIS_HOST}:${REDIS_PORT}
+        - name: S3_ENDPOINT
+          value: https://storage.googleapis.com
+        - name: S3_REGION
+          value: auto
+        - name: S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: S3_BUCKET
+          value: ${GCS_BUCKET_NAME}
+        - name: CLAUDE_MODEL
+          value: claude-sonnet-4-6
+        - name: S3_ACCESS_KEY_ID
+          valueFrom: { secretKeyRef: { name: gcs-hmac-access-id, key: latest } }
+        - name: S3_SECRET_ACCESS_KEY
+          valueFrom: { secretKeyRef: { name: gcs-hmac-secret, key: latest } }
+        - name: ANTHROPIC_API_KEY
+          valueFrom: { secretKeyRef: { name: anthropic-api-key, key: latest } }
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi

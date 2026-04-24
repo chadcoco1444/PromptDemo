@@ -1,0 +1,31 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: web
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      serviceAccountName: promptdemo-web@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 60
+      containers:
+      - image: ${IMAGE_WEB}
+        ports:
+        - containerPort: 3001
+        env:
+        - name: PORT
+          value: "3001"
+        - name: NEXT_PUBLIC_API_BASE
+          value: ${API_PUBLIC_URL}
+        - name: NEXT_PUBLIC_S3_ENDPOINT
+          value: https://storage.googleapis.com
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi

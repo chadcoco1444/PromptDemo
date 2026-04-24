@@ -1,0 +1,49 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: crawler
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "5"
+        run.googleapis.com/cpu-throttling: "false"  # always-allocated CPU for BullMQ worker loop
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      serviceAccountName: promptdemo-crawler@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      containerConcurrency: 1
+      timeoutSeconds: 600
+      containers:
+      - image: ${IMAGE_CRAWLER}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: REDIS_URL
+          value: redis://${REDIS_HOST}:${REDIS_PORT}
+        - name: S3_ENDPOINT
+          value: https://storage.googleapis.com
+        - name: S3_REGION
+          value: auto
+        - name: S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: S3_BUCKET
+          value: ${GCS_BUCKET_NAME}
+        - name: CRAWLER_RESCUE_ENABLED
+          value: "true"
+        - name: PLAYWRIGHT_TIMEOUT_MS
+          value: "15000"
+        - name: S3_ACCESS_KEY_ID
+          valueFrom: { secretKeyRef: { name: gcs-hmac-access-id, key: latest } }
+        - name: S3_SECRET_ACCESS_KEY
+          valueFrom: { secretKeyRef: { name: gcs-hmac-secret, key: latest } }
+        - name: SCREENSHOTONE_ACCESS_KEY
+          valueFrom: { secretKeyRef: { name: screenshotone-access-key, key: latest, optional: true } }
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi

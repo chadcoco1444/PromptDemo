@@ -1,0 +1,47 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: api
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"      # keep warm for SSE
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: promptdemo-api@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 3600                         # allow long-lived SSE
+      containers:
+      - image: ${IMAGE_API}
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: REDIS_URL
+          value: redis://${REDIS_HOST}:${REDIS_PORT}
+        - name: S3_ENDPOINT
+          value: https://storage.googleapis.com
+        - name: S3_REGION
+          value: auto
+        - name: S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: S3_BUCKET
+          value: ${GCS_BUCKET_NAME}
+        - name: RATE_LIMIT_PER_MINUTE
+          value: "10"
+        - name: RENDER_QUEUE_CAP
+          value: "20"
+        - name: S3_ACCESS_KEY_ID
+          valueFrom: { secretKeyRef: { name: gcs-hmac-access-id, key: latest } }
+        - name: S3_SECRET_ACCESS_KEY
+          valueFrom: { secretKeyRef: { name: gcs-hmac-secret, key: latest } }
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
