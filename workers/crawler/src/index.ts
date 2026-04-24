@@ -12,6 +12,7 @@ import { runPlaywrightTrack, closePlaywrightBrowser } from './tracks/playwrightT
 import { runScreenshotOneTrack } from './tracks/screenshotOneTrack.js';
 import { runCheerioTrack } from './tracks/cheerioTrack.js';
 import { downloadLogo } from './logoDownloader.js';
+import { startHealthServer } from './health.js';
 import type { S3Uri } from '@promptdemo/schema';
 
 const JobPayload = z.object({ jobId: z.string().min(1), url: z.string().url() });
@@ -26,6 +27,8 @@ const playwrightTimeoutMs = Number(env.PLAYWRIGHT_TIMEOUT_MS ?? '15000');
 const s3Cfg = s3ConfigFromEnv(env);
 const s3 = makeS3Client(s3Cfg);
 const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+
+startHealthServer();
 
 const worker = new Worker<JobPayload>(
   'crawl',

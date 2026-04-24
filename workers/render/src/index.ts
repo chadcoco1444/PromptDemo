@@ -13,6 +13,7 @@ import {
 } from './s3/s3Client.js';
 import { withTempDir } from './tempDir.js';
 import { renderComposition, defaultSdk } from './renderer.js';
+import { startHealthServer } from './health.js';
 import { StoryboardSchema, type Storyboard, type S3Uri } from '@promptdemo/schema';
 
 const JobPayload = z.object({
@@ -37,6 +38,8 @@ const REMOTION_ENTRY_POINT = fileURLToPath(
 const s3Cfg = s3ConfigFromEnv(env);
 const s3 = makeS3Client(s3Cfg);
 const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+
+startHealthServer();
 
 const sdkPromise = defaultSdk();
 

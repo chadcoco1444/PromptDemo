@@ -7,6 +7,7 @@ import { makeS3Client, putObject, buildKey, s3ConfigFromEnv, getObjectJson } fro
 import { generateStoryboard } from './generator.js';
 import { createClaudeClient } from './claude/claudeClient.js';
 import { loadMockStoryboard } from './mockMode.js';
+import { startHealthServer } from './health.js';
 
 const JobPayload = z.object({
   jobId: z.string().min(1),
@@ -27,6 +28,8 @@ const maxTokens = Number(env.CLAUDE_MAX_TOKENS ?? '4096');
 const s3Cfg = s3ConfigFromEnv(env);
 const s3 = makeS3Client(s3Cfg);
 const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+
+startHealthServer();
 
 const anthropic = mockMode
   ? null
