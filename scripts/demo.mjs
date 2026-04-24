@@ -394,8 +394,14 @@ async function cleanAll(arg) {
       `  $_.CommandLine -and`,
       `  $_.Name -in @('node.exe', 'pnpm.exe', 'tsx.exe', 'cmd.exe', 'powershell.exe') -and`,
       `  (`,
+      // Using .Contains() for the repo path: it's a literal substring match,
+      // so backslashes need no regex escaping. The prior [regex]::Escape path
+      // was double-escaped (we ALSO pre-escaped backslashes in JS) → the
+      // compiled regex had quad-backslashes and never matched the single-slash
+      // paths in CommandLine. The only char we still need to escape is ' for
+      // the PowerShell single-quoted string literal.
       `    $_.CommandLine -match '@promptdemo/' -or`,
-      `    $_.CommandLine -match [regex]::Escape('${REPO_ROOT.replace(/\\/g, '\\\\')}')`,
+      `    $_.CommandLine.Contains('${REPO_ROOT.replace(/'/g, "''")}')`,
       `  )`,
       `}`,
       `$procsToKill | ForEach-Object { Write-Output ("killing pid=" + $_.ProcessId + " cmd=" + $_.CommandLine.Substring(0, [Math]::Min(80, $_.CommandLine.Length))); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`,
