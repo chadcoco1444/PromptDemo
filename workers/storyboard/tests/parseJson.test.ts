@@ -31,4 +31,34 @@ describe('parseJson', () => {
     expect(r.kind).toBe('ok');
     if (r.kind === 'ok') expect(r.value).toEqual({ a: 3 });
   });
+
+  it('falls back to first balanced { } block when JSON is followed by prose', () => {
+    // Real-world case 2026-04-25: Claude emitted the object then a trailing
+    // "Note:" sentence without fencing. We should recover silently.
+    const r = parseJson('{"a": 4}\nNote: I included one stats scene.');
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') expect(r.value).toEqual({ a: 4 });
+  });
+
+  it('handles nested braces and string-literal braces correctly when extracting', () => {
+    const input = '{"nested": {"k": "has } in string"}, "other": 5}\nstray trailing garbage';
+    const r = parseJson(input);
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') {
+      expect(r.value).toEqual({ nested: { k: 'has } in string' }, other: 5 });
+    }
+  });
+
+  it('handles escaped quotes inside strings when extracting', () => {
+    const input = '{"msg": "he said \\"hi\\""}\nextra prose';
+    const r = parseJson(input);
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') expect(r.value).toEqual({ msg: 'he said "hi"' });
+  });
+
+  it('surfaces the ORIGINAL parse error when neither whole-text nor extraction parses', () => {
+    const r = parseJson('{"a": 1, broken');
+    expect(r.kind).toBe('error');
+    if (r.kind === 'error') expect(r.message).toMatch(/JSON parse failed/);
+  });
 });
