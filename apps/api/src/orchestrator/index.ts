@@ -1,0 +1,140 @@
+import type { QueueBundle } from '../queues.js';
+import type { JobStore } from '../jobStore.js';
+import type { Broker } from '../sse/broker.js';
+import type { Job } from '../model/job.js';
+import type { S3Uri } from '@promptdemo/schema';
+import { reduceEvent } from './stateMachine.js';
+import { shouldDeferRender, renderQueueDepth, DEFAULT_RENDER_CAP } from './backpressure.js';
+
+export interface OrchestratorConfig {
+  queues: QueueBundle;
+  store: JobStore;
+  broker: Broker;
+  renderCap?: number;
+  now?: () => number;
+}
+
+export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => Promise<void>> {
+  const cap = cfg.renderCap ?? DEFAULT_RENDER_CAP;
+  const now = cfg.now ?? Date.now;
+
+  const applyPatch = async (jobId: string, patch: Partial<Job>) => {
+    await cfg.store.patch(jobId, patch, now());
+    const brokerEvent = patchToEvent(patch);
+    if (brokerEvent) cfg.broker.publish(jobId, brokerEvent);
+  };
+
+  cfg.queues.crawlEvents.on('active', async ({ jobId }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:active' }));
+  });
+
+  cfg.queues.crawlEvents.on('completed', async ({ jobId, returnvalue }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    const parsed = JSON.parse(String(returnvalue)) as { crawlResultUri: S3Uri };
+    await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:completed', crawlResultUri: parsed.crawlResultUri }));
+    await cfg.queues.storyboard.add('generate', {
+      jobId,
+      crawlResultUri: parsed.crawlResultUri,
+      intent: current.input.intent,
+      duration: current.input.duration,
+      ...(current.input.hint ? { hint: current.input.hint } : {}),
+    });
+  });
+
+  cfg.queues.crawlEvents.on('failed', async ({ jobId, failedReason }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    await applyPatch(
+      jobId,
+      reduceEvent(current, {
+        kind: 'crawl:failed',
+        error: { code: 'CRAWL_FAILED', message: failedReason ?? 'unknown', retryable: false },
+      })
+    );
+  });
+
+  cfg.queues.storyboardEvents.on('completed', async ({ jobId, returnvalue }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    const parsed = JSON.parse(String(returnvalue)) as { storyboardUri: S3Uri };
+    const depth = await renderQueueDepth(cfg.queues.render);
+    const defer = shouldDeferRender({ active: depth.active, cap });
+    await applyPatch(
+      jobId,
+      reduceEvent(current, {
+        kind: 'storyboard:completed',
+        storyboardUri: parsed.storyboardUri,
+        canRender: !defer,
+      })
+    );
+    await cfg.queues.render.add('render', {
+      jobId,
+      storyboardUri: parsed.storyboardUri,
+      sourceUrl: current.input.url,
+      duration: current.input.duration,
+    });
+    if (defer) {
+      cfg.broker.publish(jobId, {
+        event: 'queued',
+        data: { position: depth.waiting + 1, aheadOfYou: depth.waiting },
+      });
+    }
+  });
+
+  cfg.queues.storyboardEvents.on('failed', async ({ jobId, failedReason }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    await applyPatch(
+      jobId,
+      reduceEvent(current, {
+        kind: 'storyboard:failed',
+        error: { code: 'STORYBOARD_GEN_FAILED', message: failedReason ?? 'unknown', retryable: false },
+      })
+    );
+  });
+
+  cfg.queues.renderEvents.on('active', async ({ jobId }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    await applyPatch(jobId, reduceEvent(current, { kind: 'render:active' }));
+  });
+
+  cfg.queues.renderEvents.on('completed', async ({ jobId, returnvalue }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    const parsed = JSON.parse(String(returnvalue)) as { videoUrl: S3Uri };
+    await applyPatch(jobId, reduceEvent(current, { kind: 'render:completed', videoUrl: parsed.videoUrl }));
+  });
+
+  cfg.queues.renderEvents.on('failed', async ({ jobId, failedReason }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    await applyPatch(
+      jobId,
+      reduceEvent(current, {
+        kind: 'render:failed',
+        error: { code: 'RENDER_FAILED', message: failedReason ?? 'unknown', retryable: false },
+      })
+    );
+  });
+
+  return async () => {
+    // QueueEvents close in queues.closeQueueBundle — nothing specific to do here.
+  };
+}
+
+function patchToEvent(patch: Partial<Job>): { event: string; data: unknown } | null {
+  if (patch.status === 'done' && patch.videoUrl) {
+    return { event: 'done', data: { videoUrl: patch.videoUrl } };
+  }
+  if (patch.status === 'failed' && patch.error) {
+    return { event: 'error', data: patch.error };
+  }
+  if (patch.stage) {
+    return { event: 'progress', data: { stage: patch.stage, pct: patch.progress ?? 0 } };
+  }
+  return null;
+}
