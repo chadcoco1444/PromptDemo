@@ -130,4 +130,87 @@ describe('extractiveCheck (CJK)', () => {
     const r = extractiveCheck(board);
     expect(r.kind).toBe('error');
   });
+
+  it('accepts middle-dot-joined feature list when every segment is in the pool', () => {
+    // Real-world case: crawler extracted 4 separate feature tags; Claude
+    // joined them with · for a compact scene display. Each segment must
+    // independently match the whitelist — no hallucinations.
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: {
+        screenshots: {},
+        sourceTexts: [
+          'protocols & standards',
+          'embedded systems',
+          'programming & tools',
+          'domain knowledge',
+        ],
+      },
+      scenes: [
+        {
+          sceneId: 1,
+          type: 'TextPunch',
+          durationInFrames: 300,
+          entryAnimation: 'fade',
+          exitAnimation: 'fade',
+          props: {
+            text: 'protocols & standards · embedded systems · programming & tools · domain knowledge',
+            emphasis: 'primary',
+          },
+        },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('ok');
+  });
+
+  it('also accepts pipe- and space-slash-separated joins', () => {
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: { screenshots: {}, sourceTexts: ['alpha', 'beta', 'gamma'] },
+      scenes: [
+        { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
+          entryAnimation: 'fade', exitAnimation: 'fade',
+          props: { text: 'alpha | beta | gamma', emphasis: 'primary' } },
+        { sceneId: 2, type: 'TextPunch', durationInFrames: 300,
+          entryAnimation: 'fade', exitAnimation: 'fade',
+          props: { text: 'alpha / beta / gamma', emphasis: 'primary' } },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('ok');
+  });
+
+  it('still REJECTS a concatenation where ANY segment is hallucinated', () => {
+    // The 3rd segment ("made up feature") isn't in the pool — must fail.
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: { screenshots: {}, sourceTexts: ['real a', 'real b'] },
+      scenes: [
+        {
+          sceneId: 1,
+          type: 'TextPunch',
+          durationInFrames: 300,
+          entryAnimation: 'fade',
+          exitAnimation: 'fade',
+          props: { text: 'real a · real b · made up feature', emphasis: 'primary' },
+        },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('error');
+  });
+
+  it('does NOT split inline uses of / and - (only space-padded separators)', () => {
+    // "AI/ML" and "multi-tenant" are single terms, not list separators.
+    // If Claude writes "AI/ML" and the pool has "AI/ML", it must match as a
+    // single phrase, NOT be split into "AI" + "ML".
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: { screenshots: {}, sourceTexts: ['AI/ML platform', 'multi-tenant architecture'] },
+      scenes: [
+        { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
+          entryAnimation: 'fade', exitAnimation: 'fade',
+          props: { text: 'AI/ML platform', emphasis: 'primary' } },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('ok');
+  });
 });
