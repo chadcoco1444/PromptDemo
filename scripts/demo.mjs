@@ -221,6 +221,9 @@ function spawnService(svc) {
     detached: true,
     stdio: ['ignore', stdout, stderr],
     shell: IS_WINDOWS,
+    // Hide the new cmd.exe console that Windows spawns per detached child,
+    // so `pnpm demo start` doesn't flash 5 windows. Logs still go to files.
+    windowsHide: true,
   });
   child.unref();
   writePid(svc.name, child.pid);
