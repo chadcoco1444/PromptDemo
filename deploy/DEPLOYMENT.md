@@ -40,3 +40,14 @@ Push a tag matching `v*.*.*-deploy` — GitHub Actions rebuilds + redeploys all 
 ## Teardown
 
 `./deploy/scripts/99-teardown.sh` removes everything provisioned. Will prompt to confirm.
+
+## Serverless VPC Connector (one-time, for Redis access)
+
+```bash
+gcloud compute networks vpc-access connectors create promptdemo-connector \
+  --region="$GCP_REGION" \
+  --network=default \
+  --range=10.8.0.0/28
+```
+
+Each worker service's deploy command passes `--vpc-connector=promptdemo-connector` so it can reach the Memorystore instance.
