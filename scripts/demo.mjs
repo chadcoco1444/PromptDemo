@@ -226,10 +226,14 @@ function spawnService(svc) {
   const stdout = openSync(log, 'a');
   const stderr = openSync(log, 'a');
 
-  // detached: true gives the child its own process group on POSIX (so we can
-  // signal the whole tree via -pid) and is a no-op on Windows.
-  // windowsHide: true suppresses console creation on Windows and is a no-op
-  // on POSIX. shell: false keeps the saved PID === the real node PID.
+  // detached: true puts the child in its own process group so it survives
+  // this launcher process exiting (setsid() on POSIX, CREATE_NEW_PROCESS_GROUP
+  // on Windows). Both flags needed to remove it but they don't interact.
+  // windowsHide: true is the Windows-only counterpart — without it Node opens
+  // a visible console for the detached group; no-op on POSIX.
+  // shell: false keeps the saved PID === the real node PID (no cmd.exe shim).
+  // Note: POSIX kill in stopAll uses positive PID (not -pid); detached: true
+  // is still needed for the "survive parent exit" semantics on both platforms.
   const child = spawn(plan.node, plan.args, {
     env: serviceEnv(svc),
     cwd: plan.cwd,
