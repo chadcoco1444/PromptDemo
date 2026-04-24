@@ -27,13 +27,17 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
   // for zh users; suppressHydrationWarning on the wrapping div tells React
   // not to complain. This is the standard pragmatic pattern for locale-
   // dependent client-only UI in Next.js App Router.
-  const [locale] = useState<SupportedLocale>(() =>
+  const [locale, setLocale] = useState<SupportedLocale>(() =>
     detectLocale(typeof navigator !== 'undefined' ? navigator.language : undefined)
   );
 
   function handlePresetSelect(preset: IntentPreset) {
-    setIntent((current) => applyPreset(current, preset));
+    setIntent((current) => applyPreset(current, preset, locale));
     trackIntentPresetSelected(preset.id);
+  }
+
+  function toggleLocale() {
+    setLocale((l) => (l === 'en' ? 'zh' : 'en'));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -86,8 +90,19 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
           placeholder="What should the video emphasize?"
           className="w-full rounded border px-3 py-2 h-24"
         />
-        <div className="mt-2" suppressHydrationWarning>
-          <IntentPresets locale={locale} onSelect={handlePresetSelect} />
+        <div className="mt-2 flex items-start gap-3" suppressHydrationWarning>
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 font-medium text-gray-700 hover:bg-gray-50 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+            aria-label="Toggle preset language"
+            title="Switch preset language"
+          >
+            {locale === 'en' ? '中' : 'EN'}
+          </button>
+          <div className="flex-1">
+            <IntentPresets locale={locale} onSelect={handlePresetSelect} />
+          </div>
         </div>
       </div>
       <div>

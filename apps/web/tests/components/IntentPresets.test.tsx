@@ -34,11 +34,18 @@ describe('IntentPresets', () => {
     expect(screen.getByRole('button', { name: /客戶案例/ })).toBeInTheDocument();
   });
 
-  it('sets each chip title attribute to the preset body (hover tooltip)', () => {
+  it('sets each chip title attribute to the EN preset body when locale="en"', () => {
     render(<IntentPresets locale="en" onSelect={onSelect} />);
     const execChip = screen.getByRole('button', { name: /executive summary/i });
     const exec = INTENT_PRESETS.find((p) => p.id === 'executive-summary')!;
-    expect(execChip).toHaveAttribute('title', exec.body);
+    expect(execChip).toHaveAttribute('title', exec.body.en);
+  });
+
+  it('sets each chip title attribute to the ZH preset body when locale="zh"', () => {
+    render(<IntentPresets locale="zh" onSelect={onSelect} />);
+    const execChip = screen.getByRole('button', { name: /高階主管摘要/ });
+    const exec = INTENT_PRESETS.find((p) => p.id === 'executive-summary')!;
+    expect(execChip).toHaveAttribute('title', exec.body.zh);
   });
 
   it('calls onSelect with the full preset object when a chip is clicked', async () => {

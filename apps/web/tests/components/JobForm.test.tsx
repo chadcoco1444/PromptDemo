@@ -104,4 +104,66 @@ describe('JobForm', () => {
     expect(call.intent).toMatch(/emphasize business outcomes/i);
     expect(call.url).toBe('https://example.com');
   });
+
+  it('renders a language toggle button and switches chip labels + tooltips', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+
+    // jsdom default navigator.language is 'en-US' → initial locale is 'en'.
+    expect(screen.getByRole('button', { name: /executive summary/i })).toBeInTheDocument();
+
+    const toggle = screen.getByRole('button', { name: /toggle preset language/i });
+    await user.click(toggle);
+
+    // After toggle: chip labels flip to zh.
+    expect(screen.getByRole('button', { name: /高階主管摘要/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /executive summary/i })).not.toBeInTheDocument();
+
+    // Tooltip also flipped to zh body (contains CJK chars).
+    const chip = screen.getByRole('button', { name: /高階主管摘要/ });
+    expect(chip.getAttribute('title')).toMatch(/[一-鿿]/);
+  });
+
+  it('clicking a chip after toggling to zh fills textarea with ZH body', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+    await user.click(screen.getByRole('button', { name: /toggle preset language/i }));
+    const intent = screen.getByLabelText(/intent/i) as HTMLTextAreaElement;
+    expect(intent.value).toBe('');
+
+    await user.click(screen.getByRole('button', { name: /高階主管摘要/ }));
+    expect(intent.value).toMatch(/[一-鿿]/); // CJK body was spliced in
+    expect(intent.value).not.toContain('Emphasize business outcomes'); // NOT the en body
+    expect(intent.value).not.toContain('[Preset:'); // fill mode, not append
+  });
+
+  it('append mode in zh uses the zh label in the [Preset: ...] marker', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+    await user.click(screen.getByRole('button', { name: /toggle preset language/i }));
+    const intent = screen.getByLabelText(/intent/i) as HTMLTextAreaElement;
+    await user.type(intent, '既有文字');
+    await user.click(screen.getByRole('button', { name: /教學版/ }));
+
+    expect(intent.value).toContain('既有文字');
+    expect(intent.value).toContain('[Preset: 教學版]');
+    expect(intent.value).not.toContain('[Preset: Tutorial'); // no en marker in zh mode
+  });
+
+  it('bilingual dedup: click chip in EN, toggle to zh, click same chip → no duplicate', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+    const intent = screen.getByLabelText(/intent/i) as HTMLTextAreaElement;
+
+    // First click in EN — fills textarea with English body
+    await user.click(screen.getByRole('button', { name: /executive summary/i }));
+    const afterEn = intent.value;
+    expect(afterEn).toMatch(/emphasize business outcomes/i);
+
+    // Toggle to zh
+    await user.click(screen.getByRole('button', { name: /toggle preset language/i }));
+    // Re-click same chip in zh — should NOT append zh body on top of en body
+    await user.click(screen.getByRole('button', { name: /高階主管摘要/ }));
+    expect(intent.value).toBe(afterEn); // unchanged — bilingual dedup
+  });
 });
