@@ -31,3 +31,4 @@ test-results/
 *.tgz
 # Non-checked-in media assets (user supplies locally / via secrets store)
 packages/remotion/src/assets/bgm/*.mp3
+deploy/.env.deploy
