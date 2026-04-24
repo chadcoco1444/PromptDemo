@@ -210,12 +210,32 @@ function serviceEnv(svc) {
   return { ...process.env, PORT: String(svc.port) };
 }
 
+/**
+ * openSync('a') on Windows can race with a zombie child's open log handle
+ * (fd released by the OS only after the kernel reaps the dead process).
+ * Retry up to 10x at 100ms each, then surface a clear "run clean-all" hint.
+ */
+function openLogFdWithRetry(log, svcName) {
+  for (let i = 0; i < 10; i++) {
+    try {
+      return openSync(log, 'a');
+    } catch (err) {
+      if (err?.code !== 'EBUSY' && err?.code !== 'EPERM') throw err;
+      const until = Date.now() + 100;
+      while (Date.now() < until) { /* busy-wait */ }
+    }
+  }
+  throw new Error(
+    `Log file ${log} is locked (10 retries). Likely a zombie ${svcName} worker ` +
+    `from a previous run is still holding the file handle. Fix: ` +
+    `pnpm demo clean-all --yes`
+  );
+}
+
 function spawnService(svc) {
   const log = logPath(svc.name);
-  // Log header: single append before spawn, no retry needed — since we now
-  // track the real node PID, orphan log-file handles from previous runs don't
-  // survive into a new run if the user ran stop first. If the write fails, the
-  // child's own append handle still works — we just lose the marker line.
+  // Best-effort start marker. If a zombie has the file locked the open-fd
+  // retry below will fire; the marker is expendable.
   try {
     appendFileSync(log, `\n===== start ${new Date().toISOString()} (PORT=${svc.port}) =====\n`);
   } catch {
@@ -223,8 +243,8 @@ function spawnService(svc) {
   }
 
   const plan = resolveDevCommand(svc);
-  const stdout = openSync(log, 'a');
-  const stderr = openSync(log, 'a');
+  const stdout = openLogFdWithRetry(log, svc.name);
+  const stderr = openLogFdWithRetry(log, svc.name);
 
   // detached: true puts the child in its own process group so it survives
   // this launcher process exiting (setsid() on POSIX, CREATE_NEW_PROCESS_GROUP
