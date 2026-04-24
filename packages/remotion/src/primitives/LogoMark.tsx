@@ -1,6 +1,6 @@
 import React from 'react';
 import { Img } from 'remotion';
-import { domainInitials } from '../utils/domainInitials.js';
+import { domainInitials } from '../utils/domainInitials';
 
 export interface LogoMarkProps {
   logoUrl?: string; // resolved HTTP URL, not s3://

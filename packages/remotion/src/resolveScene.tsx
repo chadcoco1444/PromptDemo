@@ -1,11 +1,11 @@
 import React from 'react';
 import type { Scene, Storyboard } from '@promptdemo/schema';
-import { HeroRealShot } from './scenes/HeroRealShot.js';
-import { FeatureCallout } from './scenes/FeatureCallout.js';
-import { TextPunch } from './scenes/TextPunch.js';
-import { SmoothScroll } from './scenes/SmoothScroll.js';
-import { CTA } from './scenes/CTA.js';
-import type { BrandTheme } from './utils/brandTheme.js';
+import { HeroRealShot } from './scenes/HeroRealShot';
+import { FeatureCallout } from './scenes/FeatureCallout';
+import { TextPunch } from './scenes/TextPunch';
+import { SmoothScroll } from './scenes/SmoothScroll';
+import { CTA } from './scenes/CTA';
+import type { BrandTheme } from './utils/brandTheme';
 
 export interface ResolveSceneInput {
   scene: Scene;

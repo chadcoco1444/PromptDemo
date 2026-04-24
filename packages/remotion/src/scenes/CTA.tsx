@@ -1,8 +1,8 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
-import { AnimatedText } from '../primitives/AnimatedText.js';
-import { LogoMark } from '../primitives/LogoMark.js';
-import type { BrandTheme } from '../utils/brandTheme.js';
+import { AnimatedText } from '../primitives/AnimatedText';
+import { LogoMark } from '../primitives/LogoMark';
+import type { BrandTheme } from '../utils/brandTheme';
 
 export interface CTAProps {
   headline: string;

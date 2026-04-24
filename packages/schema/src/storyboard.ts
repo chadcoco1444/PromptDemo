@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { S3UriSchema } from './s3Uri.js';
+import { S3UriSchema } from './s3Uri';
 
 const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 

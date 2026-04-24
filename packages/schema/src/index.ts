@@ -1,6 +1,6 @@
-export { normalizeText } from './normalizeText.js';
-export { S3UriSchema, parseS3Uri, toS3Uri, type S3Uri } from './s3Uri.js';
-export { CrawlResultSchema, type CrawlResult } from './crawlResult.js';
+export { normalizeText } from './normalizeText';
+export { S3UriSchema, parseS3Uri, toS3Uri, type S3Uri } from './s3Uri';
+export { CrawlResultSchema, type CrawlResult } from './crawlResult';
 export {
   StoryboardSchema,
   SceneSchema,
@@ -8,4 +8,4 @@ export {
   V1_MVP_SCENE_TYPES,
   type Storyboard,
   type Scene,
-} from './storyboard.js';
+} from './storyboard';

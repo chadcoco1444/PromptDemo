@@ -2,12 +2,12 @@ import React from 'react';
 import { AbsoluteFill } from 'remotion';
 import { TransitionSeries } from '@remotion/transitions';
 import type { Storyboard } from '@promptdemo/schema';
-import { deriveTheme } from './utils/brandTheme.js';
-import { makeS3Resolver } from './s3Resolver.js';
-import { resolveScene } from './resolveScene.js';
-import { BGMTrack } from './primitives/BGMTrack.js';
-import { toPresentation } from './animations/entryExit.js';
-import { defaultTransitionTiming } from './animations/timing.js';
+import { deriveTheme } from './utils/brandTheme';
+import { makeS3Resolver } from './s3Resolver';
+import { resolveScene } from './resolveScene';
+import { BGMTrack } from './primitives/BGMTrack';
+import { toPresentation } from './animations/entryExit';
+import { defaultTransitionTiming } from './animations/timing';
 
 const TRANSITION_FRAMES = 15;
 

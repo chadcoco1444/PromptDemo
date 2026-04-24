@@ -1,7 +1,7 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
-import { AnimatedText } from '../primitives/AnimatedText.js';
-import type { BrandTheme } from '../utils/brandTheme.js';
+import { AnimatedText } from '../primitives/AnimatedText';
+import type { BrandTheme } from '../utils/brandTheme';
 
 export interface FeatureCalloutProps {
   title: string;

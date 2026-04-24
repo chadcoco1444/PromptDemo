@@ -1,7 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Img, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
-import { BrowserChrome } from '../primitives/BrowserChrome.js';
-import type { BrandTheme } from '../utils/brandTheme.js';
+import { BrowserChrome } from '../primitives/BrowserChrome';
+import type { BrandTheme } from '../utils/brandTheme';
 
 export interface SmoothScrollProps {
   screenshotUrl: string;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { AbsoluteFill, Img } from 'remotion';
-import { AnimatedText } from '../primitives/AnimatedText.js';
-import { BrowserChrome } from '../primitives/BrowserChrome.js';
-import type { BrandTheme } from '../utils/brandTheme.js';
+import { AnimatedText } from '../primitives/AnimatedText';
+import { BrowserChrome } from '../primitives/BrowserChrome';
+import type { BrandTheme } from '../utils/brandTheme';
 
 export interface HeroRealShotProps {
   title: string;
