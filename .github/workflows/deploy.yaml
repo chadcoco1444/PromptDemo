@@ -1,0 +1,60 @@
+name: Deploy
+on:
+  push:
+    tags:
+      - 'v*.*.*-deploy'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r test
+      - run: pnpm -r typecheck
+
+      - name: Configure docker
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build + push
+        run: ./deploy/scripts/10-build-and-push.sh ${{ github.ref_name }}
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          AR_REPO_LOCATION: ${{ vars.GCP_REGION }}
+          AR_REPO_NAME: ${{ vars.AR_REPO_NAME }}
+
+      - name: Deploy all services
+        run: |
+          for svc in web api crawler storyboard render; do
+            ./deploy/scripts/20-deploy-$svc.sh ${{ github.ref_name }}
+          done
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          AR_REPO_LOCATION: ${{ vars.GCP_REGION }}
+          AR_REPO_NAME: ${{ vars.AR_REPO_NAME }}
+          GCS_BUCKET_NAME: ${{ vars.GCS_BUCKET_NAME }}
+          REDIS_HOST: ${{ vars.REDIS_HOST }}
+          REDIS_PORT: ${{ vars.REDIS_PORT }}
+          API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
+
+      - name: Smoke test
+        run: ./deploy/scripts/30-smoke.sh
+        env:
+          API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
+          WEB_PUBLIC_URL: ${{ vars.WEB_PUBLIC_URL }}
