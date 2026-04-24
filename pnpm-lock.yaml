@@ -172,6 +172,46 @@ importers:
         specifier: 2.1.1
         version: 2.1.1(@types/node@20.14.10)(jsdom@25.0.1)(terser@5.46.2)
 
+  workers/render:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.658.1
+        version: 3.658.1
+      '@promptdemo/remotion':
+        specifier: workspace:*
+        version: link:../../packages/remotion
+      '@promptdemo/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+      '@remotion/bundler':
+        specifier: 4.0.218
+        version: 4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@remotion/renderer':
+        specifier: 4.0.218
+        version: 4.0.218(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      bullmq:
+        specifier: 5.21.2
+        version: 5.21.2
+      ioredis:
+        specifier: 5.4.1
+        version: 5.4.1
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      '@types/node':
+        specifier: 20.14.10
+        version: 20.14.10
+      tsx:
+        specifier: 4.19.1
+        version: 4.19.1
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
+      vitest:
+        specifier: 2.1.1
+        version: 2.1.1(@types/node@20.14.10)(jsdom@25.0.1)(terser@5.46.2)
+
   workers/storyboard:
     dependencies:
       '@anthropic-ai/sdk':
