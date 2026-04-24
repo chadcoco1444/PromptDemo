@@ -9,7 +9,11 @@ import type { ClaudeClient } from './claude/claudeClient.js';
 
 const MAX_ATTEMPTS = 3;
 const DURATION_FRAMES: Record<10 | 30 | 60, number> = { 10: 300, 30: 900, 60: 1800 };
-const DEFAULT_BRAND_COLOR = '#1a1a1a';
+// Default brand color when the crawler's color sampler returns nothing (site
+// is all-dark / all-light and got filtered out by the luminance thresholds).
+// Indigo-600 matches the saas-landing fixture palette so videos look consistent
+// when there's no detected brand, rather than a dead-black void.
+const DEFAULT_BRAND_COLOR = '#4f46e5';
 const DEFAULT_BGM = 'minimal' as const;
 
 /**
