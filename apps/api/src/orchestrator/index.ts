@@ -14,6 +14,14 @@ export interface OrchestratorConfig {
   now?: () => number;
 }
 
+// BullMQ 5.x QueueEvents delivers `returnvalue` as either a parsed object
+// (when the worker's return was structured) or a JSON string (legacy / some
+// transports). Accept both.
+function parseReturn<T>(rv: unknown): T {
+  if (typeof rv === 'string') return JSON.parse(rv) as T;
+  return rv as T;
+}
+
 export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => Promise<void>> {
   const cap = cfg.renderCap ?? DEFAULT_RENDER_CAP;
   const now = cfg.now ?? Date.now;
@@ -33,7 +41,7 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.crawlEvents.on('completed', async ({ jobId, returnvalue }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    const parsed = JSON.parse(String(returnvalue)) as { crawlResultUri: S3Uri };
+    const parsed = parseReturn<{ crawlResultUri: S3Uri }>(returnvalue);
     await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:completed', crawlResultUri: parsed.crawlResultUri }));
     await cfg.queues.storyboard.add(
       'generate',
@@ -63,7 +71,7 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.storyboardEvents.on('completed', async ({ jobId, returnvalue }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    const parsed = JSON.parse(String(returnvalue)) as { storyboardUri: S3Uri };
+    const parsed = parseReturn<{ storyboardUri: S3Uri }>(returnvalue);
     const depth = await renderQueueDepth(cfg.queues.render);
     const defer = shouldDeferRender({ active: depth.active, cap });
     await applyPatch(
@@ -113,7 +121,7 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.renderEvents.on('completed', async ({ jobId, returnvalue }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    const parsed = JSON.parse(String(returnvalue)) as { videoUrl: S3Uri };
+    const parsed = parseReturn<{ videoUrl: S3Uri }>(returnvalue);
     await applyPatch(jobId, reduceEvent(current, { kind: 'render:completed', videoUrl: parsed.videoUrl }));
   });
 
