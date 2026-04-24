@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 700" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280" />
+    </marker>
+    <marker id="arrow-brand" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6d28d9" />
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #d1d5db; stroke-width: 1.5; rx: 8; ry: 8; }
+      .box-title { font-size: 14px; font-weight: 600; fill: #111827; }
+      .box-sub { font-size: 11px; fill: #6b7280; }
+      .client { fill: #f9fafb; stroke: #9ca3af; }
+      .web { fill: #faf5ff; stroke: #a855f7; }
+      .api { fill: #faf5ff; stroke: #a855f7; }
+      .postgres { fill: #eff6ff; stroke: #3b82f6; }
+      .redis { fill: #fef3c7; stroke: #f59e0b; }
+      .worker { fill: #f0fdf4; stroke: #22c55e; }
+      .storage { fill: #f1f5f9; stroke: #64748b; }
+      .external { fill: #f9fafb; stroke: #9ca3af; stroke-dasharray: 4 3; }
+      .section-label { font-size: 10px; font-weight: 700; fill: #6b7280; letter-spacing: 1px; }
+      .edge-label { font-size: 10px; fill: #4b5563; }
+      .edge-label-brand { font-size: 10px; fill: #6d28d9; font-weight: 600; }
+      .arrow { fill: none; stroke: #6b7280; stroke-width: 1.5; }
+      .arrow-brand { fill: none; stroke: #6d28d9; stroke-width: 1.5; }
+      .arrow-dashed { fill: none; stroke: #9ca3af; stroke-width: 1.5; stroke-dasharray: 4 3; }
+    </style>
+  </defs>
+
+  <rect width="980" height="700" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="490" y="30" font-size="18" font-weight="700" text-anchor="middle" fill="#111827">PromptDemo — System Architecture</text>
+  <text x="490" y="48" font-size="11" text-anchor="middle" fill="#6b7280">URL → AI-authored storyboard → Remotion-rendered MP4 in ~60s</text>
+
+  <!-- === CLIENT LAYER === -->
+  <text x="40" y="85" class="section-label">CLIENT</text>
+  <rect x="40" y="95" width="220" height="72" class="box client"/>
+  <text x="150" y="122" class="box-title" text-anchor="middle">Browser</text>
+  <text x="150" y="140" class="box-sub" text-anchor="middle">Next.js 14 App Router · React 18</text>
+  <text x="150" y="155" class="box-sub" text-anchor="middle">Tailwind · useJobStream (EventSource)</text>
+
+  <!-- === WEB LAYER === -->
+  <text x="40" y="210" class="section-label">WEB</text>
+  <rect x="40" y="220" width="220" height="100" class="box web"/>
+  <text x="150" y="247" class="box-title" text-anchor="middle">apps/web (Next.js)</text>
+  <text x="150" y="265" class="box-sub" text-anchor="middle">NextAuth v5 + Google OAuth</text>
+  <text x="150" y="280" class="box-sub" text-anchor="middle">/api/jobs/create (X-User-Id proxy)</text>
+  <text x="150" y="295" class="box-sub" text-anchor="middle">/history (fetch own jobs)</text>
+  <text x="150" y="310" class="box-sub" text-anchor="middle">/billing (Feature 5, planned)</text>
+
+  <!-- === API LAYER === -->
+  <text x="300" y="210" class="section-label">ORCHESTRATOR</text>
+  <rect x="300" y="220" width="220" height="100" class="box api"/>
+  <text x="410" y="247" class="box-title" text-anchor="middle">apps/api (Fastify 5)</text>
+  <text x="410" y="265" class="box-sub" text-anchor="middle">POST /api/jobs (parent lookup + skip-crawl)</text>
+  <text x="410" y="280" class="box-sub" text-anchor="middle">SSE /api/jobs/:id/stream</text>
+  <text x="410" y="295" class="box-sub" text-anchor="middle">QueueEvents → state reducer</text>
+  <text x="410" y="310" class="box-sub" text-anchor="middle">Rate limit · CORS · credit gate (F5)</text>
+
+  <!-- === POSTGRES === -->
+  <text x="560" y="210" class="section-label">AUTH + PERSISTENCE</text>
+  <rect x="560" y="220" width="170" height="100" class="box postgres"/>
+  <text x="645" y="247" class="box-title" text-anchor="middle">Postgres 16</text>
+  <text x="645" y="265" class="box-sub" text-anchor="middle">users / accounts / sessions</text>
+  <text x="645" y="280" class="box-sub" text-anchor="middle">jobs (user-scoped history)</text>
+  <text x="645" y="295" class="box-sub" text-anchor="middle">credits / credit_transactions</text>
+  <text x="645" y="310" class="box-sub" text-anchor="middle">subscriptions (tier + Stripe refs)</text>
+
+  <!-- === REDIS QUEUE === -->
+  <text x="40" y="370" class="section-label">QUEUE + PUB/SUB</text>
+  <rect x="40" y="380" width="690" height="60" class="box redis"/>
+  <text x="385" y="407" class="box-title" text-anchor="middle">Redis (BullMQ)</text>
+  <text x="385" y="425" class="box-sub" text-anchor="middle">crawl · storyboard · render queues  +  job:&lt;id&gt; hash (Redis-only progress, 7d TTL)  +  SSE pub/sub channel</text>
+
+  <!-- === WORKERS === -->
+  <text x="40" y="485" class="section-label">WORKERS (BullMQ consumers)</text>
+
+  <rect x="40" y="495" width="215" height="110" class="box worker"/>
+  <text x="147" y="522" class="box-title" text-anchor="middle">workers/crawler</text>
+  <text x="147" y="540" class="box-sub" text-anchor="middle">Playwright (primary)</text>
+  <text x="147" y="555" class="box-sub" text-anchor="middle">ScreenshotOne (rescue)</text>
+  <text x="147" y="570" class="box-sub" text-anchor="middle">Cheerio (Tier-B fallback)</text>
+  <text x="147" y="585" class="box-sub" text-anchor="middle">Luminance-guarded brand color</text>
+
+  <rect x="277" y="495" width="215" height="110" class="box worker"/>
+  <text x="384" y="522" class="box-title" text-anchor="middle">workers/storyboard</text>
+  <text x="384" y="540" class="box-sub" text-anchor="middle">Anthropic Claude Sonnet 4.6</text>
+  <text x="384" y="555" class="box-sub" text-anchor="middle">3-pass JSON resilience</text>
+  <text x="384" y="570" class="box-sub" text-anchor="middle">Extractive whitelist check</text>
+  <text x="384" y="585" class="box-sub" text-anchor="middle">10% duration auto-prorate</text>
+
+  <rect x="514" y="495" width="216" height="110" class="box worker"/>
+  <text x="622" y="522" class="box-title" text-anchor="middle">workers/render</text>
+  <text x="622" y="540" class="box-sub" text-anchor="middle">Remotion 4 (@remotion/renderer)</text>
+  <text x="622" y="555" class="box-sub" text-anchor="middle">4 FeatureCallout variants</text>
+  <text x="622" y="570" class="box-sub" text-anchor="middle">GPU-composited pan+zoom</text>
+  <text x="622" y="585" class="box-sub" text-anchor="middle">Pre-signed URL rewrites</text>
+
+  <!-- === STORAGE === -->
+  <text x="40" y="645" class="section-label">ARTIFACTS</text>
+  <rect x="40" y="655" width="690" height="35" class="box storage"/>
+  <text x="385" y="679" class="box-title" text-anchor="middle">S3 / MinIO  ·  crawlResult.json · screenshots · storyboard.json · video.mp4</text>
+
+  <!-- === EXTERNAL (right column) === -->
+  <text x="775" y="370" class="section-label">EXTERNAL</text>
+  <rect x="775" y="380" width="165" height="60" class="box external"/>
+  <text x="857" y="407" class="box-title" text-anchor="middle">Anthropic API</text>
+  <text x="857" y="425" class="box-sub" text-anchor="middle">claude-sonnet-4-6</text>
+
+  <rect x="775" y="455" width="165" height="60" class="box external"/>
+  <text x="857" y="482" class="box-title" text-anchor="middle">Google OAuth</text>
+  <text x="857" y="500" class="box-sub" text-anchor="middle">via NextAuth v5</text>
+
+  <rect x="775" y="530" width="165" height="60" class="box external"/>
+  <text x="857" y="557" class="box-title" text-anchor="middle">Stripe (F5)</text>
+  <text x="857" y="575" class="box-sub" text-anchor="middle">Checkout + webhooks</text>
+
+  <rect x="775" y="605" width="165" height="80" class="box external"/>
+  <text x="857" y="632" class="box-title" text-anchor="middle">ScreenshotOne</text>
+  <text x="857" y="650" class="box-sub" text-anchor="middle">optional rescue tier</text>
+  <text x="857" y="665" class="box-sub" text-anchor="middle">(WAF-blocked URLs)</text>
+
+  <!-- === ARROWS === -->
+  <!-- Browser → Web -->
+  <path d="M 150,167 L 150,220" class="arrow-brand" marker-end="url(#arrow-brand)"/>
+  <text x="155" y="195" class="edge-label-brand">HTTPS</text>
+
+  <!-- Web → API (trusted proxy) -->
+  <path d="M 260,268 L 300,268" class="arrow-brand" marker-end="url(#arrow-brand)"/>
+  <text x="263" y="262" class="edge-label-brand">X-User-Id</text>
+
+  <!-- Web ↔ Postgres (NextAuth session) -->
+  <path d="M 260,290 L 560,290" class="arrow" marker-end="url(#arrow)"/>
+  <text x="400" y="284" class="edge-label" text-anchor="middle">NextAuth: users / accounts / sessions (pg-adapter)</text>
+
+  <!-- API → Redis (enqueue) -->
+  <path d="M 350,320 L 250,380" class="arrow" marker-end="url(#arrow)"/>
+  <text x="265" y="355" class="edge-label">queue.add</text>
+
+  <!-- API ← Redis (SSE progress) -->
+  <path d="M 350,380 L 440,320" class="arrow" marker-end="url(#arrow)"/>
+  <text x="420" y="362" class="edge-label" text-anchor="end">QueueEvents</text>
+
+  <!-- API ↔ Postgres (dual-write when AUTH_ENABLED) -->
+  <path d="M 520,270 L 560,270" class="arrow" marker-end="url(#arrow)"/>
+  <text x="523" y="264" class="edge-label">dual-write</text>
+
+  <!-- Workers ← Redis (consume) -->
+  <path d="M 147,495 L 147,440" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M 384,495 L 384,440" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M 622,495 L 622,440" class="arrow" marker-end="url(#arrow)"/>
+
+  <!-- Workers → S3 -->
+  <path d="M 147,605 L 147,655" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M 384,605 L 384,655" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M 622,605 L 622,655" class="arrow" marker-end="url(#arrow)"/>
+
+  <!-- Storyboard → Anthropic -->
+  <path d="M 492,545 L 775,410" class="arrow-dashed" marker-end="url(#arrow)"/>
+
+  <!-- Web → Google OAuth -->
+  <path d="M 260,240 Q 520,100 775,475" class="arrow-dashed" marker-end="url(#arrow)" fill="none"/>
+  <text x="540" y="160" class="edge-label" text-anchor="middle">OAuth 2.0 redirect</text>
+
+  <!-- Browser ← S3 (video playback) -->
+  <path d="M 40,672 Q 20,420 40,130" class="arrow-dashed" marker-end="url(#arrow)" fill="none"/>
+  <text x="12" y="400" class="edge-label" transform="rotate(-90 12 400)" text-anchor="middle">presigned GET (video.mp4)</text>
+
+  <!-- API → Stripe (webhooks future) -->
+  <path d="M 520,300 Q 650,420 775,560" class="arrow-dashed" marker-end="url(#arrow)" fill="none"/>
+
+  <!-- Legend -->
+  <rect x="40" y="700" width="900" height="0" stroke="none" fill="none"/>
+</svg>
