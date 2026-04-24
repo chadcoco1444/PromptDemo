@@ -196,6 +196,8 @@ importers:
         specifier: 2.1.1
         version: 2.1.1(@types/node@20.14.10)(jsdom@25.0.1)(terser@5.46.2)
 
+  scripts: {}
+
   workers/crawler:
     dependencies:
       '@aws-sdk/client-s3':
