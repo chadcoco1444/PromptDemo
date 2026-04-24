@@ -1,7 +1,7 @@
 # PromptDemo v2.0 — PRD + Architecture Review
 
 **Date:** 2026-04-24
-**Status:** Design spec — brainstorming output; awaits user review before implementation planning per feature.
+**Status:** Design spec — approved by architecture review 2026-04-24; ready for per-feature `writing-plans`. See "Post-Review Amendments" at bottom for final tweaks.
 **Predecessor:** v1.0 MVP (tags `v0.1.0` … `v0.7.0-deploy-ready`, 127 commits on `main`).
 
 ---
@@ -695,16 +695,129 @@ cascading Anthropic rate-limit block.
 - **Scope.** 5 subsystems, explicitly sequenced over 8 weeks. Each feature will get its own plan doc via `writing-plans` when implementation starts. This spec is the blueprint, not the construction plan.
 - **Ambiguity.** Variant selection algorithm (Part 1 Feature 1) is pseudo-code but deterministic — implementation plan will give exact TypeScript. Credit refund percentages (100/50/100/50) are explicit. Concurrency caps (1/3/10) explicit. Pricing (19/99) explicit.
 
-## User Review Gate
+---
 
-Spec written and committed. Please review and approve before we move to per-feature
-writing-plans. Questions to consider:
+# Post-Review Amendments (2026-04-24)
 
-1. Do Free tier limits feel right? (3 videos/month, 10s+30s only)
-2. Is the Pro price ($19) competitive with your expectations?
-3. Any of the 5 Intent presets you want to cut / add / reword?
-4. Should Bento or Ken Burns variant ship v2.0, or defer to v2.1?
+Architecture review pass produced 3 binding refinements + variant scope decision.
+These override anything above where they conflict.
 
-If changes needed, tell me which sections. If approved, I'll queue up `writing-plans`
-for **Feature 1 (FeatureCallout variants)** first since it has zero backend deps and
-unblocks immediate visual polish.
+## A. Split `status/stage` (Postgres) from `progress %` (Redis-only)
+
+**Problem with original spec.** Section 2's table includes `progress SMALLINT` on the
+`jobs` table. Render worker emits progress ~5×/sec. Dual-writing that to Postgres
+creates row-update storms, index churn on `idx_jobs_status_updated`, and WAL bloat.
+Every job becomes a hot row for ~5 minutes. With 20 concurrent renders that's 100
+writes/sec on a single table — a deadlock generator.
+
+**Fix.** Two-tier state model:
+
+| Lives in | Data | Write frequency |
+|----------|------|-----------------|
+| Postgres `jobs` | `status`, `stage`, terminal fields (`video_url`, `error`, `credits_charged`), timestamps | On transitions only (~5 writes/job lifecycle) |
+| Redis `progress:<jobId>` | `progress` 0–100, last-event-timestamp, live log tail | Every worker heartbeat (~5×/sec) |
+| SSE broker | Fan-out from Redis pub/sub, never touches Postgres | Pass-through |
+
+Drop `progress` column from the `jobs` DDL. Rebuild after-the-fact progress views from
+`credit_transactions` + `updated_at` deltas if product ever asks for historical charts
+(YAGNI for v2.0). Keep Redis keys with 1-hour TTL post-completion — nobody needs
+frame-by-frame history after the video renders.
+
+## B. S3/GCS retention via Object Lifecycle Management, not app-level deletion
+
+**Problem with original spec.** Section 4.2 says Free retains 30 days, Pro 90, Max 365.
+The PRD implies deleting history rows, but doesn't address the S3 MP4s + thumbs that
+dominate storage cost. If we delete Postgres rows but leave S3 objects, storage bill
+grows monotonically.
+
+**Fix.** Don't write a cleanup worker. Use bucket-native lifecycle rules:
+
+- Object key convention: `tier/<free|pro|max>/<userId>/<jobId>/video.mp4` (prefix = tier).
+- GCS lifecycle rule per tier prefix: `age > 30/90/365 days → DELETE`.
+- Bucket also runs `age > 30 days AND storage_class=STANDARD → NEARLINE` for cost.
+- Postgres `jobs` rows survive retention (cheap, 1 KB/row); UI renders "video expired"
+  placeholder when `video_url` 404s.
+
+One-time migration step: when a user changes tier, backend re-keys their future
+objects (not past ones — past renders get their original tier's retention, and that's
+fine because they were already paid for).
+
+## C. Drop "credits" language, show "render seconds"
+
+**Problem with original spec.** Feature 5 and Risk B admit that "1 credit = 10s" is
+confusing. The mitigations in Risk B (tooltips, FAQ, pre-submit preview) are all
+papering over a bad abstraction. Risk B literally flags "if pricing confusion is
+top-3 cancellation reason, switch to videos-per-month in v2.1" — that's an admission
+we should ship the right model the first time.
+
+**Fix.** Ship with "render-seconds" as the primary unit from day one:
+
+- **Pricing page copy:**
+  - Free: "30 seconds of video per month" (= 3 × 10s)
+  - Pro: "300 seconds / month" (= 5 × 60s OR 10 × 30s OR 30 × 10s)
+  - Max: "2000 seconds / month" + "overage $0.05/sec"
+- **In-app balance indicator (top nav):** `240s remaining this month`
+- **Cost preview on form:** Button sub-text reads `Will use 60 seconds · 180s remaining`
+- **API & DB internals still use integer credits** (cleaner math: 1 sec = 1 credit;
+  stored `balance INTEGER` in seconds). Only the UI layer converts. Zod schemas and
+  `credit_transactions` are unchanged — this is purely a presentation decision.
+- **Removed from spec:** the onboarding tooltip tour explaining credit math. No longer
+  needed because "seconds" is self-explanatory.
+
+Revised tier table (replaces Section 5.1):
+
+| Feature                          | Free         | Pro ($19/mo)   | Max ($99/mo)     |
+|----------------------------------|--------------|----------------|------------------|
+| Render seconds / month           | 30s          | 300s           | 2000s + overage  |
+| Durations allowed                | 10s, 30s     | 10/30/60s      | 10/30/60/120s    |
+| Overage rate                     | —            | —              | $0.05/sec        |
+| Concurrent jobs                  | 1            | 3              | 10               |
+| (other rows unchanged)           |              |                |                  |
+
+Failed renders refund the full duration back to the user's balance.
+
+## D. Variant scope: Ken Burns in, Bento deferred to v2.1
+
+Feature 1's 5 variants trimmed to 4 for v2.0:
+
+- `image` ✅ ship v2.0 (default, zero-cost)
+- `kenBurns` ✅ ship v2.0 (CSS transform + Remotion `interpolate`, <1 day build)
+- `collage` ✅ ship v2.0 (3-up slice, moderate build)
+- `dashboard` ✅ ship v2.0 (v1 FakePanel, already built)
+- `bento` ⏸ **defer to v2.1** — asymmetric grid layout + per-tile spring animations
+  + icon hint rendering is a multi-day rabbit hole that blocks the monetization path.
+
+Update Feature 1's `FeatureVariantSchema` and selection algorithm:
+
+```ts
+const FeatureVariantSchema = z.enum(['image', 'kenBurns', 'collage', 'dashboard']);
+```
+
+Selection algorithm (revised — Bento branch removed):
+
+```
+For each FeatureCallout scene in order:
+  if !assets.screenshots.viewport:                          → 'dashboard'
+  elif scene is first FeatureCallout:                       → 'image'
+  elif assets.screenshots.fullPage AND scene index is even: → 'kenBurns'
+  elif assets.screenshots.fullPage AND feature count ≥ 3:   → 'collage'
+  else:                                                     → 'image'
+```
+
+v2.1 will re-introduce `bento` without a schema version bump (enum expansion is backward
+compatible per Part 2 Section 1).
+
+## E. Review Gate — answered
+
+| Q | Decision |
+|---|----------|
+| Free tier (3 videos, 10s+30s only) | **Keep.** Sufficient for "wow moment" without giving away a full project. |
+| Pro price $19 | **Keep.** Gross margin ≈ 80% even with heavy usage; $19 is the no-expense-report SaaS sweet spot. |
+| 5 Intent presets | **Keep all 5.** Prune later via telemetry (chip click-through rates). |
+| Bento vs Ken Burns for v2.0 | **Ken Burns ships v2.0; Bento deferred to v2.1** (see D). |
+
+## Next Step
+
+Spec is final. Invoke `writing-plans` skill for **Feature 1 (FeatureCallout variants
+v2.0: image + kenBurns + collage + dashboard)** — zero backend dependencies, unblocks
+immediate visual win while Auth/Postgres work kicks off in parallel.
