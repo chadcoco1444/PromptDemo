@@ -162,6 +162,45 @@ function dockerDown() {
 }
 
 /**
+ * Drop ALL docker volumes (redis data, minio bucket, postgres DB). Next `up`
+ * will re-run /docker-entrypoint-initdb.d migrations and recreate a blank
+ * bucket. Used by `db:reset` after a schema change.
+ */
+function dockerDownVolumes() {
+  console.log(`${C.cyan}[infra]${C.reset} docker compose -f docker-compose.dev.yaml down -v (dropping volumes)`);
+  spawnSync('docker', ['compose', '-f', 'docker-compose.dev.yaml', 'down', '-v'], {
+    stdio: 'inherit', shell: IS_WINDOWS,
+  });
+}
+
+function dockerUpPostgres() {
+  console.log(`${C.cyan}[infra]${C.reset} docker compose -f docker-compose.dev.yaml up -d postgres`);
+  const r = spawnSync(
+    'docker',
+    ['compose', '-f', 'docker-compose.dev.yaml', 'up', '-d', 'postgres'],
+    { stdio: 'inherit', shell: IS_WINDOWS },
+  );
+  if (r.status !== 0) {
+    console.error(`${C.red}[infra]${C.reset} docker compose up -d postgres failed`);
+    process.exit(r.status ?? 1);
+  }
+}
+
+/**
+ * Run an arbitrary SQL command against the dev Postgres container via
+ * `docker exec ... psql`. Returns stdout (trimmed) or null on error.
+ */
+function pgExec(sql) {
+  const r = spawnSync(
+    'docker',
+    ['exec', '-i', 'promptdemo-postgres-1', 'psql', '-U', 'promptdemo', '-d', 'promptdemo', '-t', '-A', '-c', sql],
+    { encoding: 'utf8', shell: false },
+  );
+  if (r.status !== 0) return null;
+  return String(r.stdout ?? '').trim();
+}
+
+/**
  * Remotion's @remotion/bundler drops a fresh webpack bundle into the OS temp
  * dir every render and never deletes it. On Windows this is
  * %LOCALAPPDATA%\Temp\remotion-webpack-bundle-*; on POSIX /tmp/remotion-webpack-bundle-*.
@@ -371,6 +410,95 @@ function killPid(pid) {
   } catch { return false; }
 }
 
+// ===========================================================================
+// Database lifecycle helpers (Feature 4)
+// ===========================================================================
+
+/**
+ * Stop all services, wipe postgres volume, bring postgres back up, wait for
+ * it to be healthy. The down -v ensures /docker-entrypoint-initdb.d scripts
+ * rerun on the fresh volume. Redis + MinIO volumes are also wiped as a
+ * side-effect — acceptable for dev, job logs live on MinIO which rebuilds
+ * the bucket via minio-init.
+ */
+async function dbReset() {
+  loadDotenv();
+  applyDefaults();
+  console.log(`${C.bold}[db:reset]${C.reset} stopping services first to release connections...`);
+  // Quick stop: kill any listener on our service ports; don't require the
+  // pid files to be in sync.
+  reapPorts('[db:reset]');
+  for (const svc of SERVICES) removePid(svc.name);
+
+  dockerDownVolumes();
+  dockerUpPostgres();
+
+  console.log(`${C.cyan}[db:reset]${C.reset} waiting for Postgres + migration to complete...`);
+  for (let i = 0; i < 60; i++) {
+    const pgOk = await tcpCheck('127.0.0.1', 5432);
+    if (pgOk) {
+      // TCP up isn't enough — Postgres accepts connections before init
+      // scripts finish. Poll for a known table from 001_initial.sql.
+      const got = pgExec("SELECT count(*) FROM information_schema.tables WHERE table_name='jobs'");
+      if (got !== null && Number(got) >= 1) {
+        console.log(`${C.green}[db:reset]${C.reset} schema ready (jobs table exists)`);
+        // Show what tables we have
+        const tables = pgExec(
+          "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name",
+        );
+        if (tables) {
+          console.log(`${C.dim}[db:reset]${C.reset} tables: ${tables.split('\n').join(', ')}`);
+        }
+        console.log('');
+        console.log(`${C.bold}Next:${C.reset} ${C.dim}pnpm demo start${C.reset}`);
+        return;
+      }
+    }
+    if (i > 0 && i % 5 === 0) {
+      console.log(`${C.dim}[db:reset]${C.reset} still waiting (${i}s)...`);
+    }
+    await sleep(1000);
+  }
+  console.error(`${C.red}[db:reset]${C.reset} timed out. Check: docker compose -f docker-compose.dev.yaml logs postgres`);
+  process.exit(1);
+}
+
+/**
+ * Show all tables + row counts in the dev Postgres database.
+ */
+function dbTables() {
+  if (!tcpCheckSync(5432)) {
+    console.error(`${C.red}[db:tables]${C.reset} Postgres is not reachable on :5432. Start it first: pnpm demo db:reset`);
+    process.exit(1);
+  }
+  const tables = pgExec(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name",
+  );
+  if (!tables) {
+    console.error(`${C.red}[db:tables]${C.reset} could not query Postgres. Is the container named promptdemo-postgres-1?`);
+    process.exit(1);
+  }
+  console.log(`${C.bold}Tables:${C.reset}`);
+  for (const t of tables.split('\n').filter(Boolean)) {
+    const count = pgExec(`SELECT count(*) FROM "${t}"`);
+    console.log(`  ${t.padEnd(22)} ${count ?? '?'} row(s)`);
+  }
+}
+
+// Synchronous port check for the one-shot db:tables path (pgExec itself is
+// sync via spawnSync, so keeping the whole command synchronous avoids mixing
+// promise/non-promise style in the dispatcher switch).
+function tcpCheckSync(port) {
+  const r = spawnSync(
+    IS_WINDOWS ? 'powershell.exe' : 'sh',
+    IS_WINDOWS
+      ? ['-NoProfile', '-Command', `Test-NetConnection -ComputerName 127.0.0.1 -Port ${port} -InformationLevel Quiet`]
+      : ['-c', `nc -z 127.0.0.1 ${port}`],
+    { encoding: 'utf8', windowsHide: true },
+  );
+  return r.status === 0;
+}
+
 function reapPorts(label) {
   let killed = 0;
   for (const svc of SERVICES) {
@@ -519,7 +647,28 @@ async function statusAll() {
   console.log(`  MinIO     ${minioOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}`);
   if (authEnabled()) {
     const pgOk = await tcpCheck('127.0.0.1', 5432);
-    console.log(`  Postgres  ${pgOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}${pgOk ? '' : ` ${C.dim}(AUTH_ENABLED=true requires Postgres — docker compose up -d postgres)${C.reset}`}`);
+    const pgStatus = pgOk ? C.green + 'UP' : C.red + 'DOWN';
+    const pgHint = pgOk ? '' : ` ${C.dim}(run: pnpm demo db:reset)${C.reset}`;
+    console.log(`  Postgres  ${pgStatus}${C.reset}${pgHint}`);
+
+    if (pgOk) {
+      // Quick schema + data sanity check. pgExec uses `docker exec` so it
+      // fails gracefully if the container isn't named promptdemo-postgres-1.
+      const tableCount = pgExec(
+        "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'",
+      );
+      const userCount = pgExec('SELECT count(*) FROM users');
+      const jobCount = pgExec('SELECT count(*) FROM jobs');
+      if (tableCount !== null) {
+        const n = Number(tableCount);
+        const migrated = n >= 8; // users + accounts + sessions + verification_token + subs + credits + tx + jobs
+        const migTag = migrated ? `${C.green}${n} tables${C.reset}` : `${C.yellow}${n} tables — migration not applied?${C.reset}`;
+        console.log(`    schema:   ${migTag}`);
+      }
+      if (userCount !== null && jobCount !== null) {
+        console.log(`    data:     ${userCount} user(s), ${jobCount} job(s)`);
+      }
+    }
   }
 
   console.log(`\n${C.bold}Services:${C.reset}`);
@@ -711,6 +860,12 @@ Commands:
              (auto-runs on start/stop/run/shutdown; use manually if needed)
   restart    Stop + start
   run        Foreground mode (all output mixed, Ctrl-C stops)
+
+${C.bold}Database (Feature 4 Postgres, AUTH_ENABLED=true):${C.reset}
+  ${C.magenta}db:reset${C.reset}   Wipe Postgres volume + rerun migrations. Use after schema changes.
+             Destructive: also drops Redis + MinIO volumes in the same sweep.
+  ${C.magenta}db:tables${C.reset}  List all tables + row counts in the dev database.
+
   help       This message
 
 Requires Docker Desktop running + ANTHROPIC_API_KEY in .env at repo root.
@@ -731,6 +886,8 @@ const arg = process.argv[3];
     case 'restart': await stopAll(); await sleep(1000); await startAll(); break;
     case 'run':     await runForeground(); break;
     case 'clean':   cleanRemotionBundles(); break;
+    case 'db:reset': await dbReset(); break;
+    case 'db:tables': dbTables(); break;
     case 'help':
     case '--help':
     case '-h':      help(); break;
