@@ -87,10 +87,26 @@ function enrichFromCrawlResult(
   };
 
   const rawScenes = Array.isArray(obj.scenes) ? (obj.scenes as unknown[]) : [];
+  // Normalize sceneId BEFORE the variant selector + zodValidate: Claude
+  // sometimes emits sceneId as null/undefined/non-numeric-string which then
+  // coerces to NaN and fails validation with a confusing "Expected number,
+  // received nan" message. Array index + 1 is a sensible deterministic
+  // fallback; Claude's sceneId is advisory (we don't rely on it for ordering
+  // — scenes[] is already ordered by the array itself).
+  const normalizedScenes = rawScenes.map((s, i) => {
+    if (!s || typeof s !== 'object') return s;
+    const obj = s as Record<string, unknown>;
+    const n = Number(obj.sceneId);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+      return { ...obj, sceneId: i + 1 };
+    }
+    return s;
+  });
+
   // Cast is safe: selector only reads `type` + `props`; Zod validation downstream
   // will reject anything malformed.
   const withVariants = selectVariants(
-    rawScenes as never,
+    normalizedScenes as never,
     enrichedAssets as never,
     input.crawlResult.features.length
   );
