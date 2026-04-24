@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ProgressBar } from '../../src/components/ProgressBar';
 import { StageLabel } from '../../src/components/StageLabel';
 import { ErrorCard } from '../../src/components/ErrorCard';
@@ -28,14 +29,19 @@ describe('StageLabel', () => {
 });
 
 describe('ErrorCard', () => {
-  it('shows code + message', () => {
-    render(<ErrorCard code="X" message="boom" retryable={false} />);
-    expect(screen.getByText('X')).toBeInTheDocument();
+  it('shows a friendly headline + collapsible code/message details', async () => {
+    const user = userEvent.setup();
+    render(<ErrorCard code="CRAWL_FAILED" message="boom" retryable={false} />);
+    // Friendly headline is user-visible by default
+    expect(screen.getByText(/couldn.?t read your URL/i)).toBeInTheDocument();
+    // Code + message live in the collapsible panel; expand + verify
+    await user.click(screen.getByRole('button', { name: /show details/i }));
+    expect(screen.getByText('CRAWL_FAILED')).toBeInTheDocument();
     expect(screen.getByText(/boom/)).toBeInTheDocument();
   });
-  it('shows retry button when retryable + onRetry provided', () => {
+  it('shows "Try again" button when retryable + onRetry provided', () => {
     render(<ErrorCard code="X" message="y" retryable={true} onRetry={() => {}} />);
-    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 });
 

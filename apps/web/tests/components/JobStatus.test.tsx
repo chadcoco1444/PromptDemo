@@ -61,6 +61,8 @@ describe('JobStatus', () => {
       error: { code: 'CRAWL_FAILED', message: 'nope', retryable: false },
     });
     render(<JobStatus streamUrl="http://api/s" jobId="j1" resolveVideoUrl={resolve} />);
-    expect(screen.getByText(/CRAWL_FAILED/)).toBeInTheDocument();
+    // Friendly ErrorCard renders the stage-aware headline; raw CRAWL_FAILED
+    // code lives in the collapsible details panel.
+    expect(screen.getByText(/couldn.?t read your URL/i)).toBeInTheDocument();
   });
 });
