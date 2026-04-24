@@ -71,6 +71,37 @@ All pushed to `main` on `origin`.
 - **History page is skeleton-only** — `/api/users/me/jobs` endpoint + job store dual-write still to build. 2-3 hours to finish.
 - **SSE live-intel per stage** — spec Part 3 mockup shows "Frame 127/900 · fps 31.2" per stage. Current StageRail shows stage progress bar. Full intel requires 3-worker + orchestrator SSE event enrichment, ~2 hours. Punted.
 
+## Extended session (user came back + asked for more)
+
+After the original wrap-up (~00:40), user returned and asked to finish the items flagged "deferred" in the decision log (Stripe last). Two more hours of work landed before final handover:
+
+### Additional commits
+- `0a669af` — storyboard robustness #6: normalize missing/invalid sceneId to array index+1 before zodValidate. (User hit "scenes.X.sceneId: Expected number, received nan" — `z.coerce.number()` turns null/non-numeric strings into NaN and `.int()` rejects. Caught in the generator's enrichment pass instead.)
+- `2ca2f13` — **Feature 4 history page + friendly errors**:
+  - Shared Postgres `Pool` in `apps/web/src/lib/pg.ts` (reused by auth.ts + new history route)
+  - `GET /api/users/me/jobs` route handler: auth-gated (404 on disabled, 401 on not-signed-in), cursor-pagination scaffolded, graceful degrade on DB errors (returns `{ jobs: [], warning: 'query_failed' }` instead of 500)
+  - `HistoryGrid` client component: 4-state render (loading skeleton / error / empty CTA / populated card grid). Hover elevates, focus rings, dark mode, relative-time + status pill + intent excerpt.
+  - `/history` page swaps static skeleton for `<HistoryGrid />`.
+  - `createJob()` rewritten to surface friendly user-facing errors: 429 → "Too many video requests…", 402 → "You're out of render seconds…", 5xx → "The server hit an unexpected error…". Before: raw Fastify JSON string was leaking into the error card. Fixed the user's "error 好醜" complaint about the 429.
+  - `apps/api/src/jobStorePostgres.ts` + `jobStoreDual.ts` — Postgres-backed JobStore + dual-write wrapper. Not yet wired into `apps/api/src/index.ts` because that needs session-derived userId extraction; ready to plug in.
+  - 2 new api.test.ts cases pin the new 429 + 402 copy.
+
+### Final user-visible improvements this extension
+- **E2E pipeline much more resilient** — 6 proactive Claude-output fixes total landed in this session. User confirmed `pnpm demo test` PASSES after the last storyboard fix.
+- **History page actually works** — signs in, fetches, shows empty-state or real cards. Full flow: home → sign in → upload → `/history` shows the job.
+- **Submit errors read like a product**, not a stack trace (429 was the trigger; same friendly copy applies to 402 / 5xx).
+
+### Items still deferred (updated from the earlier list)
+
+| Item | Status | Why |
+|---|---|---|
+| Dual-write wiring in apps/api | Code written, not wired | Needs session-derived userId extraction in POST /api/jobs. Next session is a 30-min job: apps/web proxies POST via X-User-Id header → apps/api reads it. |
+| parentJobId regenerate lineage | Pending | 1-line wiring once dual-write is live |
+| SSE live-intel per stage | Pending | 1.5 hr across 3 workers + orchestrator + broker |
+| Per-tier S3 retention | Pending | GCS lifecycle rules, infra change |
+| Terminal hiding on Windows | Pending (third attempt deferred) | Needs Windows Job Object with `JOB_OBJECT_UILIMIT_DESKTOP` via native ffi — 2-4 hrs with fragile cross-Windows-version behavior. See `2026-04-24-demo-orchestration-rewrite.md` for the full tradeoff. |
+| Stripe / Feature 5 | Pending (per user's instruction: last) | Implementation guide in `2026-04-25-feature5-pricing-guide.md`. Awaiting Stripe keys. |
+
 ## Handover state
 
 - Working tree clean on `main` (working copy is a git repo; all changes pushed to `origin/main`).
