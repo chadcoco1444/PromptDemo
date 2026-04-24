@@ -29,3 +29,5 @@ test-results/
 .vscode/
 # pack output
 *.tgz
+# Non-checked-in media assets (user supplies locally / via secrets store)
+packages/remotion/src/assets/bgm/*.mp3
