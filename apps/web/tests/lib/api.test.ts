@@ -23,15 +23,37 @@ describe('createJob', () => {
     );
   });
 
-  it('throws on non-2xx', async () => {
+  it('throws the server-provided message on non-2xx', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       status: 400,
       ok: false,
-      json: async () => ({ error: 'bad' }),
+      json: async () => ({ message: 'bad input' }),
     }) as any;
     await expect(
       createJob({ url: 'https://x.com', intent: 'x', duration: 10 }, 'http://api')
-    ).rejects.toThrow(/400/);
+    ).rejects.toThrow(/bad input/);
+  });
+
+  it('throws a friendly rate-limit message on 429', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 429,
+      ok: false,
+      json: async () => ({ error: 'Too Many Requests' }),
+    }) as any;
+    await expect(
+      createJob({ url: 'https://x.com', intent: 'x', duration: 10 }, 'http://api')
+    ).rejects.toThrow(/too many video requests/i);
+  });
+
+  it('throws a friendly insufficient-credits message on 402', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 402,
+      ok: false,
+      json: async () => ({}),
+    }) as any;
+    await expect(
+      createJob({ url: 'https://x.com', intent: 'x', duration: 10 }, 'http://api')
+    ).rejects.toThrow(/out of render seconds/i);
   });
 });
 

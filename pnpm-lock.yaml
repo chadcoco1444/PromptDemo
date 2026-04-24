@@ -50,6 +50,9 @@ importers:
       nanoid:
         specifier: 5.0.7
         version: 5.0.7
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       zod:
         specifier: 3.23.8
         version: 3.23.8
@@ -60,6 +63,9 @@ importers:
       '@types/node':
         specifier: 20.14.10
         version: 20.14.10
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
       ioredis-mock:
         specifier: 8.9.0
         version: 8.9.0(@types/ioredis-mock@8.2.7(ioredis@5.4.1))(ioredis@5.4.1)

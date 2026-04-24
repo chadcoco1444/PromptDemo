@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth, isAuthEnabled } from '../../auth';
+import { HistoryGrid } from '../../components/HistoryGrid';
 
 /**
  * History page — lists the signed-in user's past render jobs.
@@ -51,25 +52,7 @@ export default async function HistoryPage() {
         </Link>
       </header>
 
-      {/* History grid placeholder. Once the API endpoint ships, swap this
-          to a client component that fetches /api/users/me/jobs and renders
-          a card per row. Skeleton cards give the layout its final shape. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 animate-pulse"
-          >
-            <div className="aspect-video rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="h-3 rounded bg-gray-200 dark:bg-gray-800 w-3/4" />
-            <div className="h-3 rounded bg-gray-200 dark:bg-gray-800 w-1/2" />
-          </div>
-        ))}
-      </div>
-      <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-        Job persistence and the listing endpoint (GET /api/users/me/jobs) are coming online —
-        past jobs will appear here once the backfill completes.
-      </div>
+      <HistoryGrid />
     </main>
   );
 }
