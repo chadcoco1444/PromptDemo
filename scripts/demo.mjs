@@ -315,11 +315,11 @@ async function startAll() {
   cleanRemotionBundles();
 
   for (const svc of SERVICES) {
-    const existing = readPid(svc.name);
-    if (existing && isAlive(existing)) {
-      console.log(`${svc.color}[${svc.name}]${C.reset} already running (pid ${existing}); skipping`);
+    if (await isServiceUp(svc)) {
+      console.log(`${svc.color}[${svc.name}]${C.reset} already listening on :${svc.port}; skipping`);
       continue;
     }
+    const existing = readPid(svc.name);
     if (existing) removePid(svc.name);
     spawnService(svc);
   }
@@ -432,12 +432,26 @@ async function statusAll() {
 
   console.log(`\n${C.bold}Services:${C.reset}`);
   for (const svc of SERVICES) {
+    // Port-based alive check. Tracking the PID we spawned is unreliable on
+    // Windows: cmd.exe → pnpm.cmd → node chain means our saved PID dies as
+    // soon as pnpm hands off to node. The listening port is the source of truth.
+    const up = await isServiceUp(svc);
     const pid = readPid(svc.name);
-    const alive = pid && isAlive(pid);
-    const health = svc.url ? (await httpOk(svc.url, 1500) ? ' / healthy' : ' / not responding') : '';
-    const tag = alive ? `${C.green}UP${C.reset}  (pid ${pid})${health}` : `${C.red}DOWN${C.reset}`;
+    const pidTag = pid ? ` (spawned via pid ${pid})` : '';
+    const health = up && svc.url ? (await httpOk(svc.url, 1500) ? ' / healthy' : ' / not responding') : '';
+    const tag = up ? `${C.green}UP${C.reset}${pidTag}${health}` : `${C.red}DOWN${C.reset}`;
     console.log(`  ${svc.color}${svc.name.padEnd(11)}${C.reset} ${tag}`);
   }
+}
+
+/**
+ * Port-based liveness check. Reliable on Windows where spawn-chain PIDs die
+ * while the real server keeps listening. For http services with a health URL,
+ * prefer httpOk (distinguishes "listening but crashed" from "fully up").
+ */
+async function isServiceUp(svc) {
+  if (svc.url) return httpOk(svc.url, 1500);
+  return tcpCheck('localhost', svc.port);
 }
 
 async function runTest() {
