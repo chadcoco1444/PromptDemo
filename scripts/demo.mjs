@@ -215,21 +215,36 @@ function spawnService(svc) {
   const stdout = openSync(log, 'a');
   const stderr = openSync(log, 'a');
 
-  // On Windows: invoke pnpm.cmd directly (no shell wrapper). With shell:true,
-  // Node spawns cmd.exe → cmd spawns pnpm.cmd → cmd hosts its own console.
-  // `windowsHide: true` on that outer cmd.exe is unreliable when combined with
-  // detached:true. Calling `pnpm.cmd` directly + shell:false lets CreateProcess
-  // use the NO_WINDOW flag from windowsHide correctly. Node auto-resolves .cmd
-  // on PATH (pnpm via corepack/nvm is on it).
-  const executable = IS_WINDOWS ? 'pnpm.cmd' : 'pnpm';
-  const child = spawn(executable, ['--filter', svc.filter, 'dev'], {
-    env: serviceEnv(svc),
-    cwd: REPO_ROOT,
-    detached: true,
-    stdio: ['ignore', stdout, stderr],
-    shell: false,
-    windowsHide: true,
-  });
+  // On Windows, the combination of
+  //   (a) spawning .cmd files requires shell:true on Node 24+ (CVE-2024-27980 hardening),
+  //   (b) shell:true + detached:true + windowsHide:true does NOT actually hide cmd consoles,
+  //   (c) spawning pnpm.cmd with shell:false throws EINVAL on Node 24,
+  // leaves one reliable path: spawn cmd.exe DIRECTLY (it's a .exe so shell:false is OK) and
+  // pass the pnpm invocation as args. With windowsHide:true the CreateProcess call gets
+  // CREATE_NO_WINDOW and no console is created.
+  let child;
+  if (IS_WINDOWS) {
+    child = spawn(
+      'cmd.exe',
+      ['/d', '/s', '/c', 'pnpm', '--filter', svc.filter, 'dev'],
+      {
+        env: serviceEnv(svc),
+        cwd: REPO_ROOT,
+        detached: true,
+        stdio: ['ignore', stdout, stderr],
+        shell: false,
+        windowsHide: true,
+      }
+    );
+  } else {
+    child = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
+      env: serviceEnv(svc),
+      cwd: REPO_ROOT,
+      detached: true,
+      stdio: ['ignore', stdout, stderr],
+      shell: false,
+    });
+  }
   child.unref();
   writePid(svc.name, child.pid);
   console.log(`${svc.color}[${svc.name}]${C.reset} started (pid ${child.pid}, PORT=${svc.port}, log: ${log})`);
