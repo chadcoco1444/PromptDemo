@@ -14,6 +14,7 @@ import {
 import { withTempDir } from './tempDir.js';
 import { renderComposition, defaultSdk } from './renderer.js';
 import { startHealthServer } from './health.js';
+import { rewriteStoryboardUrls, defaultSigner } from './presignedRewrite.js';
 import { StoryboardSchema, type Storyboard, type S3Uri } from '@promptdemo/schema';
 
 const JobPayload = z.object({
@@ -46,12 +47,13 @@ const sdkPromise = defaultSdk();
 const worker = new Worker<JobPayload>(
   'render',
   async (job: Job<JobPayload>) => {
-    // resolverEndpoint assumes a path-style-reachable bucket (MinIO in dev, or
-    // a public/read-through proxy in prod). For private S3 buckets, Plan 7 will
-    // switch this to pre-signed URLs via @aws-sdk/s3-request-presigner.
     const payload = JobPayload.parse(job.data);
     const storyboard: Storyboard = StoryboardSchema.parse(await getObjectJson(s3, payload.storyboardUri));
     const sdk = await sdkPromise;
+    // Rewrite s3:// URIs in the storyboard to short-lived pre-signed HTTPS URLs
+    // so Remotion's headless Chromium can fetch them from private buckets.
+    // Plan 3's makeS3Resolver no-ops when input is already http(s).
+    const signed = await rewriteStoryboardUrls(storyboard, defaultSigner(s3));
 
     return withTempDir('promptdemo-render-', async (dir) => {
       const outputPath = join(dir, `${payload.jobId}.mp4`);
@@ -60,11 +62,11 @@ const worker = new Worker<JobPayload>(
         entryPoint: REMOTION_ENTRY_POINT,
         compositionId: 'MainComposition',
         inputProps: {
-          ...storyboard,
+          ...signed,
           sourceUrl: payload.sourceUrl,
           resolverEndpoint: s3Endpoint,
           forcePathStyle,
-        },
+        } as any, // cast: SignedStoryboard widens S3Uri to string
         outputPath,
         codec: 'h264',
         sdk,

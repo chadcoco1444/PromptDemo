@@ -15,6 +15,7 @@
     "@promptdemo/schema": "workspace:*",
     "@promptdemo/remotion": "workspace:*",
     "@aws-sdk/client-s3": "3.658.1",
+    "@aws-sdk/s3-request-presigner": "3.658.1",
     "@remotion/bundler": "4.0.218",
     "@remotion/renderer": "4.0.218",
     "bullmq": "5.21.2",
