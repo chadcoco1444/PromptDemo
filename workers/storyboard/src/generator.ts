@@ -9,12 +9,34 @@ import type { ClaudeClient } from './claude/claudeClient.js';
 
 const MAX_ATTEMPTS = 3;
 const DURATION_FRAMES: Record<10 | 30 | 60, number> = { 10: 300, 30: 900, 60: 1800 };
-// Default brand color when the crawler's color sampler returns nothing (site
-// is all-dark / all-light and got filtered out by the luminance thresholds).
+// Default brand color when the crawler's color sampler returns nothing OR
+// returns a color too extreme for a legible gradient (near-black / near-white).
 // Indigo-600 matches the saas-landing fixture palette so videos look consistent
-// when there's no detected brand, rather than a dead-black void.
+// when the brand fallback kicks in, rather than a dead-black void.
 const DEFAULT_BRAND_COLOR = '#4f46e5';
 const DEFAULT_BGM = 'minimal' as const;
+
+function relativeLuminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * The crawler's sampler can land on near-black or near-white colors (dark-themed
+ * product sites have buttons/surfaces that slip past the neutral filter, and
+ * minimal sites with light surfaces do the same on the other end). Either
+ * extreme collapses the 3-stop gradient palette into a flat band, so FeatureCallout's
+ * FakePanel looks dead. Guard against it here: if the detected color is outside
+ * a legible luminance band, use the default instead.
+ */
+function pickBrandColor(detected: string | undefined): string {
+  if (!detected) return DEFAULT_BRAND_COLOR;
+  const lum = relativeLuminance(detected);
+  if (lum < 0.18 || lum > 0.88) return DEFAULT_BRAND_COLOR;
+  return detected;
+}
 
 /**
  * Fill in deterministic Storyboard fields that Claude consistently under-specifies:
@@ -66,7 +88,7 @@ function enrichFromCrawlResult(
       // deterministic overrides (Claude cannot change these)
       durationInFrames: DURATION_FRAMES[input.duration],
       fps: 30,
-      brandColor: brand.primaryColor ?? DEFAULT_BRAND_COLOR,
+      brandColor: pickBrandColor(brand.primaryColor),
       ...(brand.logoUrl ? { logoUrl: brand.logoUrl } : {}),
     },
     assets: {
