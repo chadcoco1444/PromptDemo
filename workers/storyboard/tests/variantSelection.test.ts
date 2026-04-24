@@ -1,29 +1,34 @@
 import { describe, it, expect } from 'vitest';
 import { selectVariants } from '../src/variantSelection';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Scene, Storyboard, FeatureVariant } from '@promptdemo/schema';
 
-function fc(sceneId: number, extra: Partial<{ variant: string }> = {}) {
+function fc(sceneId: number, extra: Partial<{ variant: FeatureVariant }> = {}): Scene {
   return {
     sceneId,
-    type: 'FeatureCallout' as const,
+    type: 'FeatureCallout',
     durationInFrames: 120,
-    entryAnimation: 'fade' as const,
-    exitAnimation: 'fade' as const,
+    entryAnimation: 'fade',
+    exitAnimation: 'fade',
     props: {
-      title: 'T', description: 'D', layout: 'leftImage' as const,
-      ...extra,
+      title: 'T', description: 'D', layout: 'leftImage',
+      variant: extra.variant ?? 'image',
     },
-  };
+  } as Scene;
 }
-function hero() {
+function hero(): Scene {
   return {
     sceneId: 99,
-    type: 'HeroRealShot' as const,
+    type: 'HeroRealShot',
     durationInFrames: 90,
-    entryAnimation: 'fade' as const,
-    exitAnimation: 'fade' as const,
-    props: { title: 'Hi', screenshotKey: 'viewport' as const },
-  };
+    entryAnimation: 'fade',
+    exitAnimation: 'fade',
+    props: { title: 'Hi', screenshotKey: 'viewport' },
+  } as Scene;
+}
+
+function asFC(scene: Scene): Scene & { type: 'FeatureCallout' } {
+  if (scene.type !== 'FeatureCallout') throw new Error(`expected FeatureCallout, got ${scene.type}`);
+  return scene as Scene & { type: 'FeatureCallout' };
 }
 
 const assetsBoth = {
@@ -38,48 +43,48 @@ describe('selectVariants', () => {
   it('assigns dashboard to every FeatureCallout when no viewport screenshot exists', () => {
     const scenes = [hero(), fc(1), fc(2), fc(3)];
     const result = selectVariants(scenes, assetsNone, 3);
-    expect(result[1].props.variant).toBe('dashboard');
-    expect(result[2].props.variant).toBe('dashboard');
-    expect(result[3].props.variant).toBe('dashboard');
+    expect(asFC(result[1]!).props.variant).toBe('dashboard');
+    expect(asFC(result[2]!).props.variant).toBe('dashboard');
+    expect(asFC(result[3]!).props.variant).toBe('dashboard');
   });
 
   it('always gives the first FeatureCallout the "image" variant when viewport exists', () => {
     const scenes = [hero(), fc(1), fc(2)];
     const result = selectVariants(scenes, assetsBoth, 2);
-    expect(result[1].props.variant).toBe('image');
+    expect(asFC(result[1]!).props.variant).toBe('image');
   });
 
   it('alternates kenBurns on even-indexed subsequent FeatureCallouts when fullPage exists', () => {
     // indices among FeatureCallouts: 0 (first → image), 1 (odd → collage branch), 2 (even → kenBurns)
     const scenes = [hero(), fc(1), fc(2), fc(3)];
     const result = selectVariants(scenes, assetsBoth, 3);
-    expect(result[1].props.variant).toBe('image');      // first FC
-    expect(result[2].props.variant).toBe('collage');    // FC index 1 (odd) + featureCount ≥ 3
-    expect(result[3].props.variant).toBe('kenBurns');   // FC index 2 (even)
+    expect(asFC(result[1]!).props.variant).toBe('image');      // first FC
+    expect(asFC(result[2]!).props.variant).toBe('collage');    // FC index 1 (odd) + featureCount ≥ 3
+    expect(asFC(result[3]!).props.variant).toBe('kenBurns');   // FC index 2 (even)
   });
 
   it('falls back to image when fullPage missing and not first FC', () => {
     const scenes = [hero(), fc(1), fc(2), fc(3)];
     const result = selectVariants(scenes, assetsViewportOnly, 2);
-    expect(result[1].props.variant).toBe('image');
-    expect(result[2].props.variant).toBe('image');
-    expect(result[3].props.variant).toBe('image');
+    expect(asFC(result[1]!).props.variant).toBe('image');
+    expect(asFC(result[2]!).props.variant).toBe('image');
+    expect(asFC(result[3]!).props.variant).toBe('image');
   });
 
   it('never picks collage when featureCount < 3', () => {
     const scenes = [hero(), fc(1), fc(2), fc(3), fc(4)];
     const result = selectVariants(scenes, assetsBoth, 2);
     // FC indices: 0 image, 1 (odd, featureCount=2 <3) → image, 2 (even) → kenBurns, 3 (odd, count<3) → image
-    expect(result[1].props.variant).toBe('image');
-    expect(result[2].props.variant).toBe('image');
-    expect(result[3].props.variant).toBe('kenBurns');
-    expect(result[4].props.variant).toBe('image');
+    expect(asFC(result[1]!).props.variant).toBe('image');
+    expect(asFC(result[2]!).props.variant).toBe('image');
+    expect(asFC(result[3]!).props.variant).toBe('kenBurns');
+    expect(asFC(result[4]!).props.variant).toBe('image');
   });
 
   it('leaves non-FeatureCallout scenes untouched', () => {
     const scenes = [hero(), fc(1)];
     const result = selectVariants(scenes, assetsBoth, 1);
-    expect(result[0]).toEqual(scenes[0]);
+    expect(result[0]!).toEqual(scenes[0]!);
   });
 
   it('does not mutate the input array', () => {
