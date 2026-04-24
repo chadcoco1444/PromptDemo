@@ -1,10 +1,12 @@
 // Base TypeScript config. Per-package `tsconfig.json` extends this.
 //
 // Notes:
-//  - `moduleResolution: "Bundler"` is correct for Next.js (apps/web) and
-//    Remotion (packages/remotion). Node workers (workers/*) MUST override
-//    to `"NodeNext"` and `module: "NodeNext"` or they will hit runtime
-//    ERR_MODULE_NOT_FOUND on relative imports without `.js` extensions.
+//  - `moduleResolution: "Bundler"` is used across the workspace. It works
+//    for Next.js (apps/web), Remotion (packages/remotion), and Node workers
+//    (workers/*) as long as workers run via `tsx` (which tolerates
+//    extensionless imports). If a worker is ever compiled and run via
+//    `node dist/*.js` instead of `tsx`, it will need to switch back to
+//    NodeNext and add `.js` suffixes to local imports.
 //  - `lib` intentionally excludes "DOM". Browser packages add it back
 //    (e.g. `"lib": ["ES2022", "DOM"]`). Keeps Node workers honest.
 //  - `composite` is intentionally omitted. Packages that want TypeScript
