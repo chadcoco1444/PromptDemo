@@ -35,6 +35,32 @@ describe('resolveScene', () => {
     } as unknown as Scene;
     expect(() => resolveScene({ scene, assets, theme, url: 'https://x.com', resolver })).toThrow(/not implemented/i);
   });
+
+  it('resolves a FeatureCallout with variant=image', () => {
+    const scene: Scene = {
+      sceneId: 2,
+      type: 'FeatureCallout',
+      durationInFrames: 120,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: { title: 'T', description: 'D', layout: 'leftImage', variant: 'image' },
+    };
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+  });
+
+  it('resolves a FeatureCallout with variant=kenBurns when fullPage exists', () => {
+    const scene: Scene = {
+      sceneId: 3,
+      type: 'FeatureCallout',
+      durationInFrames: 120,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: { title: 'T', description: 'D', layout: 'leftImage', variant: 'kenBurns' },
+    };
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+  });
 });
 
 // Minimal type import so tests are self-contained

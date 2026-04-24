@@ -34,17 +34,21 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
       );
     }
     case 'FeatureCallout': {
-      // Use the viewport screenshot as the panel image when available — falls
-      // back to the stylized FakePanel dashboard if the crawler couldn't capture
-      // one (Tier-B fallback).
-      const imageSrc = resolver(assets.screenshots.viewport);
+      // Route both screenshots + variant to the FeatureCallout dispatcher — it
+      // picks the right panel (image / kenBurns / collage / dashboard) and
+      // falls back to the stylized DashboardPanel dashboard if a required
+      // screenshot is missing (Tier-B fallback).
+      const viewportSrc = resolver(assets.screenshots.viewport);
+      const fullPageSrc = resolver(assets.screenshots.fullPage);
       return (
         <FeatureCallout
           title={scene.props.title}
           description={scene.props.description}
           layout={scene.props.layout}
           theme={theme}
-          {...(imageSrc ? { imageSrc } : {})}
+          variant={scene.props.variant}
+          {...(viewportSrc ? { viewportSrc } : {})}
+          {...(fullPageSrc ? { fullPageSrc } : {})}
         />
       );
     }
