@@ -15,8 +15,14 @@ const AnimationEnum = z.enum([
 
 const BgmEnum = z.enum(['upbeat', 'cinematic', 'minimal', 'tech', 'none']);
 
+// z.coerce.number() accepts both 1 and "1" — Claude occasionally stringifies
+// integer fields in JSON output (observed with 10-scene boards). Coercing at
+// the schema level is safer than a pre-parse normalize because it handles
+// every code path that feeds the schema (generator, fixtures, tests).
+const IntPositive = z.coerce.number().int().positive();
+
 const VideoConfigSchema = z.object({
-  durationInFrames: z.number().int().positive(),
+  durationInFrames: IntPositive,
   fps: z.literal(30),
   brandColor: HexColorSchema,
   logoUrl: S3UriSchema.optional(),
@@ -33,8 +39,8 @@ const AssetsSchema = z.object({
 });
 
 const sceneBase = {
-  sceneId: z.number().int().positive(),
-  durationInFrames: z.number().int().positive(),
+  sceneId: IntPositive,
+  durationInFrames: IntPositive,
   entryAnimation: AnimationEnum,
   exitAnimation: AnimationEnum,
   locked: z.boolean().optional(),

@@ -94,6 +94,29 @@ describe('StoryboardSchema', () => {
     });
     expect(parsed.videoConfig.bgm).toBe('none');
   });
+
+  it('coerces string sceneId / durationInFrames to number (Claude stringification)', () => {
+    // Claude occasionally emits integer fields as strings: { sceneId: "1" }.
+    // z.coerce.number() accepts both shapes and normalizes to number.
+    const parsed = StoryboardSchema.parse({
+      videoConfig: { durationInFrames: '300', fps: 30, brandColor: '#4f46e5', bgm: 'none' },
+      assets: { screenshots: {}, sourceTexts: ['hello'] },
+      scenes: [
+        {
+          sceneId: '1',
+          type: 'TextPunch',
+          durationInFrames: '300',
+          entryAnimation: 'fade',
+          exitAnimation: 'fade',
+          props: { text: 'hello', emphasis: 'primary' },
+        },
+      ],
+    });
+    expect(parsed.videoConfig.durationInFrames).toBe(300);
+    expect(parsed.scenes[0]!.sceneId).toBe(1);
+    expect(parsed.scenes[0]!.durationInFrames).toBe(300);
+    expect(typeof parsed.scenes[0]!.sceneId).toBe('number');
+  });
 });
 
 describe('FeatureCalloutSchema variant', () => {
