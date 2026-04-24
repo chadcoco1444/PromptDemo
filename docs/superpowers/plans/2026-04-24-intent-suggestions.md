@@ -108,6 +108,33 @@ describe('applyPreset', () => {
     applyPreset('anything', preset);
     expect(JSON.stringify(preset)).toBe(snapshot);
   });
+
+  it('is a no-op when the same preset was already applied (dedup on double-click)', () => {
+    // Clicking the same chip twice shouldn't stuff the intent with duplicates.
+    // Detection rule: the current text already contains the preset body verbatim.
+    const once = applyPreset('', preset);
+    const twice = applyPreset(once, preset);
+    expect(twice).toBe(once);
+  });
+
+  it('is also a no-op when the preset was applied via append mode and then re-clicked', () => {
+    const withAppend = applyPreset('existing text', preset);
+    const reclick = applyPreset(withAppend, preset);
+    expect(reclick).toBe(withAppend);
+  });
+
+  it('still allows appending a DIFFERENT preset after one is already applied', () => {
+    const tutorial = {
+      id: 'tutorial',
+      labels: { en: 'Tutorial / Walkthrough', zh: '教學版' },
+      body: 'Walk through the product step-by-step.',
+    };
+    const first = applyPreset('', preset);
+    const second = applyPreset(first, tutorial);
+    expect(second).toContain(preset.body);
+    expect(second).toContain('[Preset: Tutorial / Walkthrough]');
+    expect(second).toContain(tutorial.body);
+  });
 });
 ```
 
@@ -186,14 +213,19 @@ export const INTENT_PRESETS: IntentPreset[] = [
 /**
  * Pure fill/append rule used when a chip is clicked.
  *
- * - Empty or whitespace-only current → return the preset body verbatim.
- * - Otherwise → append on a blank line, prefixed with [Preset: <en-label>].
+ * Rules, in order:
+ *   1. Dedup — if the preset body already appears verbatim in `current`, return
+ *      unchanged. Guards against double-click / same-chip-twice stuffing the
+ *      textarea with duplicate preset copies.
+ *   2. Empty / whitespace-only current → return the preset body verbatim (fill mode).
+ *   3. Otherwise → append on a blank line, prefixed with [Preset: <en-label>].
  *
  * The English label is intentionally used in the marker even when the UI shows
  * the zh label, because the resulting string is sent to Claude (stronger prompts
  * in English). Chinese label is display-only.
  */
 export function applyPreset(current: string, preset: IntentPreset): string {
+  if (current.includes(preset.body)) return current; // dedup
   if (current.trim().length === 0) return preset.body;
   return `${current}\n\n[Preset: ${preset.labels.en}]\n${preset.body}`;
 }
@@ -202,7 +234,7 @@ export function applyPreset(current: string, preset: IntentPreset): string {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @promptdemo/web test -- intentPresets.test.ts`
-Expected: PASS (all 8 assertions — 2 in `INTENT_PRESETS`, 5 in `applyPreset`, plus 1 CJK heuristic baked into the loop).
+Expected: PASS — 2 tests in `INTENT_PRESETS` describe (5 presets + body-is-English heuristic), 8 tests in `applyPreset` describe (fill-empty, fill-whitespace, append-with-marker, English-marker-only, no-mutation, dedup-same-chip, dedup-after-append, allow-different-preset).
 
 - [ ] **Step 5: Commit**
 
@@ -807,6 +839,7 @@ Cross-check against `docs/superpowers/specs/2026-04-24-promptdemo-v2-design.md` 
 | Click non-empty textarea + chip → append `\n\n[Preset: <name>]\n<body>` | Task 1 `applyPreset` append branch; Task 5 integration test |
 | Hover shows full preset text | Task 4 `title` attribute + test |
 | Chip click completes in <50ms (no network) | `applyPreset` is pure sync; `sendBeacon` is fire-and-forget and does not block the click handler |
+| Double-clicking same chip does not duplicate preset text | Task 1 `applyPreset` dedup via `current.includes(preset.body)` + 3 dedup/allow tests |
 | Preset text appears verbatim in submitted `input.intent` | Task 5 "submitting after preset click" integration test |
 | Chip labels detect `navigator.language` for en vs zh | Task 2 `detectLocale` + Task 5 `useEffect` |
 | Underlying preset body always English | Task 1 test guards against CJK in body; `applyPreset` marker uses `labels.en` regardless of locale |
