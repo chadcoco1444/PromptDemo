@@ -3,6 +3,7 @@ import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import {
   makeS3Client,
   putObject,
@@ -29,9 +30,17 @@ const env = process.env;
 const redisUrl = env.REDIS_URL ?? 'redis://localhost:6379';
 const s3Endpoint = env.S3_ENDPOINT ?? 'http://localhost:9000';
 const forcePathStyle = env.S3_FORCE_PATH_STYLE === 'true';
-// BGM mp3 files are gitignored (licensing). Default off so dev doesn't 404.
-// Set BGM_ENABLED=true after dropping mp3s into packages/remotion/src/assets/bgm/.
-const bgmEnabled = env.BGM_ENABLED === 'true';
+// BGM: auto-detect mp3 presence. Files live at packages/remotion/src/assets/bgm/
+// and are gitignored (licensing). If the specific track Claude picked is
+// missing, force bgm=none at render time so BGMTrack returns null and
+// Remotion doesn't 404 on the asset fetch.
+const BGM_DIR = fileURLToPath(
+  new URL('../../../packages/remotion/src/assets/bgm/', import.meta.url)
+);
+function bgmFileAvailable(mood: string): boolean {
+  if (mood === 'none') return true;
+  return existsSync(join(BGM_DIR, `${mood}.mp3`));
+}
 
 // Entry point for @remotion/bundler — the Plan 3 package's Root.tsx.
 // Resolved relative to the workspace so the render container can locate it.
@@ -57,11 +66,15 @@ const worker = new Worker<JobPayload>(
     // so Remotion's headless Chromium can fetch them from private buckets.
     // Plan 3's makeS3Resolver no-ops when input is already http(s).
     const signed = await rewriteStoryboardUrls(storyboard, defaultSigner(s3));
-    // Force bgm=none when mp3 assets aren't available (default in dev).
-    // BGMTrack component returns null for 'none', so no render error.
-    const finalStoryboard = bgmEnabled
+    // Force bgm=none if the mp3 for Claude's chosen track is missing (auto-detect).
+    // BGMTrack component returns null for 'none', so Remotion won't try to fetch.
+    const chosenBgm = signed.videoConfig.bgm;
+    const finalStoryboard = bgmFileAvailable(chosenBgm)
       ? signed
       : { ...signed, videoConfig: { ...signed.videoConfig, bgm: 'none' as const } };
+    if (!bgmFileAvailable(chosenBgm)) {
+      console.log(`[render] bgm='${chosenBgm}' mp3 missing at ${BGM_DIR}; forcing bgm=none`);
+    }
 
     return withTempDir('promptdemo-render-', async (dir) => {
       const outputPath = join(dir, `${payload.jobId}.mp4`);
