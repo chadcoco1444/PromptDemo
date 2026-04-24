@@ -5,6 +5,7 @@ import { parseJson } from './validation/parseJson.js';
 import { zodValidate } from './validation/zodValidate.js';
 import { extractiveCheck } from './validation/extractiveCheck.js';
 import { adjustDuration, adjustStoryboardDuration } from './validation/durationAdjust.js';
+import { selectVariants } from './variantSelection.js';
 import type { ClaudeClient } from './claude/claudeClient.js';
 
 const MAX_ATTEMPTS = 3;
@@ -79,6 +80,21 @@ function enrichFromCrawlResult(
     : {};
 
   const brand = input.crawlResult.brand;
+  const screenshots = input.crawlResult.screenshots;
+  const enrichedAssets = {
+    screenshots,
+    sourceTexts: buildSourceTextPool(input.crawlResult),
+  };
+
+  const rawScenes = Array.isArray(obj.scenes) ? (obj.scenes as unknown[]) : [];
+  // Cast is safe: selector only reads `type` + `props`; Zod validation downstream
+  // will reject anything malformed.
+  const withVariants = selectVariants(
+    rawScenes as never,
+    enrichedAssets as never,
+    input.crawlResult.features.length
+  );
+
   const enriched: Record<string, unknown> = {
     ...obj,
     videoConfig: {
@@ -91,10 +107,8 @@ function enrichFromCrawlResult(
       brandColor: pickBrandColor(brand.primaryColor),
       ...(brand.logoUrl ? { logoUrl: brand.logoUrl } : {}),
     },
-    assets: {
-      screenshots: input.crawlResult.screenshots,
-      sourceTexts: buildSourceTextPool(input.crawlResult),
-    },
+    assets: enrichedAssets,
+    scenes: withVariants,
   };
   return enriched;
 }

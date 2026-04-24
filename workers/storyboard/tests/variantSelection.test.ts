@@ -94,3 +94,23 @@ describe('selectVariants', () => {
     expect(JSON.stringify(scenes)).toBe(before);
   });
 });
+
+describe('generator enrichment integration', () => {
+  it('enriches FeatureCallout scenes with variants deterministically across two runs', () => {
+    const scenes = [
+      { sceneId: 1, type: 'FeatureCallout' as const, durationInFrames: 120,
+        entryAnimation: 'fade' as const, exitAnimation: 'fade' as const,
+        props: { title: 'A', description: 'a', layout: 'leftImage' as const } },
+      { sceneId: 2, type: 'FeatureCallout' as const, durationInFrames: 120,
+        entryAnimation: 'fade' as const, exitAnimation: 'fade' as const,
+        props: { title: 'B', description: 'b', layout: 'leftImage' as const } },
+    ];
+    const assets = {
+      screenshots: { viewport: 's3://x/v.jpg', fullPage: 's3://x/f.jpg' },
+    } as never;
+    const run1 = selectVariants(scenes as never, assets, 3);
+    const run2 = selectVariants(scenes as never, assets, 3);
+    expect(asFC(run1[0]!).props.variant).toBe(asFC(run2[0]!).props.variant);
+    expect(asFC(run1[1]!).props.variant).toBe(asFC(run2[1]!).props.variant);
+  });
+});
