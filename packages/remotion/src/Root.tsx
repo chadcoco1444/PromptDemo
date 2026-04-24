@@ -1,7 +1,7 @@
 import React from 'react';
 import { registerRoot, Composition } from 'remotion';
-import { MainComposition, type MainCompositionProps } from './MainComposition.js';
-import defaultStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json' with { type: 'json' };
+import { MainComposition, type MainCompositionProps } from './MainComposition';
+import defaultStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json';
 import type { Storyboard } from '@promptdemo/schema';
 
 const defaults = defaultStoryboard as unknown as Storyboard;

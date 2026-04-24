@@ -1413,10 +1413,11 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
 - [ ] **Step 2: `Root.tsx`**
 
 ```tsx
+// Note: Remotion 4's bundler (esbuild 0.18) predates import attributes; use plain JSON imports here.
 import React from 'react';
 import { registerRoot, Composition } from 'remotion';
-import { MainComposition } from './MainComposition.js';
-import defaultStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json' with { type: 'json' };
+import { MainComposition } from './MainComposition';
+import defaultStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json';
 import type { Storyboard } from '@promptdemo/schema';
 
 const defaults = defaultStoryboard as Storyboard;
