@@ -297,7 +297,7 @@ describe('selectVariants', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @promptdemo/storyboard-worker test -- variantSelection.test.ts`
+Run: `pnpm --filter @promptdemo/worker-storyboard test -- variantSelection.test.ts`
 Expected: FAIL — "Cannot find module '../src/variantSelection'".
 
 - [ ] **Step 3: Implement the selector**
@@ -343,10 +343,10 @@ function pick(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/storyboard-worker test -- variantSelection.test.ts`
+Run: `pnpm --filter @promptdemo/worker-storyboard test -- variantSelection.test.ts`
 Expected: PASS (all 7 tests).
 
-Run: `pnpm --filter @promptdemo/storyboard-worker build`
+Run: `pnpm --filter @promptdemo/worker-storyboard build`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -396,7 +396,7 @@ describe('generator enrichment integration', () => {
 });
 ```
 
-Run: `pnpm --filter @promptdemo/storyboard-worker test -- variantSelection.test.ts`
+Run: `pnpm --filter @promptdemo/worker-storyboard test -- variantSelection.test.ts`
 Expected: PASS immediately (selector is already pure; this is a regression guard).
 
 - [ ] **Step 2: Read the current enrichment function**
@@ -459,10 +459,10 @@ import { selectVariants } from './variantSelection.js';
 
 - [ ] **Step 4: Verify the build and existing tests still pass**
 
-Run: `pnpm --filter @promptdemo/storyboard-worker build`
+Run: `pnpm --filter @promptdemo/worker-storyboard build`
 Expected: PASS.
 
-Run: `pnpm --filter @promptdemo/storyboard-worker test`
+Run: `pnpm --filter @promptdemo/worker-storyboard test`
 Expected: PASS (all pre-existing generator tests + new variant tests).
 
 - [ ] **Step 5: Commit**
@@ -1231,7 +1231,7 @@ Expected: PASS.
 - [ ] **Step 3: Run full suites for both affected packages**
 
 Run: `pnpm --filter @promptdemo/remotion test`
-Run: `pnpm --filter @promptdemo/storyboard-worker test`
+Run: `pnpm --filter @promptdemo/worker-storyboard test`
 Run: `pnpm --filter @promptdemo/schema test`
 Expected: ALL PASS.
 
