@@ -41,15 +41,50 @@ function reducer(s: JobStreamState, a: Action): JobStreamState {
   }
 }
 
+// Parse e.data only if it's a non-empty string. EventSource's native 'error' event
+// (fires on connection loss, CORS block, etc.) has no data — guard against
+// JSON.parse(undefined).
+function parseEventData(e: MessageEvent): unknown {
+  if (typeof e.data !== 'string' || e.data.length === 0) return null;
+  try {
+    return JSON.parse(e.data);
+  } catch {
+    return null;
+  }
+}
+
 export function useJobStream(url: string): JobStreamState {
   const [state, dispatch] = useReducer(reducer, initial);
   useEffect(() => {
     const es = new EventSource(url);
-    const onSnap = (e: MessageEvent) => dispatch({ type: 'snapshot', data: JSON.parse(e.data) });
-    const onProg = (e: MessageEvent) => dispatch({ type: 'progress', data: JSON.parse(e.data) });
-    const onQueued = (e: MessageEvent) => dispatch({ type: 'queued', data: JSON.parse(e.data) });
-    const onDone = (e: MessageEvent) => dispatch({ type: 'done', data: JSON.parse(e.data) });
-    const onErr = (e: MessageEvent) => dispatch({ type: 'error', data: JSON.parse(e.data) });
+    const onSnap = (e: MessageEvent) => {
+      const data = parseEventData(e);
+      if (data) dispatch({ type: 'snapshot', data: data as { status: JobStatus; stage: JobStreamState['stage']; progress: number } });
+    };
+    const onProg = (e: MessageEvent) => {
+      const data = parseEventData(e);
+      if (data) dispatch({ type: 'progress', data: data as { stage: JobStreamState['stage']; pct: number } });
+    };
+    const onQueued = (e: MessageEvent) => {
+      const data = parseEventData(e);
+      if (data) dispatch({ type: 'queued', data: data as { position: number } });
+    };
+    const onDone = (e: MessageEvent) => {
+      const data = parseEventData(e);
+      if (data) dispatch({ type: 'done', data: data as { videoUrl: string } });
+    };
+    const onErr = (e: MessageEvent) => {
+      const data = parseEventData(e);
+      if (data) {
+        dispatch({ type: 'error', data: data as { code: string; message: string; retryable: boolean } });
+      } else {
+        // Native EventSource connection error (no data payload)
+        dispatch({
+          type: 'error',
+          data: { code: 'STREAM_ERROR', message: 'connection to server failed', retryable: true },
+        });
+      }
+    };
     es.addEventListener('snapshot', onSnap);
     es.addEventListener('progress', onProg);
     es.addEventListener('queued', onQueued);

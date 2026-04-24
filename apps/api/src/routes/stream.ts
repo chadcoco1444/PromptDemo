@@ -12,11 +12,17 @@ export const streamRoute: FastifyPluginAsync<StreamRouteOpts> = async (app, opts
     const job = await opts.store.get(req.params.id);
     if (!job) return reply.code(404).send({ error: 'not found' });
 
+    // The raw response bypasses Fastify's CORS plugin; set the headers ourselves.
+    // Echo the request's Origin so the browser's EventSource accepts the stream.
+    // (EventSource doesn't send credentials by default, so we don't need Allow-Credentials.)
+    const origin = (req.headers.origin as string | undefined) ?? '*';
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': origin,
+      Vary: 'Origin',
     });
 
     const write = (chunk: string) => {
