@@ -29,6 +29,9 @@ const env = process.env;
 const redisUrl = env.REDIS_URL ?? 'redis://localhost:6379';
 const s3Endpoint = env.S3_ENDPOINT ?? 'http://localhost:9000';
 const forcePathStyle = env.S3_FORCE_PATH_STYLE === 'true';
+// BGM mp3 files are gitignored (licensing). Default off so dev doesn't 404.
+// Set BGM_ENABLED=true after dropping mp3s into packages/remotion/src/assets/bgm/.
+const bgmEnabled = env.BGM_ENABLED === 'true';
 
 // Entry point for @remotion/bundler — the Plan 3 package's Root.tsx.
 // Resolved relative to the workspace so the render container can locate it.
@@ -54,6 +57,11 @@ const worker = new Worker<JobPayload>(
     // so Remotion's headless Chromium can fetch them from private buckets.
     // Plan 3's makeS3Resolver no-ops when input is already http(s).
     const signed = await rewriteStoryboardUrls(storyboard, defaultSigner(s3));
+    // Force bgm=none when mp3 assets aren't available (default in dev).
+    // BGMTrack component returns null for 'none', so no render error.
+    const finalStoryboard = bgmEnabled
+      ? signed
+      : { ...signed, videoConfig: { ...signed.videoConfig, bgm: 'none' as const } };
 
     return withTempDir('promptdemo-render-', async (dir) => {
       const outputPath = join(dir, `${payload.jobId}.mp4`);
@@ -62,7 +70,7 @@ const worker = new Worker<JobPayload>(
         entryPoint: REMOTION_ENTRY_POINT,
         compositionId: 'MainComposition',
         inputProps: {
-          ...signed,
+          ...finalStoryboard,
           sourceUrl: payload.sourceUrl,
           resolverEndpoint: s3Endpoint,
           forcePathStyle,
