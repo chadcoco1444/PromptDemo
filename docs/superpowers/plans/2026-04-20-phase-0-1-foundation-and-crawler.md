@@ -1942,7 +1942,6 @@ git commit -m "chore: add infra:check preflight script for redis + minio"
     "@aws-sdk/client-s3": "3.658.1",
     "bullmq": "5.21.2",
     "cheerio": "1.0.0",
-    "fast-average-color-node": "0.0.7",
     "ioredis": "5.4.1",
     "playwright": "1.48.0",
     "zod": "3.23.8"
