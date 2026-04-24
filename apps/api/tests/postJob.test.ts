@@ -25,7 +25,11 @@ describe('POST /api/jobs', () => {
     expect(res.json()).toEqual({ jobId: 'abc123' });
     const persisted = await store.get('abc123');
     expect(persisted?.status).toBe('queued');
-    expect(crawl.add).toHaveBeenCalledWith('crawl', expect.objectContaining({ jobId: 'abc123' }));
+    expect(crawl.add).toHaveBeenCalledWith(
+      'crawl',
+      expect.objectContaining({ jobId: 'abc123' }),
+      { jobId: 'abc123' }
+    );
   });
 
   it('rejects invalid body with 400', async () => {
@@ -42,6 +46,10 @@ describe('POST /api/jobs', () => {
       payload: { url: 'https://x.com', intent: 'x', duration: 10, parentJobId: 'parent', hint: 'faster' },
     });
     expect(res.statusCode).toBe(201);
-    expect(crawl.add).toHaveBeenCalledWith('crawl', expect.objectContaining({ jobId: 'abc123', url: 'https://x.com' }));
+    expect(crawl.add).toHaveBeenCalledWith(
+      'crawl',
+      expect.objectContaining({ jobId: 'abc123', url: 'https://x.com' }),
+      { jobId: 'abc123' }
+    );
   });
 });
