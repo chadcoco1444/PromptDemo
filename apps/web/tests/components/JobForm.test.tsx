@@ -49,7 +49,59 @@ describe('JobForm', () => {
     await user.type(screen.getByLabelText(/url/i), 'https://x.com');
     await user.type(screen.getByLabelText(/intent/i), 'x');
     await user.click(screen.getByRole('button', { name: /create/i }));
-    expect(screen.getByRole('button')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /creat/i })).toBeDisabled();
     resolve({ jobId: 'j1' });
+  });
+
+  it('renders the 5 intent-preset chips below the intent textarea', () => {
+    render(<JobForm onSubmit={onSubmit} />);
+    // English labels are the jsdom default (navigator.language === 'en-US').
+    expect(screen.getByRole('button', { name: /executive summary/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /tutorial/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /marketing hype/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /technical deep-dive/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /customer success/i })).toBeInTheDocument();
+  });
+
+  it('clicking a preset chip fills an empty intent textarea with the preset body', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+    const intent = screen.getByLabelText(/intent/i) as HTMLTextAreaElement;
+    expect(intent.value).toBe('');
+
+    await user.click(screen.getByRole('button', { name: /executive summary/i }));
+    expect(intent.value).toMatch(/emphasize business outcomes/i);
+    expect(intent.value).not.toContain('[Preset:'); // fill mode, not append mode
+  });
+
+  it('clicking a preset chip appends to non-empty intent with a [Preset: ...] marker', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+    const intent = screen.getByLabelText(/intent/i) as HTMLTextAreaElement;
+    await user.type(intent, 'existing user intent');
+
+    await user.click(screen.getByRole('button', { name: /tutorial/i }));
+    expect(intent.value).toContain('existing user intent');
+    expect(intent.value).toContain('[Preset: Tutorial / Walkthrough]');
+    expect(intent.value).toMatch(/walk through the product step-by-step/i);
+  });
+
+  it('preset chips do not submit the form', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+    await user.click(screen.getByRole('button', { name: /marketing hype/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('submitting after a preset click sends the merged intent to onSubmit', async () => {
+    const user = userEvent.setup();
+    render(<JobForm onSubmit={onSubmit} />);
+    await user.type(screen.getByLabelText(/url/i), 'https://example.com');
+    await user.click(screen.getByRole('button', { name: /executive summary/i }));
+    await user.click(screen.getByRole('button', { name: /create/i }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const call = onSubmit.mock.calls[0]![0];
+    expect(call.intent).toMatch(/emphasize business outcomes/i);
+    expect(call.url).toBe('https://example.com');
   });
 });

@@ -10,7 +10,7 @@ export interface IntentPresetsProps {
 
 export function IntentPresets({ locale, onSelect }: IntentPresetsProps) {
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Intent presets">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Preset suggestions">
       {INTENT_PRESETS.map((preset) => (
         <button
           key={preset.id}

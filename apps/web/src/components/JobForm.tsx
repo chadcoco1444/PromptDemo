@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { JobInputSchema, type JobInput } from '../lib/types';
+import { IntentPresets } from './IntentPresets';
+import { applyPreset, type IntentPreset } from '../lib/intentPresets';
+import { detectLocale, type SupportedLocale } from '../lib/locale';
+import { trackIntentPresetSelected } from '../lib/telemetry';
 
 export interface JobFormProps {
   onSubmit: (input: JobInput) => Promise<{ jobId: string }>;
@@ -15,6 +19,22 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
   const [duration, setDuration] = useState<10 | 30 | 60>(30);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  // Read the browser locale in the useState initializer so the very first
+  // client render uses the correct language — avoids the "Flash of English"
+  // for zh users. The server render always sees `undefined` and resolves to
+  // 'en', so there is an expected hydration mismatch on the chip-row subtree
+  // for zh users; suppressHydrationWarning on the wrapping div tells React
+  // not to complain. This is the standard pragmatic pattern for locale-
+  // dependent client-only UI in Next.js App Router.
+  const [locale] = useState<SupportedLocale>(() =>
+    detectLocale(typeof navigator !== 'undefined' ? navigator.language : undefined)
+  );
+
+  function handlePresetSelect(preset: IntentPreset) {
+    setIntent((current) => applyPreset(current, preset));
+    trackIntentPresetSelected(preset.id);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,6 +86,9 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
           placeholder="What should the video emphasize?"
           className="w-full rounded border px-3 py-2 h-24"
         />
+        <div className="mt-2" suppressHydrationWarning>
+          <IntentPresets locale={locale} onSelect={handlePresetSelect} />
+        </div>
       </div>
       <div>
         <label htmlFor="duration" className="block text-sm font-medium mb-1">
