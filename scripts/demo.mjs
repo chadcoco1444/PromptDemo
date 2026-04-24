@@ -339,14 +339,26 @@ function reapPorts(label) {
 
 async function stopAll() {
   let stopped = 0;
+  let stalePids = 0;
+
   for (const svc of SERVICES) {
     const pid = readPid(svc.name);
     if (pid && isAlive(pid)) {
       try {
         if (IS_WINDOWS) {
+          // /T kills the whole tree — Windows has no reliable process-group
+          // semantics, so the parent's death does NOT cascade. Without /T,
+          // tsx's inner watcher-worker node and next's bundler worker survive
+          // as zombies holding ports.
           spawnSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
         } else {
-          process.kill(-pid, 'SIGTERM');
+          // POSIX: positive pid kill. tsx and next handle SIGTERM gracefully
+          // on their own children, so tree-kill is unnecessary. Using -pid
+          // (process-group kill) would work — `detached: true` makes Node
+          // call `setsid()` so the child IS a group leader — but the extra
+          // complexity (ESRCH if the group already exited, EPERM if the
+          // signal crosses a session boundary) buys nothing here.
+          process.kill(pid, 'SIGTERM');
         }
         console.log(`${svc.color}[${svc.name}]${C.reset} stopped (pid ${pid})`);
         stopped++;
@@ -354,22 +366,27 @@ async function stopAll() {
         console.warn(`${svc.color}[${svc.name}]${C.reset} kill failed: ${err.message}`);
       }
     } else if (pid) {
-      console.log(`${svc.color}[${svc.name}]${C.reset} stale pid ${pid}; cleaning up`);
+      stalePids++;
     }
     removePid(svc.name);
   }
 
-  if (stopped > 0) await sleep(1500);
+  if (stopped > 0) await sleep(500);
 
-  // Kill-by-port pass: catches orphans that our PID tracking missed (e.g. detached
-  // Next.js workers on Windows where the spawn chain loses the real PID).
-  reapPorts('[stop]');
+  // Safety net: catches zombies from pre-rewrite runs (where we tracked dead
+  // cmd.exe PIDs and real nodes leaked) plus any edge-case subprocess our tree
+  // kill missed. With the rewrite, the normal case finds 0 orphans here.
+  const reaped = reapPorts('[stop]');
 
-  // Clean stale Remotion webpack bundles from OS temp dir.
   cleanRemotionBundles();
-
   dockerDown();
-  console.log(`\n${C.bold}Stopped.${C.reset} ${stopped} tracked services killed; port sweep done.`);
+
+  const summary = [
+    `${stopped} tracked`,
+    ...(stalePids > 0 ? [`${stalePids} stale pids`] : []),
+    ...(reaped > 0 ? [`${reaped} reaped via port sweep`] : []),
+  ].join(', ');
+  console.log(`\n${C.bold}Stopped.${C.reset} ${summary}.`);
 }
 
 async function statusAll() {
