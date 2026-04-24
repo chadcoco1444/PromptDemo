@@ -392,7 +392,7 @@ async function cleanAll(arg) {
     const ps = [
       `$procsToKill = Get-CimInstance Win32_Process | Where-Object {`,
       `  $_.CommandLine -and`,
-      `  $_.Name -in @('node.exe', 'pnpm.exe', 'tsx.exe') -and`,
+      `  $_.Name -in @('node.exe', 'pnpm.exe', 'tsx.exe', 'cmd.exe', 'powershell.exe') -and`,
       `  (`,
       `    $_.CommandLine -match '@promptdemo/' -or`,
       `    $_.CommandLine -match [regex]::Escape('${REPO_ROOT.replace(/\\/g, '\\\\')}')`,
