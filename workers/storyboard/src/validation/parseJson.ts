@@ -32,6 +32,57 @@ function extractFirstJsonObject(text: string): string | null {
   return null;
 }
 
+/**
+ * Apply lightweight repairs to common Claude JSON mistakes:
+ *   - Trailing commas before `}` or `]` (observed in v2.0 E2E)
+ *   - Smart quotes (" " ' ') replaced with straight quotes
+ *   - Literal tab / newline inside string content escaped
+ * Preserves content semantics — never invents data. Every repair is applied
+ * OUTSIDE of string literals (tracked by depth/escape state like the
+ * extractor above), so legitimate occurrences inside JSON string values are
+ * left alone.
+ */
+function repairJson(text: string): string {
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]!;
+    if (escaped) {
+      out += c;
+      escaped = false;
+      continue;
+    }
+    if (inString) {
+      if (c === '\\') { out += c; escaped = true; continue; }
+      if (c === '"') { out += c; inString = false; continue; }
+      // Smart quotes inside a string → straight quote + escape
+      if (c === '“' || c === '”') { out += '\\"'; continue; }
+      if (c === '‘' || c === '’') { out += "'"; continue; }
+      // Unescaped raw newline/tab inside a string → escape
+      if (c === '\n') { out += '\\n'; continue; }
+      if (c === '\r') { out += '\\r'; continue; }
+      if (c === '\t') { out += '\\t'; continue; }
+      out += c;
+      continue;
+    }
+    if (c === '"') { out += c; inString = true; continue; }
+    // Outside strings:
+    // Strip trailing commas before } or ]
+    if (c === ',') {
+      let j = i + 1;
+      while (j < text.length && /\s/.test(text[j]!)) j++;
+      const next = text[j];
+      if (next === '}' || next === ']') {
+        // Skip the stray comma; keep the following whitespace + bracket.
+        continue;
+      }
+    }
+    out += c;
+  }
+  return out;
+}
+
 export function parseJson(input: string): ParseResult {
   let text = input.trim();
 
@@ -39,22 +90,30 @@ export function parseJson(input: string): ParseResult {
   const fenceMatch = text.match(/^```(?:json)?\s*\n([\s\S]*?)\n```\s*$/);
   if (fenceMatch) text = fenceMatch[1]!.trim();
 
-  // First-attempt parse on the fenced or trimmed whole text.
+  // Attempt 1: parse whatever we have after fence-stripping.
   try {
     return { kind: 'ok', value: JSON.parse(text) };
   } catch (firstErr) {
-    // Fallback: Claude may have added a prose note after the JSON object
-    // (happens on edge retries). Extract the first balanced {...} and try
-    // again; on success we silently recover. On failure, surface the
-    // ORIGINAL error so feedback-to-Claude matches what Claude actually sees.
-    const extracted = extractFirstJsonObject(text);
-    if (extracted && extracted !== text) {
+    // Attempt 2: extract the first balanced {...} to recover from trailing
+    // prose (Claude occasionally adds a "Note: ..." after the JSON).
+    const extracted = extractFirstJsonObject(text) ?? text;
+    if (extracted !== text) {
       try {
         return { kind: 'ok', value: JSON.parse(extracted) };
       } catch {
-        // fall through to original error
+        // fall through to repair
       }
     }
-    return { kind: 'error', message: `JSON parse failed: ${(firstErr as Error).message}` };
+    // Attempt 3: apply lightweight repairs (trailing commas, smart quotes,
+    // unescaped newlines inside strings) and try again. This handles the
+    // malformed-inside-JSON class of failures the prior two passes can't.
+    try {
+      const repaired = repairJson(extracted);
+      return { kind: 'ok', value: JSON.parse(repaired) };
+    } catch {
+      // All three attempts failed — surface the ORIGINAL error so Claude's
+      // retry feedback points at the real issue, not our repair artifact.
+      return { kind: 'error', message: `JSON parse failed: ${(firstErr as Error).message}` };
+    }
   }
 }

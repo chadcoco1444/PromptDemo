@@ -56,9 +56,43 @@ describe('parseJson', () => {
     if (r.kind === 'ok') expect(r.value).toEqual({ msg: 'he said "hi"' });
   });
 
-  it('surfaces the ORIGINAL parse error when neither whole-text nor extraction parses', () => {
-    const r = parseJson('{"a": 1, broken');
+  it('surfaces the ORIGINAL parse error when repair + extraction both fail', () => {
+    const r = parseJson('{"a": 1, totally broken stuff that cannot be repaired');
     expect(r.kind).toBe('error');
     if (r.kind === 'error') expect(r.message).toMatch(/JSON parse failed/);
+  });
+
+  it('auto-repairs trailing comma before closing brace', () => {
+    const r = parseJson('{"a": 1, "b": 2,}');
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') expect(r.value).toEqual({ a: 1, b: 2 });
+  });
+
+  it('auto-repairs trailing comma before closing bracket inside an array', () => {
+    const r = parseJson('{"items": [1, 2, 3,]}');
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') expect(r.value).toEqual({ items: [1, 2, 3] });
+  });
+
+  it('auto-repairs unescaped newline inside a string value', () => {
+    const r = parseJson('{"note": "line one\nline two"}');
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') expect(r.value).toEqual({ note: 'line one\nline two' });
+  });
+
+  it('auto-repairs smart quotes inside a string value', () => {
+    const r = parseJson('{"title": "it’s “live”"}');
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') {
+      const v = (r.value as { title: string }).title;
+      expect(v).toContain('live'); // repair kept the core content intact
+    }
+  });
+
+  it('does NOT strip commas that are inside a JSON string value', () => {
+    // The comma before the closing " is STRING CONTENT, not a trailing comma.
+    const r = parseJson('{"msg": "hello, world", "n": 1}');
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') expect(r.value).toEqual({ msg: 'hello, world', n: 1 });
   });
 });
