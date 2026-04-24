@@ -21,6 +21,7 @@ import { resolve, join } from 'node:path';
 import { platform, tmpdir } from 'node:os';
 import { createConnection } from 'node:net';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { resolveDevCommand } from './lib/devCommand.mjs';
 
 const REPO_ROOT = process.cwd();
 const TMP = join(REPO_ROOT, '.tmp', 'demo');
@@ -38,11 +39,11 @@ const C = {
 // locally. In Cloud Run each service runs on its own instance, so PORT=8080 is fine
 // there — this override is dev-only.
 const SERVICES = [
-  { name: 'crawler',    filter: '@promptdemo/worker-crawler',    color: C.red,     kind: 'worker', port: 8081 },
-  { name: 'storyboard', filter: '@promptdemo/worker-storyboard', color: C.green,   kind: 'worker', port: 8082 },
-  { name: 'render',     filter: '@promptdemo/worker-render',     color: C.blue,    kind: 'worker', port: 8083 },
-  { name: 'api',        filter: '@promptdemo/api',                color: C.yellow,  kind: 'http',   port: 3000, url: 'http://localhost:3000/healthz' },
-  { name: 'web',        filter: '@promptdemo/web',                color: C.magenta, kind: 'http',   port: 3001, url: 'http://localhost:3001' },
+  { name: 'crawler',    filter: '@promptdemo/worker-crawler',    color: C.red,     kind: 'worker', port: 8081, cwd: resolve(REPO_ROOT, 'workers/crawler') },
+  { name: 'storyboard', filter: '@promptdemo/worker-storyboard', color: C.green,   kind: 'worker', port: 8082, cwd: resolve(REPO_ROOT, 'workers/storyboard') },
+  { name: 'render',     filter: '@promptdemo/worker-render',     color: C.blue,    kind: 'worker', port: 8083, cwd: resolve(REPO_ROOT, 'workers/render') },
+  { name: 'api',        filter: '@promptdemo/api',               color: C.yellow,  kind: 'http',   port: 3000, url: 'http://localhost:3000/healthz', cwd: resolve(REPO_ROOT, 'apps/api') },
+  { name: 'web',        filter: '@promptdemo/web',               color: C.magenta, kind: 'http',   port: 3001, url: 'http://localhost:3001',           cwd: resolve(REPO_ROOT, 'apps/web') },
 ];
 
 // --- .env loader ---
@@ -209,91 +210,39 @@ function serviceEnv(svc) {
   return { ...process.env, PORT: String(svc.port) };
 }
 
-// Windows holds file handles on detached children's log files briefly after we
-// kill the orphan via TerminateProcess (reapPorts). If we race the handle
-// release with appendFileSync we get EBUSY. Retry 10x at 100ms = 1s max, then
-// give up quietly — the child will open the log in append mode anyway so the
-// only thing we lose is the "===== start ... =====" marker line.
-function appendHeaderWithRetry(log, header) {
-  for (let i = 0; i < 10; i++) {
-    try {
-      appendFileSync(log, header);
-      return true;
-    } catch (err) {
-      if (err?.code !== 'EBUSY' && err?.code !== 'EPERM') throw err;
-      const until = Date.now() + 100;
-      while (Date.now() < until) { /* busy-wait 100ms (sync spawn flow) */ }
-    }
-  }
-  return false;
-}
-
 function spawnService(svc) {
   const log = logPath(svc.name);
-  appendHeaderWithRetry(log, `\n===== start ${new Date().toISOString()} (PORT=${svc.port}) =====\n`);
-
-  if (IS_WINDOWS) {
-    spawnServiceWindows(svc, log);
-    return;
+  // Log header: single append before spawn, no retry needed — since we now
+  // track the real node PID, orphan log-file handles from previous runs don't
+  // survive into a new run if the user ran stop first. If the write fails, the
+  // child's own append handle still works — we just lose the marker line.
+  try {
+    appendFileSync(log, `\n===== start ${new Date().toISOString()} (PORT=${svc.port}) =====\n`);
+  } catch {
+    // Ignore — best-effort header only.
   }
 
+  const plan = resolveDevCommand(svc);
   const stdout = openSync(log, 'a');
   const stderr = openSync(log, 'a');
-  const child = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
+
+  // detached: true gives the child its own process group on POSIX (so we can
+  // signal the whole tree via -pid) and is a no-op on Windows.
+  // windowsHide: true suppresses console creation on Windows and is a no-op
+  // on POSIX. shell: false keeps the saved PID === the real node PID.
+  const child = spawn(plan.node, plan.args, {
     env: serviceEnv(svc),
-    cwd: REPO_ROOT,
+    cwd: plan.cwd,
     detached: true,
     stdio: ['ignore', stdout, stderr],
     shell: false,
+    windowsHide: true,
   });
   child.unref();
   writePid(svc.name, child.pid);
-  console.log(`${svc.color}[${svc.name}]${C.reset} started (pid ${child.pid}, PORT=${svc.port}, log: ${log})`);
-}
-
-// Windows-only path. Node's spawn({detached, windowsHide}) sets STARTF_USESHOWWINDOW
-// +SW_HIDE, which hides the immediate cmd.exe console, but grandchildren spawned by
-// pnpm.cmd (node, tsx, next) inherit console state inconsistently on Node 22+ and
-// some of them flash visible consoles during startup. The canonical Windows API
-// flag to suppress all console creation for the process AND its descendants is
-// CREATE_NO_WINDOW, which Node exposes via System.Diagnostics.ProcessStartInfo
-// (CreateNoWindow=true + UseShellExecute=false). Bridging through a one-shot
-// PowerShell invocation is the only reliable way from Node to set that flag.
-function spawnServiceWindows(svc, log) {
-  // PS single-quote escape: double any ' inside the string.
-  const psQuote = (s) => `'${String(s).replace(/'/g, "''")}'`;
-  // Inside cmd.exe's arg string, wrap paths with spaces in double quotes.
-  const cmdArgs = `/c pnpm --filter ${svc.filter} dev 1>>"${log}" 2>&1`;
-  const psScript = [
-    '$ErrorActionPreference = "Stop"',
-    '$psi = New-Object System.Diagnostics.ProcessStartInfo',
-    `$psi.FileName = ${psQuote('cmd.exe')}`,
-    `$psi.Arguments = ${psQuote(cmdArgs)}`,
-    `$psi.WorkingDirectory = ${psQuote(REPO_ROOT)}`,
-    '$psi.CreateNoWindow = $true',
-    '$psi.UseShellExecute = $false',
-    '$psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden',
-    '$p = [System.Diagnostics.Process]::Start($psi)',
-    'Write-Output $p.Id',
-  ].join('; ');
-
-  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript], {
-    env: serviceEnv(svc),
-    cwd: REPO_ROOT,
-    windowsHide: true,
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    console.error(`${svc.color}[${svc.name}]${C.reset} ${C.red}failed to start${C.reset}: ${result.stderr || result.stdout || 'unknown error'}`);
-    return;
-  }
-  const pid = Number(String(result.stdout).trim().split(/\r?\n/).pop());
-  if (!Number.isFinite(pid) || pid <= 0) {
-    console.error(`${svc.color}[${svc.name}]${C.reset} ${C.red}could not parse pid${C.reset}: ${result.stdout}`);
-    return;
-  }
-  writePid(svc.name, pid);
-  console.log(`${svc.color}[${svc.name}]${C.reset} started (pid ${pid}, PORT=${svc.port}, log: ${log})`);
+  console.log(
+    `${svc.color}[${svc.name}]${C.reset} started (pid ${child.pid}, PORT=${svc.port}, log: ${log})`
+  );
 }
 
 async function startAll() {
