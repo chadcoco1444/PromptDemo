@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { KenBurnsPanel } from '../src/scenes/variants/KenBurnsPanel';
+import { CollagePanel } from '../src/scenes/variants/CollagePanel';
 
 describe('KenBurnsPanel', () => {
   it('is defined as a function component', () => {
@@ -7,5 +8,11 @@ describe('KenBurnsPanel', () => {
     // a Composition context. Structural assertion is sufficient here; render
     // correctness is exercised by renderSmoke / resolveScene integration tests.
     expect(typeof KenBurnsPanel).toBe('function');
+  });
+});
+
+describe('CollagePanel', () => {
+  it('exports a component', () => {
+    expect(typeof CollagePanel).toBe('function');
   });
 });
