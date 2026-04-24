@@ -199,9 +199,6 @@ describe('extractiveCheck (CJK)', () => {
   });
 
   it('does NOT split inline uses of / and - (only space-padded separators)', () => {
-    // "AI/ML" and "multi-tenant" are single terms, not list separators.
-    // If Claude writes "AI/ML" and the pool has "AI/ML", it must match as a
-    // single phrase, NOT be split into "AI" + "ML".
     const board: Storyboard = {
       videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
       assets: { screenshots: {}, sourceTexts: ['AI/ML platform', 'multi-tenant architecture'] },
@@ -212,5 +209,62 @@ describe('extractiveCheck (CJK)', () => {
       ],
     };
     expect(extractiveCheck(board).kind).toBe('ok');
+  });
+
+  it('accepts comma-joined natural prose when every segment is in the pool', () => {
+    // Real-world case 2026-04-25: Claude joined 4 extracted skills with
+    // commas + "and" — a common construction when pulling bullet points
+    // into a grammatical sentence.
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: {
+        screenshots: {},
+        sourceTexts: [
+          'Senior Firmware Engineer specializing in NR/LTE cellular protocol stack',
+          'Embedded systems',
+          '3GPP RRC/NAS protocols',
+        ],
+      },
+      scenes: [
+        {
+          sceneId: 1,
+          type: 'TextPunch',
+          durationInFrames: 300,
+          entryAnimation: 'fade',
+          exitAnimation: 'fade',
+          props: {
+            text: 'senior firmware engineer specializing in nr/lte cellular protocol stack, embedded systems, and 3gpp rrc/nas protocols.',
+            emphasis: 'primary',
+          },
+        },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('ok');
+  });
+
+  it('trims leading "and"/"or" + trailing punctuation from each comma segment', () => {
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: { screenshots: {}, sourceTexts: ['fast', 'reliable', 'secure'] },
+      scenes: [
+        { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
+          entryAnimation: 'fade', exitAnimation: 'fade',
+          props: { text: 'fast, reliable, and secure!', emphasis: 'primary' } },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('ok');
+  });
+
+  it('rejects comma list when one segment is hallucinated', () => {
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: { screenshots: {}, sourceTexts: ['fast', 'reliable'] },
+      scenes: [
+        { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
+          entryAnimation: 'fade', exitAnimation: 'fade',
+          props: { text: 'fast, reliable, and supercalifragilistic.', emphasis: 'primary' } },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('error');
   });
 });

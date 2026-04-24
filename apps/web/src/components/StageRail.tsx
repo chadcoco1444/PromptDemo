@@ -42,10 +42,17 @@ export interface StageRailProps {
 }
 
 export function StageRail({ state, jobId }: StageRailProps) {
+  // Show a skeleton layout until the SSE stream delivers its first event.
+  // Without this, users see "Starting…" with no visual structure for 100-300ms
+  // during EventSource handshake — the skeleton preserves the layout so the
+  // transition to live data doesn't shift content around.
+  const isConnecting = state.status === 'connecting';
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-medium text-gray-600 dark:text-gray-400">Progress</h2>
+        <h2 className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          {isConnecting ? 'Connecting…' : 'Progress'}
+        </h2>
         <code className="text-[11px] text-gray-400 dark:text-gray-500">{jobId}</code>
       </div>
 
