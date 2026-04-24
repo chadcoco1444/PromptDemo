@@ -15,10 +15,10 @@
 import { spawn, spawnSync } from 'node:child_process';
 import {
   existsSync, mkdirSync, readFileSync, writeFileSync, rmSync,
-  openSync, statSync, appendFileSync,
+  openSync, statSync, appendFileSync, readdirSync,
 } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { platform } from 'node:os';
+import { platform, tmpdir } from 'node:os';
 import { createConnection } from 'node:net';
 import { setTimeout as sleep } from 'node:timers/promises';
 
@@ -153,6 +153,42 @@ function dockerDown() {
   });
 }
 
+/**
+ * Remotion's @remotion/bundler drops a fresh webpack bundle into the OS temp
+ * dir every render and never deletes it. On Windows this is
+ * %LOCALAPPDATA%\Temp\remotion-webpack-bundle-*; on POSIX /tmp/remotion-webpack-bundle-*.
+ * Stale bundles also sometimes hold on to pre-registered static asset paths
+ * from old code (e.g. BGMTrack's mp3 references), so clearing them on start/stop
+ * is a good idempotent hygiene step.
+ */
+function cleanRemotionBundles() {
+  const dir = tmpdir();
+  if (!existsSync(dir)) return 0;
+  let removed = 0;
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return 0;
+  }
+  for (const name of entries) {
+    if (!name.startsWith('remotion-webpack-bundle-')) continue;
+    const full = join(dir, name);
+    try {
+      rmSync(full, { recursive: true, force: true });
+      removed++;
+    } catch {
+      // ignore locked dirs
+    }
+  }
+  if (removed > 0) {
+    console.log(`${C.cyan}[clean]${C.reset} removed ${removed} stale Remotion bundle${removed === 1 ? '' : 's'} in ${dir}`);
+  } else {
+    console.log(`${C.dim}[clean]${C.reset} no Remotion bundles to remove in ${dir}`);
+  }
+  return removed;
+}
+
 async function waitForInfra() {
   console.log(`${C.cyan}[infra]${C.reset} waiting for Redis + MinIO...`);
   for (let i = 0; i < 30; i++) {
@@ -205,6 +241,9 @@ async function startAll() {
   // Pre-flight port sweep: clean up any orphans from a previous crashed run
   // so EADDRINUSE doesn't kill our fresh spawns.
   reapPorts('[start]');
+
+  // Stale Remotion bundles can hold on to old BGM references / cached sources.
+  cleanRemotionBundles();
 
   for (const svc of SERVICES) {
     const existing = readPid(svc.name);
@@ -307,6 +346,9 @@ async function stopAll() {
   // Kill-by-port pass: catches orphans that our PID tracking missed (e.g. detached
   // Next.js workers on Windows where the spawn chain loses the real PID).
   reapPorts('[stop]');
+
+  // Clean stale Remotion webpack bundles from OS temp dir.
+  cleanRemotionBundles();
 
   dockerDown();
   console.log(`\n${C.bold}Stopped.${C.reset} ${stopped} tracked services killed; port sweep done.`);
@@ -432,6 +474,7 @@ async function runForeground() {
 
   // Pre-flight port sweep — orphans from previous crashed runs die here.
   reapPorts('[run]');
+  cleanRemotionBundles();
 
   console.log(`${C.bold}[dev-demo]${C.reset} starting 5 services in foreground. Ctrl-C to stop.\n`);
 
@@ -464,6 +507,7 @@ async function runForeground() {
       for (const p of procs) if (!p.killed) p.kill('SIGKILL');
       // Final sweep — catches grand-children that SIGKILL didn't cascade to.
       reapPorts('[shutdown]');
+      cleanRemotionBundles();
       dockerDown();
       process.exit(0);
     }, 3000);
@@ -482,6 +526,8 @@ Commands:
   ${C.yellow}test${C.reset}       End-to-end smoke: POST /api/jobs, poll until done
              Override via env: TEST_URL, TEST_INTENT, TEST_DURATION, TEST_TIMEOUT_S
   ${C.blue}logs${C.reset} [svc] Tail logs (all, or one service: crawler/storyboard/render/api/web)
+  clean      Remove stale Remotion webpack bundles from OS temp dir
+             (auto-runs on start/stop/run/shutdown; use manually if needed)
   restart    Stop + start
   run        Foreground mode (all output mixed, Ctrl-C stops)
   help       This message
@@ -502,6 +548,7 @@ const arg = process.argv[3];
     case 'logs':    tailLogs(arg); break;
     case 'restart': await stopAll(); await sleep(1000); await startAll(); break;
     case 'run':     await runForeground(); break;
+    case 'clean':   cleanRemotionBundles(); break;
     case 'help':
     case '--help':
     case '-h':      help(); break;
