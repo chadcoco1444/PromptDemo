@@ -1,5 +1,6 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
 import type { JobStreamState } from '../lib/useJobStream';
 
 type StageId = 'crawl' | 'storyboard' | 'render';
@@ -48,7 +49,7 @@ export function StageRail({ state, jobId }: StageRailProps) {
   // transition to live data doesn't shift content around.
   const isConnecting = state.status === 'connecting';
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+    <div className="rounded-lg border border-gray-200/60 dark:border-gray-800/60 bg-white/80 dark:bg-gray-900/60 backdrop-blur-md p-5 shadow-xl shadow-brand-500/5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-medium text-gray-600 dark:text-gray-400">
           {isConnecting ? 'Connecting…' : 'Progress'}
@@ -73,14 +74,17 @@ export function StageRail({ state, jobId }: StageRailProps) {
                   }`}
                 />
               )}
-              {/* Dot */}
+              {/* Dot — active state breathes a brand-color halo via a CSS
+                  box-shadow keyframe (animate-breathe-glow). The halo radius
+                  expands then fades, signalling "live" without competing with
+                  the live-intel subtitle for attention. */}
               <span
                 aria-hidden
                 className={`absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full ${
                   status === 'done'
                     ? 'bg-brand-500 text-white'
                     : status === 'active'
-                    ? 'bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 ring-2 ring-brand-500 animate-pulse'
+                    ? 'bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 ring-2 ring-brand-500 animate-breathe-glow'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 ring-1 ring-gray-300 dark:ring-gray-700'
                 }`}
               >
@@ -125,13 +129,24 @@ export function StageRail({ state, jobId }: StageRailProps) {
                     Queued — position {state.queuedPosition} (renders are serialized)
                   </div>
                 ) : null}
+                {/* Intel subtitle — wrapped in AnimatePresence so each
+                    message swap cross-fades with a slide-up. Per the v2.1
+                    spec: text MUST NOT flash-replace. */}
                 {status === 'active' && state.intel && state.intel.stage === s.id ? (
-                  <div
-                    key={state.intel.ts}
-                    className="mt-1.5 text-xs italic text-gray-500 dark:text-gray-400 animate-fade-in"
-                    aria-live="polite"
-                  >
-                    {state.intel.message}
+                  <div className="mt-1.5 relative h-4">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={state.intel.ts}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="absolute inset-0 text-xs italic text-gray-500 dark:text-gray-400"
+                        aria-live="polite"
+                      >
+                        {state.intel.message}
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 ) : null}
               </div>

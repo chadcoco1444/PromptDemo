@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { JobInputSchema, type JobInput } from '../lib/types';
 import { IntentPresets } from './IntentPresets';
+import { MagneticButton } from './MagneticButton';
 import { applyPreset, type IntentPreset } from '../lib/intentPresets';
 import { type SupportedLocale } from '../lib/locale';
 import { trackIntentPresetSelected } from '../lib/telemetry';
@@ -89,12 +91,12 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
         <label htmlFor="intent" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
           Intent
         </label>
-        <textarea
+        <SpringTextarea
           id="intent"
           value={intent}
           onChange={(e) => setIntent(e.target.value)}
           placeholder="What should the video emphasize?"
-          className={`${INPUT_CLASSES} h-24`}
+          className={INPUT_CLASSES}
         />
         <div className="mt-2 flex items-start gap-3">
           <button
@@ -135,13 +137,64 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
           {error}
         </div>
       ) : null}
-      <button
+      <MagneticButton
         type="submit"
         disabled={pending}
-        className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-md font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 active:scale-[0.98] transition-all duration-150"
+        className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-md font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 transition-shadow"
       >
         {pending ? 'Creating…' : 'Create video'}
-      </button>
+      </MagneticButton>
     </form>
+  );
+}
+
+/**
+ * v2.1 Phase 4 — textarea with spring-animated height growth. When the
+ * intent text overflows the visible rows, the height transitions via
+ * framer-motion spring instead of the default abrupt scrollbar appearance.
+ *
+ * Reads scrollHeight on every change and animates `height` to match,
+ * clamped to a min/max so a paragraph paste doesn't push the form off
+ * screen.
+ */
+function SpringTextarea({
+  id,
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  id: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder: string;
+  className: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const [height, setHeight] = useState(96); // initial: matches old h-24
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Measure: temporarily reset height to auto so scrollHeight is accurate,
+    // then snap back to the controlled height the spring will animate to.
+    el.style.height = 'auto';
+    const next = Math.min(280, Math.max(96, el.scrollHeight));
+    el.style.height = '';
+    setHeight(next);
+  }, [value]);
+
+  return (
+    <motion.textarea
+      ref={ref}
+      id={id}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      animate={{ height }}
+      transition={{ type: 'spring', stiffness: 220, damping: 22, mass: 0.5 }}
+      className={`${className} resize-none overflow-hidden`}
+      style={{ height }}
+    />
   );
 }
