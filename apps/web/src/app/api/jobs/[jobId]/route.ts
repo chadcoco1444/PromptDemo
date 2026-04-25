@@ -33,14 +33,30 @@ export async function DELETE(_req: Request, ctx: { params: { jobId: string } }) 
       return new Response(null, { status: 404 });
     }
 
-    const { status, duration } = rows[0] as { status: string; duration: number };
+    const { status, duration } = rows[0] as { status: string; duration: number | null };
 
     if (IN_FLIGHT.has(status)) {
+      if (duration == null || !Number.isFinite(duration)) {
+        await client.query('ROLLBACK');
+        console.error('[api/jobs/delete] in-flight job has null/invalid duration', { jobId });
+        return new Response(JSON.stringify({ error: 'delete_failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       const refund = await client.query(
         `UPDATE credits SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
         [duration, Number(userId)],
       );
-      const balanceAfter = (refund.rows[0] as { balance: number })?.balance ?? 0;
+      if (refund.rows.length === 0) {
+        await client.query('ROLLBACK');
+        console.error('[api/jobs/delete] credits row missing for user during refund', { userId, jobId });
+        return new Response(JSON.stringify({ error: 'delete_failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const balanceAfter = (refund.rows[0] as { balance: number }).balance;
       await client.query(
         `INSERT INTO credit_transactions (user_id, job_id, delta, reason, balance_after)
          VALUES ($1, $2, $3, 'refund', $4)`,
