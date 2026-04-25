@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { LandingFooter } from '../../../src/components/landing/LandingFooter';
+import { LandingFooter } from '../components/landing/LandingFooter';
 
 describe('LandingFooter', () => {
   it('renders all four column headings', () => {
