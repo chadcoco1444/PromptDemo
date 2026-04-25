@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 
 const COMPANY = [
@@ -69,6 +71,12 @@ function DiscordIcon() {
   );
 }
 
+const SOCIAL = [
+  { label: 'Twitter', href: 'https://twitter.com/promptdemo', Icon: TwitterIcon },
+  { label: 'GitHub', href: 'https://github.com/chadcoco1444/PromptDemo', Icon: GitHubIcon },
+  { label: 'Discord', href: 'https://discord.gg/promptdemo', Icon: DiscordIcon },
+];
+
 export function LandingFooter() {
   return (
     <footer className="bg-[#0a0a0a] border-t border-white/10">
@@ -85,33 +93,18 @@ export function LandingFooter() {
             <span className="text-xs text-gray-500">© 2026 PromptDemo Inc.</span>
           </div>
           <div className="flex items-center gap-4">
-            <a
-              href="https://twitter.com/promptdemo"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-gray-300 transition-colors"
-              aria-label="Twitter"
-            >
-              <TwitterIcon />
-            </a>
-            <a
-              href="https://github.com/chadcoco1444/PromptDemo"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-gray-300 transition-colors"
-              aria-label="GitHub"
-            >
-              <GitHubIcon />
-            </a>
-            <a
-              href="https://discord.gg/promptdemo"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-gray-300 transition-colors"
-              aria-label="Discord"
-            >
-              <DiscordIcon />
-            </a>
+            {SOCIAL.map(({ label, href, Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-500 hover:text-gray-300 transition-colors"
+                aria-label={label}
+              >
+                <Icon />
+              </a>
+            ))}
           </div>
         </div>
       </div>
