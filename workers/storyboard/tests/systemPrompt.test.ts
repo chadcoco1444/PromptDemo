@@ -5,7 +5,7 @@ describe('buildSystemPrompt', () => {
   const prompt = buildSystemPrompt();
 
   it('mentions all v1 scene types', () => {
-    for (const t of ['HeroRealShot', 'FeatureCallout', 'TextPunch', 'SmoothScroll', 'CTA']) {
+    for (const t of ['HeroRealShot', 'FeatureCallout', 'TextPunch', 'SmoothScroll', 'CTA', 'BentoGrid', 'CursorDemo']) {
       expect(prompt).toContain(t);
     }
   });
@@ -38,9 +38,8 @@ describe('buildSystemPrompt', () => {
     // Phase 2.1 hardening: Claude hallucinated CursorDemo / BentoGrid /
     // UseCaseStory / StatsBand / HeroStylized when the full catalog leaked.
     // The implemented subset must be the only one in the SCENE TYPES list.
+    // Note: CursorDemo and BentoGrid are now v1-implemented (Task 3).
     const sceneTypesSection = prompt.split('SCENE TYPES')[1]!.split('HARD RULES')[0]!;
-    expect(sceneTypesSection).not.toMatch(/^\s*-\s+CursorDemo/m);
-    expect(sceneTypesSection).not.toMatch(/^\s*-\s+BentoGrid/m);
     expect(sceneTypesSection).not.toMatch(/^\s*-\s+UseCaseStory/m);
     expect(sceneTypesSection).not.toMatch(/^\s*-\s+StatsBand/m);
     expect(sceneTypesSection).not.toMatch(/^\s*-\s+HeroStylized/m);
