@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import type { Pool } from 'pg';
+import { vi } from 'vitest';
 import {
   TIER_ALLOWANCE,
   CONCURRENCY_LIMIT,
@@ -6,6 +8,7 @@ import {
   calculateCost,
   calculateRefund,
   isDurationAllowed,
+  getUserTier,
 } from '../../src/credits/ledger.js';
 
 describe('TIER_ALLOWANCE', () => {
@@ -80,5 +83,35 @@ describe('isDurationAllowed', () => {
       expect(isDurationAllowed('pro', d)).toBe(true);
       expect(isDurationAllowed('max', d)).toBe(true);
     }
+  });
+});
+
+function mockPool(rows: Array<{ tier: string }>): Pool {
+  return {
+    query: vi.fn().mockResolvedValue({ rows }),
+  } as unknown as Pool;
+}
+
+describe('getUserTier', () => {
+  it('returns "free" when no subscription row exists (COALESCE fallback)', async () => {
+    // No subscription row → COALESCE(s.tier, 'free') = 'free' in SQL
+    const pool = mockPool([{ tier: 'free' }]);
+    expect(await getUserTier(pool, 42)).toBe('free');
+  });
+
+  it('returns "pro" for a user with an active pro subscription', async () => {
+    const pool = mockPool([{ tier: 'pro' }]);
+    expect(await getUserTier(pool, 42)).toBe('pro');
+  });
+
+  it('returns "max" for a user with an active max subscription', async () => {
+    const pool = mockPool([{ tier: 'max' }]);
+    expect(await getUserTier(pool, 42)).toBe('max');
+  });
+
+  it('returns "free" as safe fallback for unknown tier values', async () => {
+    // Guards against future DB values not yet in the Tier union
+    const pool = mockPool([{ tier: 'enterprise' }]);
+    expect(await getUserTier(pool, 42)).toBe('free');
   });
 });

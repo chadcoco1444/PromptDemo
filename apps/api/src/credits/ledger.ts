@@ -6,6 +6,8 @@
  * number of seconds.
  */
 
+import type { Pool } from 'pg';
+
 export type Tier = 'free' | 'pro' | 'max';
 
 /** Monthly allowance in render-seconds. */
@@ -72,4 +74,21 @@ export function calculateRefund(
  */
 export function isDurationAllowed(tier: Tier, duration: 10 | 30 | 60): boolean {
   return ALLOWED_DURATIONS[tier].includes(duration);
+}
+
+/**
+ * Read a user's subscription tier in a single query. Safe fallback to 'free'
+ * for users with no subscription row (COALESCE) or unknown tier values.
+ * No transaction needed — single read.
+ */
+export async function getUserTier(db: Pool, userId: number): Promise<Tier> {
+  const result = await db.query<{ tier: string }>(
+    `SELECT COALESCE(s.tier, 'free') AS tier
+     FROM users u
+     LEFT JOIN subscriptions s ON s.user_id = u.id
+     WHERE u.id = $1`,
+    [userId],
+  );
+  const raw = result.rows[0]?.tier ?? 'free';
+  return raw === 'free' || raw === 'pro' || raw === 'max' ? raw : 'free';
 }
