@@ -43,6 +43,16 @@ if (typeof HTMLVideoElement !== 'undefined') {
   };
 }
 
+// Polyfill IntersectionObserver for framer-motion whileInView in jsdom
+if (typeof IntersectionObserver === 'undefined') {
+  class IntersectionObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  (globalThis as unknown as Record<string, unknown>).IntersectionObserver = IntersectionObserverMock;
+}
+
 afterEach(() => {
   cleanup();
 });

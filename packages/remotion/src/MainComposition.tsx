@@ -42,8 +42,15 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
             ...(logoUrl ? { logoUrl } : {}),
             resolver,
           });
+          // Non-last sequences need TRANSITION_FRAMES extra so that after the
+          // TransitionSeries subtracts (N-1)×TRANSITION_FRAMES of overlap the
+          // total rendered duration equals videoConfig.durationInFrames.
+          const seqDuration =
+            i < scenes.length - 1
+              ? scene.durationInFrames + TRANSITION_FRAMES
+              : scene.durationInFrames;
           const seq = (
-            <TransitionSeries.Sequence key={`seq-${scene.sceneId}`} durationInFrames={scene.durationInFrames}>
+            <TransitionSeries.Sequence key={`seq-${scene.sceneId}`} durationInFrames={seqDuration}>
               {sceneEl}
             </TransitionSeries.Sequence>
           );

@@ -1,12 +1,59 @@
 # PromptDemo Marketing Landing Page — Design Spec
 
 **Brainstorm completed:** 2026-04-25
-**Status:** awaiting user review before writing-plans handoff
+**Visual Paradigm Shift (v2):** 2026-04-25 — FloatingHero + IntentShowcase + framer-motion scroll reveals
+**Status:** ✅ implemented
 **Predecessor:** [v2.1 hardening spec](2026-04-25-promptdemo-v2-1-design.md) — Phase 4 floor (Inter, glassmorphism, framer-motion) is the visual baseline this spec builds on.
 
-**Goal.** Add a public-facing marketing landing page that converts cold visitors. Adopt the visual quality bar of [remotion.dev](https://www.remotion.dev) and the design rigor of [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill).
+**Goal.** B2B SaaS marketing landing page at remotion.dev quality: full-screen floating hero, animated intent showcase, glassmorphism feature grid with scroll-reveal, deep black (#0a0a0a) background.
 
-**Conversion target.** A signed-out visitor lands on `/`, sees the value prop within one second, watches a 12-second dogfooded demo loop, and clicks through to sign-in with intent + URL prefilled — i.e. the sign-in flow lands them on `/jobs/[id]` with their first job already running.
+**Conversion target.** A signed-out visitor lands on `/`, sees the mega-headline + floating video immediately, pastes a URL into the hero input bar → navigates to `/create?url=...` (pre-filled) or `/api/auth/signin?callbackUrl=/create?url=...` if signed out.
+
+---
+
+## v2 Visual Paradigm Shift — changes from v1
+
+| Section | v1 | v2 |
+|---------|----|----|
+| Hero layout | 5/12 form + 7/12 video split | Full-screen centered, mega headline + floating video |
+| Hero CTA | Full JobForm (url + intent + duration) | Single "Paste URL" input → `/create?url=...` |
+| New section | — | IntentShowcase: Marketing/Tutorial/Deep-dive tab switcher |
+| Animations | Static (CSS only) | framer-motion: stagger entrance, whileInView, AnimatePresence |
+| Background | `#0a0a14` | `#0a0a0a` (deeper black, stronger contrast) |
+| Feature cards | CSS hover transition | framer-motion whileHover scale + dynamic glow shadow |
+| FinalCTA | Static | whileInView scroll reveal + motion button |
+
+## Section architecture (v2)
+
+```
+§1 LandingHero        min-h-screen | centered | floating video | URL input
+§2 IntentShowcase     tab strip (Marketing/Tutorial/Deep-dive) + AnimatePresence panel
+§3 LandingFeatures    3-col glassmorphism grid, staggered whileInView
+§4 LandingFinalCTA    whileInView headline + motion CTA button
+§5 LandingFooter      unchanged
+```
+
+## framer-motion animation inventory
+
+| Element | Motion |
+|---------|--------|
+| Hero eyebrow | `animate` opacity/y, 0.4s |
+| Hero headline words | staggerChildren 0.1s, opacity/y, ease custom cubic |
+| Hero video | spring stiffness:80, then `animate y:[0,-12,0]` infinite breathe |
+| Hero URL input | opacity/y, delay 0.85s |
+| IntentShowcase section | `whileInView` opacity/y |
+| Intent tab indicator | `layoutId="intent-indicator"` spring slide |
+| Intent panel swap | `AnimatePresence mode="wait"` crossfade 0.2s |
+| Scene badge entrance | stagger 0.055s per badge, spring scale |
+| Feature section heading | `whileInView` opacity/y, once |
+| Feature cards | `whileInView` stagger i×0.1s, `whileHover scale:1.02` + JS glow shadow |
+| FinalCTA heading | `whileInView` opacity/y |
+| FinalCTA subtext | `whileInView` delay 0.15s |
+| FinalCTA button | `whileHover scale:1.05`, `whileTap scale:0.97` |
+
+## url query param flow (new in v2)
+
+Hero input → `/create?url=<encoded>` → `CreatePage` reads `url` param → `CreatePageBody({ initialUrl })` → `JobForm initialUrl` pre-filled.
 
 ---
 

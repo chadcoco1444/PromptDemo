@@ -3,27 +3,19 @@ import { redirect } from 'next/navigation';
 import { auth, isAuthEnabled } from '../../auth';
 import { HistoryGrid } from '../../components/HistoryGrid';
 
-/**
- * History page — lists the signed-in user's past render jobs.
- *
- * v2.0 scope: skeleton. The real data fetch happens against
- * GET /api/users/me/jobs (Feature 4 partial — apps/api route follows). Until
- * that endpoint is wired + the Postgres job store backfill runs, this page
- * shows a placeholder message explaining what's on its way.
- */
 export default async function HistoryPage() {
   if (!isAuthEnabled() || !auth) {
     return (
-      <main className="max-w-3xl mx-auto p-8">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-6">
-          <h1 className="text-lg font-semibold">History is not configured</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Set <code className="font-mono">AUTH_ENABLED=true</code> in your environment and
+      <main className="max-w-3xl mx-auto px-6 py-16">
+        <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur-md p-6">
+          <h1 className="text-lg font-semibold text-white">History is not configured</h1>
+          <p className="mt-2 text-sm text-gray-400">
+            Set <code className="font-mono text-violet-300">AUTH_ENABLED=true</code> in your environment and
             configure OAuth credentials to enable the History feature.
           </p>
           <Link
             href="/"
-            className="inline-block mt-4 text-sm text-brand-600 dark:text-brand-400 hover:underline"
+            className="inline-block mt-4 text-sm text-brand-400 hover:text-brand-300 transition-colors"
           >
             ← Back to home
           </Link>
@@ -36,17 +28,27 @@ export default async function HistoryPage() {
   if (!session?.user) redirect('/api/auth/signin?callbackUrl=/history');
 
   return (
-    <main className="max-w-5xl mx-auto p-8 space-y-6">
+    <main className="max-w-5xl mx-auto px-6 py-16 space-y-6">
       <header className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Your videos</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <h1
+            className="font-extrabold tracking-tight text-transparent bg-clip-text"
+            style={{
+              backgroundImage: 'linear-gradient(180deg, #fff 0%, #c4b5fd 100%)',
+              fontSize: 'clamp(24px, 3.5vw, 40px)',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Your videos
+          </h1>
+          <p className="text-sm text-gray-400 mt-1">
             All demos you've rendered. Click one to rewatch or regenerate.
           </p>
         </div>
         <Link
           href="/"
-          className="text-sm bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-md font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 active:scale-[0.98] transition-all"
+          className="text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] active:scale-[0.98] transition-all"
+          style={{ boxShadow: '0 0 20px rgba(109,40,217,0.4)' }}
         >
           + New video
         </Link>

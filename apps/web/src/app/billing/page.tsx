@@ -18,30 +18,17 @@ interface Txn {
   createdAt: Date;
 }
 
-/**
- * Billing + plan overview for the signed-in user. v2.0 scope:
- *   - Current tier + allowance vs. balance
- *   - Last 10 credit-ledger transactions (debit / refund / refresh)
- *   - Upgrade CTAs that show "Coming soon" until Stripe is wired in prod
- *
- * Kept as a server component so balance + history are rendered from a single
- * round-trip. No client-side refetch needed: the UsageIndicator in the nav
- * handles live balance updates.
- */
 export default async function BillingPage() {
   if (!isAuthEnabled() || !auth) {
     return (
-      <main className="max-w-3xl mx-auto p-8">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-6">
-          <h1 className="text-lg font-semibold">Billing is not configured</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Set <code className="font-mono">AUTH_ENABLED=true</code> and{' '}
-            <code className="font-mono">PRICING_ENABLED=true</code> to enable the billing page.
+      <main className="max-w-3xl mx-auto px-6 py-16">
+        <div className="rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur-md p-6">
+          <h1 className="text-lg font-semibold text-white">Billing is not configured</h1>
+          <p className="mt-2 text-sm text-gray-400">
+            Set <code className="font-mono text-violet-300">AUTH_ENABLED=true</code> and{' '}
+            <code className="font-mono text-violet-300">PRICING_ENABLED=true</code> to enable the billing page.
           </p>
-          <Link
-            href="/"
-            className="inline-block mt-4 text-sm text-brand-600 dark:text-brand-400 hover:underline"
-          >
+          <Link href="/" className="inline-block mt-4 text-sm text-brand-400 hover:text-brand-300 transition-colors">
             ← Back to home
           </Link>
         </div>
@@ -53,20 +40,12 @@ export default async function BillingPage() {
   if (!session?.user) redirect('/api/auth/signin?callbackUrl=/billing');
 
   const userId = Number((session.user as { id?: string }).id);
-  if (!Number.isFinite(userId)) {
-    throw new Error('session missing user id');
-  }
+  if (!Number.isFinite(userId)) throw new Error('session missing user id');
 
   const pool = getPool();
   type SnapshotRow = { balance: number; tier: string; active_jobs: number };
-  type TxnRow = {
-    id: string;
-    job_id: string | null;
-    delta: number;
-    reason: string;
-    balance_after: number;
-    created_at: Date;
-  };
+  type TxnRow = { id: string; job_id: string | null; delta: number; reason: string; balance_after: number; created_at: Date };
+
   const [snapRes, txnRes] = await Promise.all([
     pool.query<SnapshotRow>(
       `SELECT COALESCE(c.balance, 0)::int AS balance,
@@ -104,63 +83,61 @@ export default async function BillingPage() {
     createdAt: r.created_at,
   }));
 
+  const barColor = pctUsed > 0.9 ? 'bg-red-500' : pctUsed > 0.7 ? 'bg-amber-500' : 'bg-brand-500';
+
   return (
-    <main className="max-w-3xl mx-auto p-8 space-y-8">
+    <main className="max-w-3xl mx-auto px-6 py-16 space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold">Billing</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        <h1
+          className="font-extrabold tracking-tight text-transparent bg-clip-text"
+          style={{
+            backgroundImage: 'linear-gradient(180deg, #fff 0%, #c4b5fd 100%)',
+            fontSize: 'clamp(24px, 3.5vw, 40px)',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Billing
+        </h1>
+        <p className="text-sm text-gray-400 mt-1">
           Manage your plan and see how your render-seconds are being spent.
         </p>
       </header>
 
-      <section className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+      {/* Current plan card */}
+      <section className="rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur-md p-6" style={{ boxShadow: '0 0 40px rgba(109,40,217,0.06)' }}>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Current plan
-            </div>
-            <div className="mt-1 text-lg font-semibold flex items-center gap-2">
+            <div className="text-xs uppercase tracking-widest text-gray-500">Current plan</div>
+            <div className="mt-1.5 text-xl font-bold text-white flex items-center gap-2">
               {TIER_LABEL[tier]}
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                {TIER_PRICE_USD[tier]}/mo
-              </span>
+              <span className="text-sm font-normal text-gray-500">{TIER_PRICE_USD[tier]}/mo</span>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Balance
-            </div>
-            <div className="mt-1 text-lg font-semibold">
+            <div className="text-xs uppercase tracking-widest text-gray-500">Balance</div>
+            <div className="mt-1.5 text-xl font-bold text-white">
               {snap.balance}s
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
-                / {allowance}s
-              </span>
+              <span className="text-sm font-normal text-gray-500 ml-1">/ {allowance}s</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+        <div className="mt-5 h-1.5 rounded-full bg-white/10 overflow-hidden">
           <div
-            className={`h-full ${
-              pctUsed > 0.9
-                ? 'bg-red-500'
-                : pctUsed > 0.7
-                ? 'bg-amber-500'
-                : 'bg-brand-500'
-            }`}
+            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
             style={{ width: `${Math.round(pctUsed * 100)}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {snap.active_jobs} active {snap.active_jobs === 1 ? 'render' : 'renders'} · resets
-          monthly on your billing anniversary
+        <p className="mt-2 text-xs text-gray-500">
+          {snap.active_jobs} active {snap.active_jobs === 1 ? 'render' : 'renders'} · resets monthly
         </p>
       </section>
 
-      <section className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
-        <h2 className="text-base font-semibold">Upgrade</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          More render-seconds, higher concurrency, and the 60-second duration option.
+      {/* Upgrade */}
+      <section className="rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur-md p-6">
+        <h2 className="text-sm font-semibold text-white uppercase tracking-wider">Upgrade</h2>
+        <p className="text-sm text-gray-400 mt-1">
+          More render-seconds, higher concurrency, and 60-second duration.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <UpgradeCard
@@ -180,44 +157,35 @@ export default async function BillingPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
-        <h2 className="text-base font-semibold">Recent activity</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+      {/* Recent activity */}
+      <section className="rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur-md p-6">
+        <h2 className="text-sm font-semibold text-white uppercase tracking-wider">Recent activity</h2>
+        <p className="text-sm text-gray-400 mt-1">
           Last 10 credit movements. Negative = debit when you start a render.
         </p>
         {txns.length === 0 ? (
-          <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-6 text-sm text-gray-500">
             No activity yet. Start a render from the{' '}
-            <Link href="/" className="text-brand-600 dark:text-brand-400 hover:underline">
+            <Link href="/" className="text-brand-400 hover:text-brand-300 transition-colors">
               home page
             </Link>
             .
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-gray-200 dark:divide-gray-800">
+          <ul className="mt-4 divide-y divide-white/5">
             {txns.map((t) => (
               <li key={t.id} className="py-3 flex items-center justify-between gap-4 text-sm">
                 <div className="min-w-0">
-                  <div className="font-medium capitalize">{t.reason}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {t.jobId ? `Job ${t.jobId}` : '—'} ·{' '}
-                    {new Date(t.createdAt).toLocaleString()}
+                  <div className="font-medium text-gray-200 capitalize">{t.reason}</div>
+                  <div className="text-xs text-gray-500 truncate">
+                    {t.jobId ? `Job ${t.jobId}` : '—'} · {new Date(t.createdAt).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div
-                    className={`font-mono ${
-                      t.delta < 0
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-green-600 dark:text-green-400'
-                    }`}
-                  >
-                    {t.delta > 0 ? '+' : ''}
-                    {t.delta}s
+                  <div className={`font-mono font-semibold ${t.delta < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {t.delta > 0 ? '+' : ''}{t.delta}s
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    balance {t.balanceAfter}s
-                  </div>
+                  <div className="text-xs text-gray-500">bal {t.balanceAfter}s</div>
                 </div>
               </li>
             ))}
@@ -236,20 +204,22 @@ function UpgradeCard(props: {
   current: boolean;
 }) {
   return (
-    <div className="rounded-md border border-gray-200 dark:border-gray-800 p-4">
+    <div className="rounded-xl ring-1 ring-white/10 bg-white/[0.03] p-4 hover:ring-violet-500/30 hover:bg-white/[0.06] transition-all duration-200">
       <div className="flex items-center justify-between">
-        <div className="font-semibold">{props.label}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">{props.price}</div>
+        <div className="font-semibold text-white">{props.label}</div>
+        <div className="text-sm text-gray-400">{props.price}</div>
       </div>
-      <ul className="mt-3 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+      <ul className="mt-3 space-y-1 text-sm text-gray-400">
         {props.bullets.map((b) => (
-          <li key={b}>• {b}</li>
+          <li key={b} className="flex items-center gap-1.5">
+            <span className="text-brand-500">•</span> {b}
+          </li>
         ))}
       </ul>
       <button
         type="button"
         disabled
-        className="mt-4 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm font-medium py-1.5 cursor-not-allowed"
+        className="mt-4 w-full rounded-lg ring-1 ring-white/10 bg-white/5 text-gray-500 text-sm font-medium py-2 cursor-not-allowed"
         title="Stripe checkout lands before production — tracked in the roadmap."
       >
         {props.current ? 'Current plan' : 'Upgrade — coming soon'}

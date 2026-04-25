@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Img, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
+import { AbsoluteFill, Img, useCurrentFrame, interpolate } from 'remotion';
 import { BrowserChrome } from '../primitives/BrowserChrome';
 import type { BrandTheme } from '../utils/brandTheme';
 
@@ -8,6 +8,7 @@ export interface SmoothScrollProps {
   url: string;
   speed: 'slow' | 'medium' | 'fast';
   theme: BrandTheme;
+  durationInFrames: number;
 }
 
 const SPEED_MULTIPLIER: Record<SmoothScrollProps['speed'], number> = {
@@ -16,9 +17,8 @@ const SPEED_MULTIPLIER: Record<SmoothScrollProps['speed'], number> = {
   fast: 1.6,
 };
 
-export const SmoothScroll: React.FC<SmoothScrollProps> = ({ screenshotUrl, url, speed, theme }) => {
+export const SmoothScroll: React.FC<SmoothScrollProps> = ({ screenshotUrl, url, speed, theme, durationInFrames }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
   const scrollDistance = 2000 * SPEED_MULTIPLIER[speed];
   const offset = interpolate(frame, [0, durationInFrames], [0, -scrollDistance], {
     extrapolateRight: 'clamp',

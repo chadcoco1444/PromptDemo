@@ -1,19 +1,16 @@
 'use client';
 
-import type { JobInput } from '../../lib/types';
 import { LandingHero } from './LandingHero';
+import { IntentShowcase } from './IntentShowcase';
 import { LandingFeatures } from './LandingFeatures';
 import { LandingFinalCTA } from './LandingFinalCTA';
 import { LandingFooter } from './LandingFooter';
 
-export interface MarketingLandingProps {
-  onAuthedSubmit: (input: JobInput) => Promise<{ jobId: string }>;
-}
-
-export function MarketingLanding({ onAuthedSubmit }: MarketingLandingProps) {
+export function MarketingLanding() {
   return (
-    <div className="bg-[#0a0a14]">
-      <LandingHero onAuthedSubmit={onAuthedSubmit} />
+    <div style={{ background: '#0a0a0a' }}>
+      <LandingHero />
+      <IntentShowcase />
       <LandingFeatures />
       <LandingFinalCTA />
       <LandingFooter />

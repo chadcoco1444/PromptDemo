@@ -19,7 +19,11 @@ export interface JobFormProps {
 }
 
 const INPUT_CLASSES =
-  'w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent transition-colors';
+  'w-full rounded-lg border border-white/15 bg-white/5 text-white px-3 py-2 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60 focus-visible:border-violet-500/50 transition-colors';
+
+// Select needs a solid background so native OS dropdown options are legible
+const SELECT_CLASSES =
+  'rounded-lg border border-white/15 bg-[#1a1a1a] text-white px-3 py-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60 focus-visible:border-violet-500/50 transition-colors [&>option]:bg-[#1a1a1a] [&>option]:text-white';
 
 export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, initialDuration, parentJobId }: JobFormProps) {
   const [url, setUrl] = useState(initialUrl ?? '');
@@ -78,7 +82,7 @@ export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, init
       // keying by shakeNonce on the error div below; form itself stable
     >
       <div>
-        <label htmlFor="url" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+        <label htmlFor="url" className="block text-sm font-medium mb-1 text-gray-300">
           URL
         </label>
         <input
@@ -91,7 +95,7 @@ export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, init
         />
       </div>
       <div>
-        <label htmlFor="intent" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+        <label htmlFor="intent" className="block text-sm font-medium mb-1 text-gray-300">
           Intent
         </label>
         <SpringTextarea
@@ -105,7 +109,7 @@ export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, init
           <button
             type="button"
             onClick={toggleLocale}
-            className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-900 active:scale-95 transition-transform"
+            className="text-xs rounded-md border border-white/15 bg-white/5 px-2 py-1 font-medium text-gray-300 hover:bg-white/10 shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60 active:scale-95 transition-all"
             aria-label="Toggle preset language"
             title="Switch preset language"
           >
@@ -117,14 +121,14 @@ export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, init
         </div>
       </div>
       <div>
-        <label htmlFor="duration" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+        <label htmlFor="duration" className="block text-sm font-medium mb-1 text-gray-300">
           Duration
         </label>
         <select
           id="duration"
           value={duration}
           onChange={(e) => setDuration(Number(e.target.value) as 10 | 30 | 60)}
-          className={`${INPUT_CLASSES} w-auto`}
+          className={`${SELECT_CLASSES} w-auto`}
         >
           <option value={10}>10s</option>
           <option value={30}>30s</option>
@@ -135,7 +139,7 @@ export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, init
         <div
           key={shakeNonce}
           role="alert"
-          className="text-red-600 dark:text-red-400 text-sm animate-shake-x"
+          className="text-red-400 text-sm animate-shake-x"
         >
           {error}
         </div>
@@ -143,7 +147,8 @@ export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, init
       <MagneticButton
         type="submit"
         disabled={pending}
-        className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-md font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 transition-shadow"
+        className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-md font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] transition-all"
+        style={{ boxShadow: '0 0 28px rgba(109,40,217,0.45)' }}
       >
         {pending ? 'Creating…' : 'Create video'}
       </MagneticButton>

@@ -13,13 +13,12 @@ export interface LandingBackdropProps {
 export function LandingBackdrop({ children, className = '' }: LandingBackdropProps) {
   return (
     <div
-      aria-hidden="true"
       className={`relative overflow-hidden ${className}`}
       style={{
         background:
           'radial-gradient(circle at 25% 50%, rgba(109, 40, 217, 0.45), transparent 60%),' +
           ' radial-gradient(circle at 80% 30%, rgba(167, 139, 250, 0.25), transparent 50%),' +
-          ' #0a0a14',
+          ' #0a0a0a',
       }}
     >
       <div

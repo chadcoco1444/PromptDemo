@@ -9,6 +9,8 @@ export interface BrowserChromeProps {
 export const BrowserChrome: React.FC<BrowserChromeProps> = ({ url, children, style }) => (
   <div
     style={{
+      display: 'flex',
+      flexDirection: 'column',
       borderRadius: 16,
       overflow: 'hidden',
       boxShadow: '0 40px 80px rgba(0,0,0,0.25)',
@@ -24,6 +26,7 @@ export const BrowserChrome: React.FC<BrowserChromeProps> = ({ url, children, sty
         padding: '10px 14px',
         background: '#f2f3f5',
         borderBottom: '1px solid #e2e4e8',
+        flexShrink: 0,
       }}
     >
       <div style={{ width: 12, height: 12, borderRadius: 6, background: '#ff5f57' }} />
@@ -44,6 +47,6 @@ export const BrowserChrome: React.FC<BrowserChromeProps> = ({ url, children, sty
         {url}
       </div>
     </div>
-    <div style={{ position: 'relative' }}>{children}</div>
+    <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>{children}</div>
   </div>
 );

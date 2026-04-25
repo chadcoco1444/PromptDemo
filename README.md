@@ -14,7 +14,7 @@
   <img alt="Fastify" src="https://img.shields.io/badge/Fastify-5-000?logo=fastify" />
   <img alt="Remotion" src="https://img.shields.io/badge/Remotion-4-FF6600" />
   <img alt="Claude" src="https://img.shields.io/badge/Anthropic-Sonnet%204.6-d97706" />
-  <img alt="tests" src="https://img.shields.io/badge/tests-268%2B%20passing-22c55e" />
+  <img alt="tests" src="https://img.shields.io/badge/tests-340%2B%20passing-22c55e" />
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
 </p>
 
@@ -36,7 +36,8 @@ No human editor in the loop. The storyboard only uses text the crawler actually 
 |---|---|
 | 🎬 **4 FeatureCallout variants** | Real screenshot · Ken Burns pan+zoom on the full-page capture · 3-up collage slice · stylized dashboard fallback. Variant selected deterministically post-LLM. |
 | 💬 **5 intent presets, bilingual** | English / 中 toggle; body AND append marker both follow the chosen language. Bilingual dedup prevents duplicate stuffing on re-clicks. |
-| 🎨 **Dark / light / system theme** | Tailwind `darkMode: 'class'`. Pre-hydration script applies the saved preference BEFORE first paint — no flash of wrong theme. |
+| 🎨 **Glassmorphic dark UI** | Full-app `#0a0a0a` design system — radial violet gradient blooms, `ring-1 ring-white/10 bg-white/5 backdrop-blur-md` cards, framer-motion scroll reveals, floating video with breathe animation, and an IntentShowcase tab switcher on the landing page. Every authenticated route (Create / Jobs / Billing / History) matches the landing page aesthetic. |
+| 📜 **History v2.2 with URL-synced filters** | HistoryGrid with debounced search, status + duration chip filters, lineage badges, staggered fade-in cards, and load-more pagination — all state synced to the URL query string. |
 | 🔐 **Google OAuth + History** | NextAuth v5 + Postgres. Signed-in users see their past renders at `/history`, can regenerate from any job with a hint. |
 | 🔄 **Regenerate with hint** | Parent `jobId` lookup is server-side — skips the crawl stage entirely, reuses the parent's crawlResultUri, saves ~30s. Security-hardened: client-supplied crawlResultUri is ignored. |
 | 🛡️ **7-layer LLM defense** | JSON auto-repair, balanced-brace extractor, list-separator extractive check, Zod integer coercion, smart-quote normalization, 10% duration auto-prorate, sceneId array-index fallback. See [design decisions](docs/readme/design-decisions.md). |
@@ -151,11 +152,11 @@ Visit `http://localhost:3001`, click Sign In, complete Google OAuth. You'll land
 
 ```bash
 pnpm -r test
-# → 268+ tests across:
+# → 340+ tests across:
 #   @promptdemo/schema                (50)
 #   @promptdemo/worker-storyboard     (68)
 #   @promptdemo/remotion              (25)
-#   @promptdemo/web                   (86)
+#   @promptdemo/web                   (159)
 #   @promptdemo/api                   (39)
 ```
 
@@ -218,8 +219,10 @@ Target: Cloud Run. Scripts under `deploy/` provision Artifact Registry, GCS buck
 
 - ✅ Feature 1 — FeatureCallout variants (image / Ken Burns / collage / dashboard)
 - ✅ Feature 2 — Intent presets with bilingual toggle
-- ✅ Feature 3 — Theme toggle, stage rail, micro-interactions, dark mode
+- ✅ Feature 3 — Stage rail, micro-interactions, glassmorphic dark UI system
 - ✅ Feature 4 — Google OAuth, history, regenerate with skip-crawl
+- ✅ Feature 4.1 — HistoryGrid v2.2: URL-synced filters, load-more, staggered cards, lineage badges
+- ✅ Feature 4.2 — Full-app visual redesign: landing page paradigm shift + all authenticated routes
 - 🚧 Feature 5 — Credits + tier enforcement + /billing (Stripe integration pending keys)
 - 📋 SSE live-intel per stage (Playwright track, token count, frame counter)
 - 📋 Windows terminal hiding via Job Objects

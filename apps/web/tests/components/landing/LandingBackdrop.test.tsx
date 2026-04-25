@@ -3,17 +3,20 @@ import { render } from '@testing-library/react';
 import { LandingBackdrop } from '../../../src/components/landing/LandingBackdrop';
 
 describe('LandingBackdrop', () => {
-  it('renders an absolutely-positioned div with brand-violet bloom + grid pattern', () => {
+  it('renders with brand-violet bloom + aria-hidden grid overlay child', () => {
     const { container } = render(<LandingBackdrop />);
     const root = container.firstChild as HTMLElement;
     expect(root).toBeTruthy();
-    // Decorative-only — must be aria-hidden so the gradient isn't read by SR.
-    expect(root.getAttribute('aria-hidden')).toBe('true');
+    // Root should NOT be aria-hidden — it may wrap interactive content (form, buttons).
+    expect(root.getAttribute('aria-hidden')).toBeNull();
     // Has at least one child for the grid overlay.
     expect(root.children.length).toBeGreaterThanOrEqual(1);
+    // The decorative grid overlay child must be aria-hidden.
+    const gridOverlay = Array.from(root.children).find(
+      (child) => child.getAttribute('aria-hidden') === 'true'
+    );
+    expect(gridOverlay).toBeTruthy();
     // Inline-style or class for the radial bloom — accept either.
-    // Note: jsdom may not properly serialize very long gradient strings in outerHTML,
-    // so also check the style element itself and the grid child's inline styles as proof of styling.
     const hasInlineRadialGradient = root.getAttribute('style')?.includes('radial-gradient') ?? false;
     const hasGridChild = Array.from(root.children).some(
       (child) => child.getAttribute('style')?.includes('background') ?? false

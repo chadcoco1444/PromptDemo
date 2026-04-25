@@ -38,7 +38,7 @@ function LinkCluster({ heading, links }: { heading: string; links: typeof PRODUC
 
 export function LandingFooter() {
   return (
-    <footer className="bg-[#0a0a14] border-t border-white/10">
+    <footer className="bg-[#0a0a0a] border-t border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           <LinkCluster heading="Product" links={PRODUCT} />

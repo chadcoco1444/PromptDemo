@@ -57,7 +57,7 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
     case 'SmoothScroll': {
       const screenshotUrl = resolver(assets.screenshots.fullPage);
       if (!screenshotUrl) throw new Error('SmoothScroll requires assets.screenshots.fullPage');
-      return <SmoothScroll screenshotUrl={screenshotUrl} url={url} speed={scene.props.speed} theme={theme} />;
+      return <SmoothScroll screenshotUrl={screenshotUrl} url={url} speed={scene.props.speed} theme={theme} durationInFrames={scene.durationInFrames} />;
     }
     case 'CTA':
       return (
