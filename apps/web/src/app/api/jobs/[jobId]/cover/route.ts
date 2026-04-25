@@ -15,8 +15,10 @@ export const dynamic = 'force-dynamic';
  * post-render thumb extraction).
  *
  * Path is deterministic — the crawler always writes to
- * jobs/<jobId>/screenshots/viewport.jpg. We don't read crawlResult.json
- * to avoid an extra S3 GET per history-page render.
+ * jobs/<jobId>/viewport.jpg (the buildKey helper in workers/crawler stores
+ * artifacts flat under the job dir, not under a /screenshots/ subdir). We
+ * don't read crawlResult.json to avoid an extra S3 GET per history-page
+ * render.
  *
  * Security: ownership check against the jobs table; 404 (not 403) for
  * non-owned jobs to avoid leaking job-id existence.
@@ -57,7 +59,7 @@ export async function GET(_request: Request, ctx: { params: { jobId: string } })
     const s3 = getS3Client();
     const cmd = new GetObjectCommand({
       Bucket: getS3Bucket(),
-      Key: `jobs/${jobId}/screenshots/viewport.jpg`,
+      Key: `jobs/${jobId}/viewport.jpg`,
     });
     const res = await s3.send(cmd);
     if (!res.Body) return new Response('not_found', { status: 404 });

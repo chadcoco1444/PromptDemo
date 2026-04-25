@@ -73,3 +73,30 @@ cp.execFile = function patchedExecFile(file, args, options, cb) {
   }
   return origExecFile.call(this, file, undefined, ensureHidden(args), cb);
 };
+
+// child_process.fork is the case Next.js 14 hits for its dev-server worker.
+// fork captures a LOCAL reference to spawn at child_process module load, so
+// our patched cp.spawn doesn't see the call. We patch fork directly: the
+// underlying internal spawn still honors windowsHide:true via libuv when
+// it's set on the options object we hand it.
+// child_process.fork is the case Next.js 14 hits for its dev-server worker.
+// fork captures a LOCAL reference to spawn at child_process module load, so
+// our patched cp.spawn doesn't see the call. We patch fork directly: the
+// underlying internal spawn still honors windowsHide:true via libuv when
+// it's set on the options object we hand it.
+//
+// Caveat: libuv on Windows still allocates a conhost.exe for forked Node
+// children with stdio:'inherit' (and even with stdio:'ignore'+ipc). The
+// allocated console is invisible thanks to windowsHide:true, but a brief
+// (~50ms) flash can occur before SW_HIDE applies on slower machines. This
+// is a Node + Windows interaction we can't eliminate without bypassing
+// fork entirely — see the comment in scripts/start-hidden.vbs for the
+// "fully hidden" launch path.
+const origFork = cp.fork;
+cp.fork = function patchedFork(modulePath, args, options) {
+  if (Array.isArray(args)) {
+    return origFork.call(this, modulePath, args, ensureHidden(options));
+  }
+  // (modulePath, options) signature — args was actually options.
+  return origFork.call(this, modulePath, ensureHidden(args));
+};
