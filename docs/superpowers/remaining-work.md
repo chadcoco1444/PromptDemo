@@ -1,8 +1,14 @@
-# PromptDemo v2.0 — Remaining Work
+# PromptDemo — Remaining Work
 
-Audit of the v2 spec ([docs/superpowers/specs/2026-04-24-promptdemo-v2-design.md](specs/2026-04-24-promptdemo-v2-design.md)) against shipped state as of `a0b0d0d` (2026-04-25). Everything below is what the spec promised that has NOT yet been built or validated.
+Audit against shipped state as of `c508375` (2026-04-25, post-v2.1). Sections in order of likely sequencing for a production launch.
 
-Sections in order of likely sequencing for a production launch.
+**v2.1 cycle closed sections** (struck through here, see the v2.1 design spec):
+- ~~§2 Anthropic daily spend guard~~ — shipped Phase 5.1
+- ~~§3 Per-user rate limit~~ — shipped Phase 5.2
+- §4 History polish — partial: §3.2 cover proxy shipped, others pending below
+- §7 Acceptance criteria — Lighthouse / perf still untested
+
+What's actually still open is **§1 Stripe**, **§4 history extras**, **§5 free-tier guardrails**, **§6 S3 lifecycle**, **§7 perf validation**, **§8 nice-to-haves** — everything else from the original v2 audit is done.
 
 ---
 
@@ -56,41 +62,36 @@ Sections in order of likely sequencing for a production launch.
 
 ---
 
-## 2. Anthropic daily spending guard (storyboard worker)
+## 2. ~~Anthropic daily spending guard~~ — DONE in v2.1 Phase 5.1 (commit shipped 2026-04-25)
 
-**Spec §3 (Architecture Review).** The `system_limits` table already seeds `anthropic_daily_limit_usd=25` and a running spend counter (commit `5ead1d6`), but the storyboard worker doesn't read or write either yet — the cap is currently advisory.
+`workers/storyboard/src/anthropic/{pricing,spendGuard}.ts` — `assertBudgetAvailable` + `recordSpend` with UTC daily reset and `BudgetExceededError`. Off by default, opt in via `BUDGET_GUARD_ENABLED=true` + `DATABASE_URL`.
 
-**Tasks:**
-- After each Claude call in `workers/storyboard/src/generator.ts`, parse the `usage` block from the response, multiply by Sonnet 4.6 input/output rates, increment `system_limits[anthropic_daily_spend_usd]`.
-- Before kicking off a Claude call, read `anthropic_daily_spend_usd` and `anthropic_daily_limit_usd`. If spend ≥ limit, throw a typed error so the orchestrator marks the job failed with `STORYBOARD_BUDGET_EXCEEDED` and refunds 100%.
-- Reset spend at UTC midnight (compare `anthropic_daily_reset_at`; if older than today UTC, set spend=0 before the next read).
-
-**Risk if skipped:** unbounded Claude API spend on a viral day. The credit gate caps render-seconds but not Claude calls (e.g. mock-mode + intent='very long' could be cheap to the user but expensive to us).
+**Followups out of scope for v2.1:**
+- Tier-differentiated rate limits (free=10/min, pro=30/min, max=120/min). Currently the Fastify keyGenerator buckets per user but treats all tiers equally.
 
 ---
 
-## 3. Per-user rate limiting (currently per-IP only)
+## 3. ~~Per-user rate limiting~~ — DONE in v2.1 Phase 5.2
 
-**Spec §3 (Rate limit layers).** [apps/api/src/app.ts:43-48](../../apps/api/src/app.ts) registers `@fastify/rate-limit` with `keyGenerator: req => req.ip` only. The spec calls for layered limits (per-IP **and** per-user) so a logged-in attacker behind a VPN can't trivially bypass.
+`apps/api/src/app.ts` keyGenerator now verifies the JWT and buckets by `user:<id>`, falls back to `ip:<ip>` for anonymous. Test in `apps/api/tests/app.test.ts`.
 
-**Tasks:**
-- Wrap `@fastify/rate-limit`'s `keyGenerator` to prefer `req.headers['x-user-id']` when present, fall back to `req.ip`.
-- Different `max` per tier: free=10/min, pro=30/min, max=120/min — read tier from session, multiply against tier-aware key.
+**Followup carried forward from §2:** tier-differentiated max-per-window.
 
 ---
 
-## 4. History page polish (spec §4.2 — partially shipped)
+## 4. History page polish (spec §4.2 — partially shipped, more shipped in v2.1)
 
-Shipped: basic `/history` page + `HistoryGrid` component, thumbnail placeholder, relative time.
+Shipped pre-v2.1: basic `/history` page + `HistoryGrid` component, relative time.
+Shipped in v2.1 Phase 3: 3-state badges (Generating/Done/Failed), crawl-screenshot cover proxy `/api/jobs/[jobId]/cover`.
 
-**Missing per spec §4.2:**
+**Still missing per spec §4.2:**
 
 | Feature | Status | Notes |
 |---|---|---|
-| First-frame thumbnail extraction | ❌ | Render worker should `ffmpeg -ss 00:00:01 -frames:v 1` after MP4 upload, push as `jobs/<jobId>/thumb.jpg`. Currently `thumbUrl` is null for everyone. |
+| First-frame thumbnail extraction | ❌ | Render worker should `ffmpeg -ss 00:00:01 -frames:v 1` after MP4 upload, push as `jobs/<jobId>/thumb.jpg`. Currently `thumbUrl` is null; we fall back to the cover proxy which only has the crawl screenshot. |
 | Status / duration / date-range filters | ❌ | Add query params + Postgres WHERE clauses to `/api/users/me/jobs`. |
 | Full-text search on intent | ❌ | Postgres `tsvector` GIN index on `jobs.input->>'intent'`. |
-| Cursor pagination (24/page) | ❌ | Currently returns the full set. Cursor on `created_at`. |
+| Cursor pagination (24/page) | ❌ | Currently returns the full set (limit=24 default but no cursor UI). Cursor on `created_at`. |
 | List/grid toggle (mobile→list, desktop→grid) | ❌ | Tailwind `md:` breakpoint + a toggle button. |
 | Regenerate lineage badge ("Regenerated from job X") | ❌ | We persist `parentJobId` already; UI just needs to render the link. |
 
@@ -148,15 +149,16 @@ For sanity, things the spec promised that ARE done:
 
 - Feature 1: 4 FeatureCallout variants (image / kenBurns / collage / dashboard) + selection logic + Zod-validated schema.
 - Feature 2: 5 intent presets, bilingual labels, dedup, append-mode precedence, telemetry.
-- Feature 3: Theme toggle (3-state), 3-stage progress rail with **live intel**, micro-interactions, dark mode.
-- Feature 4.1: NextAuth v5 + Google + Postgres adapter + AUTH_ENABLED flag.
-- Feature 4.2: Skeleton + basic grid + relative time (gaps in #4 above).
+- Feature 3: Theme toggle (3-state), 3-stage progress rail with **live intel**, micro-interactions, dark mode, **glassmorphism + framer-motion physics (v2.1)**, **breathing pulse + cross-fade intel (v2.1)**.
+- Feature 4.1: NextAuth v5 + Google + Postgres adapter + AUTH_ENABLED flag, **JWT-signed user proxy + BFF rate limit (v2.1)**.
+- Feature 4.2: Skeleton + basic grid + relative time, **3-state badges (Generating/Done/Failed) + crawl-screenshot cover proxy (v2.1)** — gaps in §4 above.
 - Feature 4.3: Regenerate with hint via `parentJobId` + server-authoritative crawl-skip.
 - Feature 5 (minus Stripe): credit ledger, transactional debit/refund, concurrency cap, 402/429/403 responses, `UsageIndicator` pill, `/billing` page with disabled upgrade CTAs, refund hook on job failure per Amendment C.
 - Postgres dual-write + canonical schema (Amendment A).
-- Live-intel SSE (spec §3.3 — better than promised: workers emit phase messages now, not just stage transitions).
+- Live-intel SSE (spec §3.3 — workers emit phase messages, **cross-fade transitions in v2.1**).
 - Demo orchestration: direct-node spawn, port-based liveness, db:reset / db:tables, full-stack `pnpm demo` lifecycle, terminal-flash hidden on Windows.
+- **v2.1 hardening**: storyboard whitelist filter, bilingual pacing profiles (Marketing Hype / Tutorial), profile-aware Zod, locale lock, `start-hidden.vbs`, Anthropic daily spend guard, Fastify per-user rate limit. See [v2.1 design spec](specs/2026-04-25-promptdemo-v2-1-design.md).
 
 ---
 
-**TL;DR:** the only blocker to a real launch is **Stripe (§1)**. Everything else is polish or defense-in-depth.
+**TL;DR:** the only blocker to a real launch remains **Stripe (§1)**. v2.1 closed the security + UX hardening gaps. What's left is polish (history filters/search/pagination, free-tier guardrails) and prod-ops (S3 lifecycle, Lighthouse).
