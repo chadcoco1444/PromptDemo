@@ -40,6 +40,22 @@ export async function GET(request: Request) {
   try {
     const pool = getPool();
 
+    // Resolve user's subscription tier for PLG watermark hint on the client.
+    let tier: 'free' | 'pro' | 'max' = 'free';
+    try {
+      const tierResult = await pool.query<{ tier: string }>(
+        `SELECT COALESCE(s.tier, 'free') AS tier
+         FROM users u
+         LEFT JOIN subscriptions s ON s.user_id = u.id
+         WHERE u.id = $1`,
+        [Number(userId)],
+      );
+      const raw = tierResult.rows[0]?.tier ?? 'free';
+      tier = raw === 'pro' || raw === 'max' ? raw : 'free';
+    } catch {
+      // Non-fatal: fall back to free tier
+    }
+
     // v2.2 — extended filter set + parent join + hasMore via limit+1 trick.
     // Per design: status enum 'generating' expands to the 5 in-flight raw
     // statuses; pg_trgm gin index on (input->>'intent') powers ILIKE.
@@ -138,11 +154,12 @@ export async function GET(request: Request) {
         };
       }),
       hasMore,
+      tier,
     });
   } catch (err) {
     console.error('[api/users/me/jobs] query failed:', err);
     // Graceful degrade — don't 500 the page, return empty and let the UI
     // render "no jobs yet" rather than an error card.
-    return NextResponse.json({ jobs: [], warning: 'query_failed' });
+    return NextResponse.json({ jobs: [], warning: 'query_failed', tier: 'free' as const });
   }
 }
