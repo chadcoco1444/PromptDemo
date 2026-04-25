@@ -14,7 +14,8 @@ export default async function CreatePage({ searchParams }: PageProps) {
 
   // Fork prefill: load parent job server-side (auth-gated ownership check).
   let fork: ForkInfo | undefined;
-  if (searchParams.forkId && isAuthEnabled() && auth) {
+  const forkId = searchParams.forkId;
+  if (forkId && forkId.length <= 64 && /^[A-Za-z0-9_-]+$/.test(forkId) && isAuthEnabled() && auth) {
     try {
       const session = await auth();
       const userId = (session?.user as { id?: string } | null)?.id;
@@ -22,7 +23,7 @@ export default async function CreatePage({ searchParams }: PageProps) {
         const pool = getPool();
         const { rows } = await pool.query(
           `SELECT id, input FROM jobs WHERE id = $1 AND user_id = $2 LIMIT 1`,
-          [searchParams.forkId, Number(userId)],
+          [forkId, Number(userId)],
         );
         if (rows.length > 0) {
           const row = rows[0] as {
