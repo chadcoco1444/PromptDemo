@@ -1,23 +1,23 @@
 # Demo Orchestration Rewrite — Followup
 
 **Created:** 2026-04-24
-**Status:** **RESOLVED** (core issues) — implemented 2026-04-24 via `docs/superpowers/plans/2026-04-24-demo-orchestration-rewrite.md`, tag `v2.0.0-demo-rewrite`. Option B shipped (direct node spawn, skip pnpm.cmd middleman). End-to-end `pnpm demo test` passes: 5/5 services UP, real PIDs tracked, `stop` kills cleanly, no zombie accumulation, 60s video roundtrip.
+**Status:** **RESOLVED** (core issues) — implemented 2026-04-24 via `docs/superpowers/plans/2026-04-24-demo-orchestration-rewrite.md`, tag `v2.0.0-demo-rewrite`. Option B shipped (direct node spawn, skip pnpm.cmd middleman). End-to-end `pnpm lume test` passes: 5/5 services UP, real PIDs tracked, `stop` kills cleanly, no zombie accumulation, 60s video roundtrip.
 
 ## Known issue remaining (non-blocking)
 
-**Terminal visibility on Windows.** `pnpm demo start` still pops 5 visible-but-empty console windows (4 `node.exe` + 1 `next-server`). `windowsHide: true` hides the parent node.exe we spawn, but `tsx watch`'s internal child-node spawn and Next.js's bundler-worker fork don't inherit the hide flag, so their grandchildren create visible consoles with no way to suppress from the launcher side. Impact:
+**Terminal visibility on Windows.** `pnpm lume start` still pops 5 visible-but-empty console windows (4 `node.exe` + 1 `next-server`). `windowsHide: true` hides the parent node.exe we spawn, but `tsx watch`'s internal child-node spawn and Next.js's bundler-worker fork don't inherit the hide flag, so their grandchildren create visible consoles with no way to suppress from the launcher side. Impact:
 
 - Services work correctly; consoles are empty (stdio goes to log files).
-- `pnpm demo stop` closes all 5 windows cleanly along with the processes.
+- `pnpm lume stop` closes all 5 windows cleanly along with the processes.
 - Purely visual noise, no functional regression.
 
 Fix path (deferred): Windows Job Object with `JOB_OBJECT_LIMIT_UI_LIMIT` + `JOB_OBJECT_UILIMIT_DESKTOP` via a native helper (`ffi-napi` or a small companion EXE). Estimated 4-6 hours, fragile across Windows versions, not worth blocking feature work on.
 
 ## Problem
 
-`scripts/demo.mjs` is the local lifecycle manager for the 5-service demo stack
+`scripts/lume.mjs` is the local lifecycle manager for the 5-service demo stack
 (crawler + storyboard + render + api + web). On Windows it's unreliable: each
-`pnpm demo start` leaves only 1 random service actually listening on its port,
+`pnpm lume start` leaves only 1 random service actually listening on its port,
 despite reporting all 5 as "started".
 
 Symptoms observed this session:
@@ -50,14 +50,14 @@ Symptoms observed this session:
 ## Candidate fixes (pick one or combine)
 
 ### Option A — Commandline-based stop
-Use `Get-CimInstance Win32_Process | Where CommandLine -like '*@promptdemo/*'`
+Use `Get-CimInstance Win32_Process | Where CommandLine -like '*@lumespec/*'`
 to enumerate every related process (cmd, pnpm, node, tsx) and kill them all.
 Handles zombies regardless of how they were spawned.
 
 Tradeoff: slow (~300-500ms per `stop`), captures processes the user may
 actually want (e.g. a `tsx src/index.ts` they launched by hand in another
 terminal). Mitigation: filter by both commandline AND cwd
-(`ExecutablePath -like '*promptdemo*'`).
+(`ExecutablePath -like '*lumespec*'`).
 
 ### Option B — Direct node spawn (skip pnpm.cmd)
 For each service, resolve the actual entry command at startup time:
@@ -70,7 +70,7 @@ all work deterministically.
 
 Tradeoff: needs per-service entry detection (read each package.json's `dev`
 script and reconstruct). If pnpm adds env vars or does workspace-symlink work
-we skip that. Historically promptdemo's `dev` scripts are plain `tsx watch`
+we skip that. Historically lumespec's `dev` scripts are plain `tsx watch`
 or `next dev`, so this should work.
 
 ### Option C — Use `concurrently` or PM2
@@ -79,12 +79,12 @@ prefixes output. PM2 is a full process manager with log rotation, status,
 cluster mode, etc.
 
 Tradeoff: extra dep. PM2 in particular is heavy. Concurrently doesn't give
-us background/detached mode by default, so `pnpm demo start` would block
+us background/detached mode by default, so `pnpm lume start` would block
 the terminal instead of being fire-and-forget.
 
 ### Option D — Add `demo clean-all` subcommand
 As a minimum safety net: a nuclear option that kills every process whose
-commandline matches `--filter @promptdemo/` OR `apps/(api|web)` OR
+commandline matches `--filter @lumespec/` OR `apps/(api|web)` OR
 `workers/(crawler|storyboard|render)`. Use before every `start` if state
 is suspect.
 
@@ -104,7 +104,7 @@ Estimated effort: 2-3 hours of focused work + testing on Windows + Linux.
   reconstructs the argv for the local `tsx` / `next` binary.
 - Update `stopAll` to kill by commandline match as a followup pass (catches
   orphans from earlier bad-state sessions).
-- Add `pnpm demo clean-all` subcommand that nukes any `@promptdemo/*`-tagged
+- Add `pnpm lume clean-all` subcommand that nukes any `@lumespec/*`-tagged
   node/cmd process.
 - Drop the PowerShell bridge entirely (it was a workaround for EINVAL on
   pnpm.cmd, no longer needed once we skip pnpm).

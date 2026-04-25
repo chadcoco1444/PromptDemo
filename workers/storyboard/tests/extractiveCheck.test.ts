@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { extractiveCheck, collectSceneTexts } from '../src/validation/extractiveCheck.js';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 const basePool = [
   'ship production-grade ai workflows in minutes',

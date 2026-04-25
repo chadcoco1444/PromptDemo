@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Embed a "Made with PromptDemo" Pill Badge watermark in every Free-tier rendered video, enforced server-side so it cannot be bypassed.
+**Goal:** Embed a "Made with LumeSpec" Pill Badge watermark in every Free-tier rendered video, enforced server-side so it cannot be bypassed.
 
 **Architecture:** `showWatermark` is determined once in `apps/api` (from the `subscriptions` table), passed through the BullMQ job payload into the storyboard worker, and baked into the storyboard JSON stored in S3 by `enrichFromCrawlResult()`. The Remotion layer passively reads the field with zero tier awareness.
 
@@ -193,7 +193,7 @@ export const Watermark: React.FC = () => (
           whiteSpace: 'nowrap',
         }}
       >
-        Made with PromptDemo
+        Made with LumeSpec
       </span>
     </div>
   </AbsoluteFill>

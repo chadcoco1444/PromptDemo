@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { toS3Uri, parseS3Uri, type S3Uri } from '@promptdemo/schema';
+import { toS3Uri, parseS3Uri, type S3Uri } from '@lumespec/schema';
 import { basename } from 'node:path/posix';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -55,7 +55,7 @@ export async function putObject(
 export function s3ConfigFromEnv(env: NodeJS.ProcessEnv): S3Config {
   const cfg: S3Config = {
     region: env.S3_REGION ?? 'us-east-1',
-    bucket: env.S3_BUCKET ?? 'promptdemo-dev',
+    bucket: env.S3_BUCKET ?? 'lumespec-dev',
     forcePathStyle: env.S3_FORCE_PATH_STYLE === 'true',
   };
   if (env.S3_ENDPOINT) cfg.endpoint = env.S3_ENDPOINT;

@@ -1,4 +1,4 @@
-# PromptDemo v1.0 — Plan 6: Next.js Frontend
+# LumeSpec v1.0 — Plan 6: Next.js Frontend
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 14.2, React 18.3, TypeScript, Tailwind CSS 3.4, Zod 3.23 (client-side validation), Vitest + @testing-library/react for component tests. No SSR fetches against the API — the app is effectively a single-page app shell with server-rendered HTML scaffolding; keeps deploy simple (no backend calls from Next.js server runtime).
 
-**Spec reference:** `docs/superpowers/specs/2026-04-20-promptdemo-design.md` §3.
+**Spec reference:** `docs/superpowers/specs/2026-04-20-lumespec-design.md` §3.
 
 **Predecessor:** Plan 4 (`v0.4.0-api`). Plan 6 talks only to the REST + SSE API; it does not consume any worker package directly.
 
@@ -94,7 +94,7 @@ apps/web/
 
 ```json
 {
-  "name": "@promptdemo/web",
+  "name": "@lumespec/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -130,7 +130,7 @@ apps/web/
 }
 ```
 
-Note: this package does NOT depend on `@promptdemo/schema` (would pull bundler-incompatible upstream chain). It mirrors the tiny subset of Job types it needs locally.
+Note: this package does NOT depend on `@lumespec/schema` (would pull bundler-incompatible upstream chain). It mirrors the tiny subset of Job types it needs locally.
 
 - [ ] **Step 2: `tsconfig.json`**
 
@@ -209,7 +209,7 @@ NEXT_PUBLIC_API_BASE=http://localhost:3000
 import './globals.css';
 
 export const metadata = {
-  title: 'PromptDemo',
+  title: 'LumeSpec',
   description: 'Turn any URL into a demo video',
 };
 
@@ -251,7 +251,7 @@ body {
 
 ```bash
 pnpm install
-pnpm --filter @promptdemo/web typecheck
+pnpm --filter @lumespec/web typecheck
 ```
 
 Note: Next.js generates `next-env.d.ts` on first `next build` or `next dev`. Typecheck may complain. If so, create an empty `apps/web/next-env.d.ts` with `/// <reference types="next" />`.
@@ -273,7 +273,7 @@ No push.
 - Create: `apps/web/src/lib/types.ts`
 - Create: `apps/web/tests/lib/types.test.ts`
 
-**Purpose:** Local Zod schemas mirroring the subset of `@promptdemo/api`'s Job/JobInput contract this app needs. Keeps the web bundle independent of the API package (which has Node-only deps).
+**Purpose:** Local Zod schemas mirroring the subset of `@lumespec/api`'s Job/JobInput contract this app needs. Keeps the web bundle independent of the API package (which has Node-only deps).
 
 - [ ] **Step 1: Test**
 
@@ -1428,7 +1428,7 @@ export default function JobPage({ params }: PageProps) {
 import './globals.css';
 
 export const metadata = {
-  title: 'PromptDemo',
+  title: 'LumeSpec',
   description: 'Turn any URL into a demo video',
 };
 
@@ -1439,7 +1439,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <nav className="border-b">
           <div className="max-w-5xl mx-auto p-4 flex items-center gap-4">
             <a href="/" className="font-semibold text-lg">
-              PromptDemo
+              LumeSpec
             </a>
           </div>
         </nav>
@@ -1453,8 +1453,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 - [ ] **Step 4: Typecheck**
 
 ```bash
-pnpm --filter @promptdemo/web typecheck
-pnpm --filter @promptdemo/web test
+pnpm --filter @lumespec/web typecheck
+pnpm --filter @lumespec/web test
 ```
 
 - [ ] **Step 5: Commit**
@@ -1555,7 +1555,7 @@ Grand total (all 7 packages): **~226 passing + 2 skipped**.
 ```bash
 git tag -a v0.6.0-web -m "Phase 6: Next.js frontend complete
 
-Adds @promptdemo/web:
+Adds @lumespec/web:
 - Next.js 14 App Router + React 18 + TypeScript + Tailwind 3.4
 - Home page with JobForm (client-side Zod validation)
 - /jobs/[jobId] progress page with SSE-driven status, queue position,
@@ -1567,7 +1567,7 @@ Adds @promptdemo/web:
   Zod schemas mirroring the API Job contract
 - Standalone Next.js Dockerfile (two-stage, slim runtime)
 
-Talks to @promptdemo/api over REST+SSE via NEXT_PUBLIC_API_BASE.
+Talks to @lumespec/api over REST+SSE via NEXT_PUBLIC_API_BASE.
 Resolves s3:// video URLs via NEXT_PUBLIC_S3_ENDPOINT (dev: MinIO public-read).
 
 ~36 tests passing."

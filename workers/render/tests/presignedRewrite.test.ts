@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { rewriteStoryboardUrls } from '../src/presignedRewrite.js';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 const sb = {
   videoConfig: {

@@ -7,7 +7,7 @@ import { extractFeatures, type ExtractedFeature } from '../extractors/featureExt
 import { pickPrimaryFontFamily } from '../extractors/fontDetector.js';
 import { pickLogoCandidate, type LogoCandidate } from '../extractors/logoDetector.js';
 import { pickDominantFromFrequencies, toHex, type DominantColors } from '../extractors/colorSampler.js';
-import { normalizeText } from '@promptdemo/schema';
+import { normalizeText } from '@lumespec/schema';
 
 export type PlaywrightTrackResult =
   | {

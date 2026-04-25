@@ -1,5 +1,5 @@
 {
-  "name": "@promptdemo/worker-render",
+  "name": "@lumespec/worker-render",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,8 +14,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.658.1",
     "@aws-sdk/s3-request-presigner": "3.658.1",
-    "@promptdemo/remotion": "workspace:*",
-    "@promptdemo/schema": "workspace:*",
+    "@lumespec/remotion": "workspace:*",
+    "@lumespec/schema": "workspace:*",
     "@remotion/bundler": "4.0.218",
     "@remotion/renderer": "4.0.218",
     "bullmq": "5.21.2",

@@ -16,7 +16,7 @@ describe.skipIf(!GATED)('renderSmoke (gated behind REMOTION_SMOKE=true)', () => 
     const main = comps.find((c) => c.id === 'MainComposition');
     expect(main).toBeDefined();
 
-    const outDir = mkdtempSync(join(tmpdir(), 'promptdemo-smoke-'));
+    const outDir = mkdtempSync(join(tmpdir(), 'lumespec-smoke-'));
     const outPath = join(outDir, 'smoke.mp4');
     try {
       await renderMedia({

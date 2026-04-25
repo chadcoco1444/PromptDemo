@@ -41,7 +41,7 @@ export function LandingHero() {
           transition={{ duration: 0.4 }}
           className="text-[11px] tracking-[0.18em] text-brand-300 uppercase font-medium"
         >
-          PromptDemo · Claude + Remotion
+          LumeSpec · Claude + Remotion
         </motion.p>
 
         {/* Mega Headline */}
@@ -100,7 +100,7 @@ export function LandingHero() {
                 muted
                 playsInline
                 preload="auto"
-                aria-label="PromptDemo — paste a URL, watch the AI pipeline generate your demo video"
+                aria-label="LumeSpec — paste a URL, watch the AI pipeline generate your demo video"
               >
                 <source src="/landing-hero-demo.mp4" type="video/mp4" />
               </video>

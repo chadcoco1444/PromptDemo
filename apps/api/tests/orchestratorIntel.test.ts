@@ -4,7 +4,7 @@ import RedisMock from 'ioredis-mock';
 import { startOrchestrator } from '../src/orchestrator/index.js';
 import { makeJobStore } from '../src/jobStore.js';
 import { makeBroker } from '../src/sse/broker.js';
-import { makeIntel } from '@promptdemo/schema';
+import { makeIntel } from '@lumespec/schema';
 
 /**
  * Spin up the orchestrator with bare EventEmitters in place of real

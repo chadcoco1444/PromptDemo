@@ -1,4 +1,4 @@
-import { SCENE_TYPES } from '@promptdemo/schema';
+import { SCENE_TYPES } from '@lumespec/schema';
 
 export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
   HeroRealShot:

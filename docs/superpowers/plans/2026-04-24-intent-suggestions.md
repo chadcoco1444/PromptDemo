@@ -140,7 +140,7 @@ describe('applyPreset', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @promptdemo/web test -- intentPresets.test.ts`
+Run: `pnpm --filter @lumespec/web test -- intentPresets.test.ts`
 Expected: FAIL — "Cannot find module '../../src/lib/intentPresets'".
 
 - [ ] **Step 3: Implement the module**
@@ -233,7 +233,7 @@ export function applyPreset(current: string, preset: IntentPreset): string {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/web test -- intentPresets.test.ts`
+Run: `pnpm --filter @lumespec/web test -- intentPresets.test.ts`
 Expected: PASS — 2 tests in `INTENT_PRESETS` describe (5 presets + body-is-English heuristic), 8 tests in `applyPreset` describe (fill-empty, fill-whitespace, append-with-marker, English-marker-only, no-mutation, dedup-same-chip, dedup-after-append, allow-different-preset).
 
 - [ ] **Step 5: Commit**
@@ -296,7 +296,7 @@ describe('detectLocale', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @promptdemo/web test -- locale.test.ts`
+Run: `pnpm --filter @lumespec/web test -- locale.test.ts`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement the helper**
@@ -321,7 +321,7 @@ export function detectLocale(languageTag: string | undefined | null): SupportedL
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/web test -- locale.test.ts`
+Run: `pnpm --filter @lumespec/web test -- locale.test.ts`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -398,7 +398,7 @@ describe('trackIntentPresetSelected', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @promptdemo/web test -- telemetry.test.ts`
+Run: `pnpm --filter @lumespec/web test -- telemetry.test.ts`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement the helper**
@@ -433,7 +433,7 @@ export function trackIntentPresetSelected(presetId: string): void {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/web test -- telemetry.test.ts`
+Run: `pnpm --filter @lumespec/web test -- telemetry.test.ts`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
@@ -520,7 +520,7 @@ describe('IntentPresets', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @promptdemo/web test -- IntentPresets.test.tsx`
+Run: `pnpm --filter @lumespec/web test -- IntentPresets.test.tsx`
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement the component**
@@ -565,7 +565,7 @@ Design notes baked into the styles:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/web test -- IntentPresets.test.tsx`
+Run: `pnpm --filter @lumespec/web test -- IntentPresets.test.tsx`
 Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
@@ -641,7 +641,7 @@ Append to `apps/web/tests/components/JobForm.test.tsx` — inside the existing `
   });
 ```
 
-Run: `pnpm --filter @promptdemo/web test -- JobForm.test.tsx`
+Run: `pnpm --filter @lumespec/web test -- JobForm.test.tsx`
 Expected: FAIL — the 5 new tests can't find the chip buttons because `JobForm` doesn't render them yet.
 
 - [ ] **Step 2: Update `JobForm.tsx`**
@@ -776,10 +776,10 @@ Key changes from the prior version:
 
 - [ ] **Step 3: Run full web test suite**
 
-Run: `pnpm --filter @promptdemo/web test`
+Run: `pnpm --filter @lumespec/web test`
 Expected: PASS. The 5 new JobForm tests pass. The 4 pre-existing JobForm tests still pass (renders fields, submits correctly, validation error, disables while pending). No other web test is affected.
 
-Run: `pnpm --filter @promptdemo/web typecheck`
+Run: `pnpm --filter @lumespec/web typecheck`
 Expected: CLEAN.
 
 - [ ] **Step 4: Commit**
@@ -799,10 +799,10 @@ git commit -m "feat(web): wire intent preset chips into JobForm"
 
 - [ ] **Step 1: Start the web service**
 
-(`pnpm demo start` has its own Windows tooling issues per the followup doc — for Feature 2 verification just run the web service directly.)
+(`pnpm lume start` has its own Windows tooling issues per the followup doc — for Feature 2 verification just run the web service directly.)
 
 ```bash
-pnpm --filter @promptdemo/web dev
+pnpm --filter @lumespec/web dev
 ```
 
 Open `http://localhost:3001` in a browser.
@@ -834,7 +834,7 @@ Do NOT push the tag. The user pushes when ready.
 
 ## Self-Review Against Spec
 
-Cross-check against `docs/superpowers/specs/2026-04-24-promptdemo-v2-design.md` Part 1 Feature 2 + Review Gate answer ("Keep all 5 presets; prune later via telemetry").
+Cross-check against `docs/superpowers/specs/2026-04-24-lumespec-v2-design.md` Part 1 Feature 2 + Review Gate answer ("Keep all 5 presets; prune later via telemetry").
 
 | Spec requirement | Covered by |
 |---|---|

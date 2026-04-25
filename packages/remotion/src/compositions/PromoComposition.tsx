@@ -275,7 +275,7 @@ const Scene4Preview: React.FC = () => {
               boxShadow: `0 0 ${12 + badgeGlow * 20}px rgba(124,58,237,${badgeGlow})`,
             }}>
               <div style={{ width: 20, height: 20, background: ACCENT_GRADIENT, borderRadius: 5, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.90)', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Made with PromptDemo</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.90)', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Made with LumeSpec</span>
             </div>
           </div>
 
@@ -286,7 +286,7 @@ const Scene4Preview: React.FC = () => {
         {/* arrow annotation */}
         <div style={{ position: 'absolute', bottom: -32, right: 80, opacity: arrowOpacity, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 22 }}>↗</span>
-          <span style={{ fontSize: 13, color: 'rgba(167,139,250,0.9)', fontWeight: 600 }}>Made with PromptDemo badge</span>
+          <span style={{ fontSize: 13, color: 'rgba(167,139,250,0.9)', fontWeight: 600 }}>Made with LumeSpec badge</span>
         </div>
 
         {/* ready label */}

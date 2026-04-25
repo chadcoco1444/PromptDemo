@@ -55,7 +55,7 @@ Internal storage (`credits` table) is integer seconds. UI labels convert to "X s
 ## Implementation tasks (ordered)
 
 ### Task 1: Stripe client + env plumbing (~1 hr)
-- `pnpm --filter @promptdemo/api add stripe`
+- `pnpm --filter @lumespec/api add stripe`
 - `apps/api/src/stripe/client.ts` — lazy singleton with env check
 - `apps/api/src/lib/pricingEnabled.ts` — `isPricingEnabled()` + `assertPricingEnv()`
 - Extend `assertAuthEnv()` logic: pricing requires auth (no credits without users)
@@ -106,8 +106,8 @@ Internal storage (`credits` table) is integer seconds. UI labels convert to "X s
 
 ```bash
 # 1. Create Stripe products + prices in the Stripe dashboard (Test mode)
-#    - Product "PromptDemo Pro"       → Price id prod_XXXX / price_YYYY ($19/mo)
-#    - Product "PromptDemo Max"       → Price id prod_ZZZZ / price_WWWW ($99/mo)
+#    - Product "LumeSpec Pro"       → Price id prod_XXXX / price_YYYY ($19/mo)
+#    - Product "LumeSpec Max"       → Price id prod_ZZZZ / price_WWWW ($99/mo)
 
 # 2. Populate .env
 STRIPE_SECRET_KEY=sk_test_...
@@ -126,7 +126,7 @@ stripe listen --forward-to http://localhost:3000/api/webhooks/stripe
 # Copy the displayed webhook signing secret → STRIPE_WEBHOOK_SECRET
 
 # 5. Restart api + web services
-pnpm demo restart
+pnpm lume restart
 ```
 
 ## Product decision log (locked)

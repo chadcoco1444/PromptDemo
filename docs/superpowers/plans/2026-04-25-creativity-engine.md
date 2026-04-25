@@ -4,9 +4,9 @@
 
 **Goal:** Unlock BentoGrid and CursorDemo scene types, add industry-aware Style Modifier injection into the user message, and liberate RHYTHM_TEMPLATES from prescriptive to suggestive — making every generated video structurally unique.
 
-**Architecture:** Pure-function industry detector (`industryDetect.ts`) appends a `## Product Style Guidance` block to the user message without touching the cached system prompt. `V1_IMPLEMENTED_SCENE_TYPES` in `sceneTypeCatalog.ts` expands from 5 → 7; the Zod schemas for both new types already exist in `@promptdemo/schema`. Remotion components implement the visual render.
+**Architecture:** Pure-function industry detector (`industryDetect.ts`) appends a `## Product Style Guidance` block to the user message without touching the cached system prompt. `V1_IMPLEMENTED_SCENE_TYPES` in `sceneTypeCatalog.ts` expands from 5 → 7; the Zod schemas for both new types already exist in `@lumespec/schema`. Remotion components implement the visual render.
 
-**Tech Stack:** TypeScript, Remotion 4 (`useCurrentFrame`, `interpolate`, `spring`), Zod 3, Vitest, `@promptdemo/schema`
+**Tech Stack:** TypeScript, Remotion 4 (`useCurrentFrame`, `interpolate`, `spring`), Zod 3, Vitest, `@lumespec/schema`
 
 ---
 
@@ -41,7 +41,7 @@ Create `workers/storyboard/tests/industryDetect.test.ts`:
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { detectIndustry, STYLE_MODIFIERS } from '../src/prompts/industryDetect.js';
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 
 // Minimal fixture — extend only the fields detectIndustry actually reads
 function make(overrides: {
@@ -153,7 +153,7 @@ Expected: FAIL — `Cannot find module '../src/prompts/industryDetect.js'`
 Create `workers/storyboard/src/prompts/industryDetect.ts`:
 
 ```typescript
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 
 export type IndustryCategory =
   | 'developer_tool'
@@ -262,7 +262,7 @@ Create `workers/storyboard/tests/userMessage.test.ts`:
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { buildUserMessage } from '../src/prompts/userMessage.js';
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 
 function makeCrawl(overrides: {
   sourceTexts?: string[];
@@ -341,7 +341,7 @@ Expected: FAIL — `## Product Style Guidance` not found in output
 Add import and injection at the end of the file. The final `buildUserMessage` function becomes:
 
 ```typescript
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 import { detectIndustry, STYLE_MODIFIERS } from './industryDetect.js';
 
 const DURATION_TO_FRAMES = { 10: 300, 30: 900, 60: 1800 } as const;
@@ -430,7 +430,7 @@ No new tests needed — the existing test suite for the storyboard worker will e
 Replace the file with:
 
 ```typescript
-import { SCENE_TYPES } from '@promptdemo/schema';
+import { SCENE_TYPES } from '@lumespec/schema';
 
 export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
   HeroRealShot:
@@ -995,7 +995,7 @@ Add imports and replace the `throw` stubs for BentoGrid and CursorDemo. The comp
 
 ```typescript
 import React from 'react';
-import type { Scene, Storyboard } from '@promptdemo/schema';
+import type { Scene, Storyboard } from '@lumespec/schema';
 import { HeroRealShot } from './scenes/HeroRealShot';
 import { FeatureCallout } from './scenes/FeatureCallout';
 import { TextPunch } from './scenes/TextPunch';

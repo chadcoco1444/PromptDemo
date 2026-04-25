@@ -47,7 +47,7 @@ if [[ -z "$PG_CONTAINER" ]]; then
   exit 1
 fi
 
-PSQL="docker exec -i $PG_CONTAINER psql -U promptdemo -d promptdemo -t -A"
+PSQL="docker exec -i $PG_CONTAINER psql -U lumespec -d lumespec -t -A"
 
 # ── Check user exists ─────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ fi
 
 echo ""
 echo "Before:"
-docker exec -i "$PG_CONTAINER" psql -U promptdemo -d promptdemo -c \
+docker exec -i "$PG_CONTAINER" psql -U lumespec -d lumespec -c \
   "SELECT u.email,
           COALESCE(s.tier, 'free') AS tier,
           COALESCE(c.balance, 0)   AS credits
@@ -72,7 +72,7 @@ docker exec -i "$PG_CONTAINER" psql -U promptdemo -d promptdemo -c \
 
 # ── Apply changes (single transaction) ───────────────────────────────────────
 
-docker exec -i "$PG_CONTAINER" psql -U promptdemo -d promptdemo -c "
+docker exec -i "$PG_CONTAINER" psql -U lumespec -d lumespec -c "
 BEGIN;
 
 -- Upsert subscription tier
@@ -98,7 +98,7 @@ COMMIT;
 
 echo ""
 echo "After ($ACTION → $TIER):"
-docker exec -i "$PG_CONTAINER" psql -U promptdemo -d promptdemo -c \
+docker exec -i "$PG_CONTAINER" psql -U lumespec -d lumespec -c \
   "SELECT u.email,
           COALESCE(s.tier, 'free') AS tier,
           COALESCE(c.balance, 0)   AS credits

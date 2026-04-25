@@ -1,6 +1,6 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
-import type { FeatureVariant } from '@promptdemo/schema';
+import type { FeatureVariant } from '@lumespec/schema';
 import { AnimatedText } from '../primitives/AnimatedText';
 import type { BrandTheme } from '../utils/brandTheme';
 import { ImagePanel } from './variants/ImagePanel';

@@ -163,7 +163,7 @@ describe('applyPreset', () => {
 });
 ```
 
-Run: `pnpm --filter @promptdemo/web test -- intentPresets.test.ts`
+Run: `pnpm --filter @lumespec/web test -- intentPresets.test.ts`
 Expected: FAIL — multiple tests fail because the current `applyPreset` signature is `(current, preset)` (no locale) and `preset.body` is a string.
 
 - [ ] **Step 2: Update the schema + implementation**
@@ -294,12 +294,12 @@ Key changes from the v2.0.0-feature2 version:
 
 - [ ] **Step 3: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/web test -- intentPresets.test.ts`
+Run: `pnpm --filter @lumespec/web test -- intentPresets.test.ts`
 Expected: PASS — 2 tests in `INTENT_PRESETS` describe + 10 tests in `applyPreset` describe.
 
 Run the full web test suite:
 ```
-pnpm --filter @promptdemo/web test
+pnpm --filter @lumespec/web test
 ```
 Expected: MOST tests pass but the IntentPresets + JobForm component tests FAIL because they're still passing `applyPreset(current, preset)` with the old 2-arg signature, and they still read `preset.body` as a string in tooltips. Those are Tasks 3-5. FAIL is expected here; move on.
 
@@ -351,7 +351,7 @@ Replace with:
   });
 ```
 
-Run: `pnpm --filter @promptdemo/web test -- IntentPresets.test.tsx`
+Run: `pnpm --filter @lumespec/web test -- IntentPresets.test.tsx`
 Expected: FAIL — `title={preset.body}` in the component currently stringifies `{en, zh}` to `"[object Object]"`.
 
 - [ ] **Step 2: Update the component**
@@ -372,7 +372,7 @@ That's the only change. The component already takes `locale` as a prop; we just 
 
 - [ ] **Step 3: Run tests**
 
-Run: `pnpm --filter @promptdemo/web test -- IntentPresets.test.tsx`
+Run: `pnpm --filter @lumespec/web test -- IntentPresets.test.tsx`
 Expected: PASS (7 tests — original 6 minus the old tooltip test, plus 2 new tooltip-per-locale tests).
 
 - [ ] **Step 4: Commit**
@@ -441,7 +441,7 @@ Append to `apps/web/tests/components/JobForm.test.tsx` inside the `describe('Job
   });
 ```
 
-Run: `pnpm --filter @promptdemo/web test -- JobForm.test.tsx`
+Run: `pnpm --filter @lumespec/web test -- JobForm.test.tsx`
 Expected: FAIL — no toggle button exists yet; query by `/中/` returns nothing.
 
 - [ ] **Step 2: Update `JobForm.tsx`**
@@ -515,18 +515,18 @@ Design rationale baked into the styles:
 
 - [ ] **Step 3: Run tests**
 
-Run: `pnpm --filter @promptdemo/web test -- JobForm.test.tsx`
+Run: `pnpm --filter @lumespec/web test -- JobForm.test.tsx`
 Expected: PASS (existing 9 tests + 3 new locale-toggle tests = 12 total for JobForm).
 
 Run the full web suite:
 ```
-pnpm --filter @promptdemo/web test
+pnpm --filter @lumespec/web test
 ```
 Expected: ALL PASS (64 from before + new tests — expect 70+ now).
 
 Run typecheck:
 ```
-pnpm --filter @promptdemo/web typecheck
+pnpm --filter @lumespec/web typecheck
 ```
 Expected: CLEAN.
 
@@ -546,7 +546,7 @@ git commit -m "feat(web): explicit EN/中 locale toggle on intent preset row"
 - [ ] **Step 1: Start web only** (don't need the full pipeline — this is pure client UI)
 
 ```bash
-pnpm --filter @promptdemo/web dev
+pnpm --filter @lumespec/web dev
 ```
 
 Open `http://localhost:3001` in a browser. Leave DevTools open.
@@ -578,7 +578,7 @@ Do not push the tag. User pushes when ready.
 ## Self-Review Against Spec + User Decision
 
 Cross-check against:
-- `docs/superpowers/specs/2026-04-24-promptdemo-v2-design.md` Part 1 Feature 2 (original English-only spec).
+- `docs/superpowers/specs/2026-04-24-lumespec-v2-design.md` Part 1 Feature 2 (original English-only spec).
 - User decision 2026-04-24: Option C — full bilingual, Chinese body to Claude, user accepts quality risk.
 
 | Requirement | Addressed by |

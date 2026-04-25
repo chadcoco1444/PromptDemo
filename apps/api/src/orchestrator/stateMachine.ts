@@ -1,5 +1,5 @@
 import type { Job } from '../model/job.js';
-import type { S3Uri } from '@promptdemo/schema';
+import type { S3Uri } from '@lumespec/schema';
 
 export type OrchestratorEvent =
   | { kind: 'crawl:active'; progress?: number }

@@ -2,8 +2,8 @@
   "url": "https://example-nobrand.com",
   "fetchedAt": 1734000000000,
   "screenshots": {
-    "viewport": "s3://promptdemo-dev/fixtures/nobrand-viewport.jpg",
-    "fullPage": "s3://promptdemo-dev/fixtures/nobrand-full.jpg"
+    "viewport": "s3://lumespec-dev/fixtures/nobrand-viewport.jpg",
+    "fullPage": "s3://lumespec-dev/fixtures/nobrand-full.jpg"
   },
   "brand": {
     "primaryColor": "#10b981",

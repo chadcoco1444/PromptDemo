@@ -36,8 +36,8 @@ export async function verifyInternalToken(authHeader: string | undefined): Promi
   const token = m[1]!;
   try {
     const { payload } = await jwtVerify(token, secret, {
-      issuer: 'promptdemo-web',
-      audience: 'promptdemo-api',
+      issuer: 'lumespec-web',
+      audience: 'lumespec-api',
       clockTolerance: 30,
     });
     if (payload.sub === undefined || payload.sub === null || payload.sub === '') {

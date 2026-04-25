@@ -1,4 +1,4 @@
-# PromptDemo v1.0 — Plan 5: Render Worker
+# LumeSpec v1.0 — Plan 5: Render Worker
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans.
 
@@ -6,9 +6,9 @@
 
 **Architecture:** One worker, `concurrency: 1` at both the Cloud Run HTTP layer AND the BullMQ worker options layer (per spec §1 and §6 — Remotion saturates CPU; two jobs on one instance thrash). `lockDuration: 600_000` matches Cloud Run's max request timeout and comfortably covers the worst-case 60s-video render (~5–10 min on first run with cold font cache). The Remotion bundle is created fresh per render job for v1; future work: cache the bundle between jobs in the same instance.
 
-**Tech Stack:** Node 20, `@remotion/bundler`, `@remotion/renderer`, `@promptdemo/remotion` (Plan 3), `@promptdemo/schema`, BullMQ, ioredis, `@aws-sdk/client-s3`.
+**Tech Stack:** Node 20, `@remotion/bundler`, `@remotion/renderer`, `@lumespec/remotion` (Plan 3), `@lumespec/schema`, BullMQ, ioredis, `@aws-sdk/client-s3`.
 
-**Spec reference:** `docs/superpowers/specs/2026-04-20-promptdemo-design.md` §1, §6.
+**Spec reference:** `docs/superpowers/specs/2026-04-20-lumespec-design.md` §1, §6.
 
 **Predecessor:** Plan 3 (`v0.3.0-remotion-mvp`) + Plan 2 (`v0.2.0-storyboard-ai`) for the Storyboard contract.
 
@@ -75,7 +75,7 @@ workers/render/
 
 ```json
 {
-  "name": "@promptdemo/worker-render",
+  "name": "@lumespec/worker-render",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -88,8 +88,8 @@ workers/render/
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@promptdemo/schema": "workspace:*",
-    "@promptdemo/remotion": "workspace:*",
+    "@lumespec/schema": "workspace:*",
+    "@lumespec/remotion": "workspace:*",
     "@aws-sdk/client-s3": "3.658.1",
     "@remotion/bundler": "4.0.218",
     "@remotion/renderer": "4.0.218",
@@ -129,7 +129,7 @@ console.log('render worker bootstrap pending');
 
 ```bash
 pnpm install
-pnpm --filter @promptdemo/worker-render typecheck
+pnpm --filter @lumespec/worker-render typecheck
 ```
 
 - [ ] **Step 5: Commit**
@@ -210,7 +210,7 @@ import { join } from 'node:path';
 describe('withTempDir', () => {
   it('creates dir, runs fn, cleans up on success', async () => {
     let path = '';
-    const result = await withTempDir('promptdemo-render-', async (dir) => {
+    const result = await withTempDir('lumespec-render-', async (dir) => {
       path = dir;
       writeFileSync(join(dir, 'hello.txt'), 'hi');
       return 42;
@@ -222,7 +222,7 @@ describe('withTempDir', () => {
   it('cleans up even when the fn throws', async () => {
     let path = '';
     await expect(
-      withTempDir('promptdemo-render-', async (dir) => {
+      withTempDir('lumespec-render-', async (dir) => {
         path = dir;
         throw new Error('boom');
       })
@@ -324,7 +324,7 @@ describe('renderComposition', () => {
 - [ ] **Step 2: Impl**
 
 ```ts
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 export interface RendererSdk {
   bundle(opts: { entryPoint: string }): Promise<string>;
@@ -414,7 +414,7 @@ import {
 } from './s3/s3Client.js';
 import { withTempDir } from './tempDir.js';
 import { renderComposition, defaultSdk } from './renderer.js';
-import { StoryboardSchema, type Storyboard, type S3Uri } from '@promptdemo/schema';
+import { StoryboardSchema, type Storyboard, type S3Uri } from '@lumespec/schema';
 
 const JobPayload = z.object({
   jobId: z.string().min(1),
@@ -448,7 +448,7 @@ const worker = new Worker<JobPayload>(
     const storyboard: Storyboard = StoryboardSchema.parse(await getObjectJson(s3, payload.storyboardUri));
     const sdk = await sdkPromise;
 
-    return withTempDir('promptdemo-render-', async (dir) => {
+    return withTempDir('lumespec-render-', async (dir) => {
       const outputPath = join(dir, `${payload.jobId}.mp4`);
 
       await renderComposition({
@@ -496,7 +496,7 @@ console.log('[render] worker started, queue=render, concurrency=1');
 - [ ] **Step 2: Typecheck**
 
 ```bash
-pnpm --filter @promptdemo/worker-render typecheck
+pnpm --filter @lumespec/worker-render typecheck
 ```
 
 - [ ] **Step 3: Commit**
@@ -568,7 +568,7 @@ import { describe, it, expect } from 'vitest';
 import { renderComposition, defaultSdk } from '../src/renderer.js';
 import { withTempDir } from '../src/tempDir.js';
 import { fileURLToPath } from 'node:url';
-import storyboard30s from '@promptdemo/schema/fixtures/storyboard.30s.json';
+import storyboard30s from '@lumespec/schema/fixtures/storyboard.30s.json';
 import { statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -580,7 +580,7 @@ describe.skipIf(!GATED)('real Remotion render (RENDER_INTEGRATION=true)', () => 
       new URL('../../../packages/remotion/src/Root.tsx', import.meta.url)
     );
     const sdk = await defaultSdk();
-    await withTempDir('promptdemo-render-int-', async (dir) => {
+    await withTempDir('lumespec-render-int-', async (dir) => {
       const output = join(dir, 'smoke.mp4');
       const shortened = { ...(storyboard30s as any), videoConfig: { ...(storyboard30s as any).videoConfig, durationInFrames: 300 } };
       await renderComposition({
@@ -610,7 +610,7 @@ git add workers/render/tests/renderReal.test.ts
 git commit -m "test(render): gated real-render integration (RENDER_INTEGRATION=true)"
 ```
 
-Note: before tagging, run locally with `RENDER_INTEGRATION=true pnpm --filter @promptdemo/worker-render test` to validate the full render pipeline end-to-end. Requires MinIO running with fixture screenshots uploaded to `promptdemo-dev/fixtures/` (or the Hero scene's `<Img>` will 404 — render may still succeed with a broken frame).
+Note: before tagging, run locally with `RENDER_INTEGRATION=true pnpm --filter @lumespec/worker-render test` to validate the full render pipeline end-to-end. Requires MinIO running with fixture screenshots uploaded to `lumespec-dev/fixtures/` (or the Hero scene's `<Img>` will 404 — render may still succeed with a broken frame).
 
 ---
 
@@ -638,7 +638,7 @@ Combined: ~185 passing + 2 skipped.
 ```bash
 git tag -a v0.5.0-render-worker -m "Phase 5: Render worker complete
 
-Adds @promptdemo/worker-render:
+Adds @lumespec/worker-render:
 - BullMQ Worker on 'render' queue with concurrency=1 (Remotion saturates CPU)
 - lockDuration: 600_000ms to accommodate full 60s-video renders
 - Reads Storyboard from S3 (getObjectJson), validates with Zod

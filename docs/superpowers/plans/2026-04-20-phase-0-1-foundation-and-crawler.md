@@ -1,4 +1,4 @@
-# PromptDemo v1.0 — Plan 1: Foundation + Crawler
+# LumeSpec v1.0 — Plan 1: Foundation + Crawler
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Zod, pnpm workspaces, Vitest, Playwright, Cheerio, `fast-average-color-node`, BullMQ, ioredis, MinIO (local), Docker + tini.
 
-**Spec reference:** `docs/superpowers/specs/2026-04-20-promptdemo-design.md` §1, §4.
+**Spec reference:** `docs/superpowers/specs/2026-04-20-lumespec-design.md` §1, §4.
 
 **Future plans (not in this doc):**
 - Plan 2 — Storyboard AI worker (Claude + Zod + extractive validation)
@@ -23,7 +23,7 @@
 ## File Structure (Plans 1 target)
 
 ```
-promptdemo/
+lumespec/
 ├── .gitignore
 ├── .nvmrc
 ├── package.json                      # root, workspaces config
@@ -102,10 +102,10 @@ promptdemo/
 
 Run:
 ```bash
-cd "c:/Users/88698/Desktop/Workspace/promptdemo"
+cd "c:/Users/88698/Desktop/Workspace/lumespec"
 git init
 git branch -M main
-git remote add origin https://github.com/chadcoco1444/PromptDemo.git
+git remote add origin https://github.com/chadcoco1444/LumeSpec.git
 ```
 
 Write `.nvmrc`:
@@ -131,7 +131,7 @@ pnpm-lock.yaml
 .vitest-cache
 playwright/.cache
 # keep workspace file
-!promptdemo.code-workspace
+!lumespec.code-workspace
 # render artifacts
 /tmp
 /out-videos
@@ -139,7 +139,7 @@ playwright/.cache
 
 Write a minimal `README.md`:
 ```markdown
-# PromptDemo
+# LumeSpec
 
 Automated website demo video generator. URL + intent → MP4.
 
@@ -149,7 +149,7 @@ See `docs/superpowers/specs/` for the design spec and `docs/superpowers/plans/` 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .nvmrc .gitignore README.md promptdemo.code-workspace
+git add .nvmrc .gitignore README.md lumespec.code-workspace
 git commit -m "chore: initialize repo scaffolding"
 ```
 
@@ -175,7 +175,7 @@ packages:
 
 ```json
 {
-  "name": "promptdemo",
+  "name": "lumespec",
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@9.0.0",
@@ -253,7 +253,7 @@ git commit -m "chore: add pnpm workspace config and root toolchain"
 
 ```json
 {
-  "name": "@promptdemo/schema",
+  "name": "@lumespec/schema",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -295,7 +295,7 @@ git commit -m "chore: add pnpm workspace config and root toolchain"
 - [ ] **Step 3: Write empty `packages/schema/src/index.ts`**
 
 ```ts
-// Public API of @promptdemo/schema. Re-exports added per task.
+// Public API of @lumespec/schema. Re-exports added per task.
 export {};
 ```
 
@@ -310,7 +310,7 @@ pnpm install
 
 ```bash
 git add packages/schema/package.json packages/schema/tsconfig.json packages/schema/src/index.ts pnpm-lock.yaml
-git commit -m "chore(schema): scaffold @promptdemo/schema package"
+git commit -m "chore(schema): scaffold @lumespec/schema package"
 ```
 
 ---
@@ -381,7 +381,7 @@ describe('normalizeText', () => {
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test
+pnpm --filter @lumespec/schema test
 ```
 
 Expected: FAIL — `Cannot find module '../src/normalizeText.js'`.
@@ -448,7 +448,7 @@ export { normalizeText } from './normalizeText.js';
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test
+pnpm --filter @lumespec/schema test
 ```
 
 Expected: PASS — 8 tests green.
@@ -512,7 +512,7 @@ describe('toS3Uri', () => {
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test -- s3Uri
+pnpm --filter @lumespec/schema test -- s3Uri
 ```
 
 Expected: FAIL — module missing.
@@ -556,7 +556,7 @@ export { S3UriSchema, parseS3Uri, toS3Uri, type S3Uri } from './s3Uri.js';
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test
+pnpm --filter @lumespec/schema test
 ```
 
 Expected: PASS — all (8 + 6) tests.
@@ -663,7 +663,7 @@ describe('CrawlResultSchema', () => {
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test -- crawlResult
+pnpm --filter @lumespec/schema test -- crawlResult
 ```
 
 Expected: FAIL — module missing.
@@ -731,7 +731,7 @@ export { CrawlResultSchema, type CrawlResult } from './crawlResult.js';
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test
+pnpm --filter @lumespec/schema test
 ```
 
 Expected: PASS — all tests.
@@ -883,7 +883,7 @@ function makeScene(type: string) {
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test -- storyboard
+pnpm --filter @lumespec/schema test -- storyboard
 ```
 
 Expected: FAIL.
@@ -1102,7 +1102,7 @@ export {
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test
+pnpm --filter @lumespec/schema test
 ```
 
 Expected: PASS — all tests including new 7 storyboard tests.
@@ -1178,13 +1178,13 @@ Create `packages/schema/fixtures/crawlResult.saas-landing.json`:
   "url": "https://example-saas.com",
   "fetchedAt": 1734000000000,
   "screenshots": {
-    "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
-    "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+    "viewport": "s3://lumespec-dev/fixtures/saas-viewport.jpg",
+    "fullPage": "s3://lumespec-dev/fixtures/saas-full.jpg"
   },
   "brand": {
     "primaryColor": "#4f46e5",
     "secondaryColor": "#a78bfa",
-    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/saas-logo.png",
     "fontFamily": "Inter",
     "fontFamilySupported": true
   },
@@ -1211,11 +1211,11 @@ Create `packages/schema/fixtures/crawlResult.ecommerce.json`:
   "url": "https://example-shop.com",
   "fetchedAt": 1734000000000,
   "screenshots": {
-    "viewport": "s3://promptdemo-dev/fixtures/shop-viewport.jpg"
+    "viewport": "s3://lumespec-dev/fixtures/shop-viewport.jpg"
   },
   "brand": {
     "primaryColor": "#db2777",
-    "logoUrl": "s3://promptdemo-dev/fixtures/shop-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/shop-logo.png",
     "fontFamily": "Poppins",
     "fontFamilySupported": true
   },
@@ -1266,8 +1266,8 @@ Create `packages/schema/fixtures/crawlResult.logo-missing.json`:
   "url": "https://example-nobrand.com",
   "fetchedAt": 1734000000000,
   "screenshots": {
-    "viewport": "s3://promptdemo-dev/fixtures/nobrand-viewport.jpg",
-    "fullPage": "s3://promptdemo-dev/fixtures/nobrand-full.jpg"
+    "viewport": "s3://lumespec-dev/fixtures/nobrand-viewport.jpg",
+    "fullPage": "s3://lumespec-dev/fixtures/nobrand-full.jpg"
   },
   "brand": {
     "primaryColor": "#10b981",
@@ -1301,11 +1301,11 @@ Create `packages/schema/fixtures/crawlResult.font-unsupported.json`:
   "url": "https://example-customfont.com",
   "fetchedAt": 1734000000000,
   "screenshots": {
-    "viewport": "s3://promptdemo-dev/fixtures/cf-viewport.jpg"
+    "viewport": "s3://lumespec-dev/fixtures/cf-viewport.jpg"
   },
   "brand": {
     "primaryColor": "#ef4444",
-    "logoUrl": "s3://promptdemo-dev/fixtures/cf-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/cf-logo.png",
     "fontFamily": "Acme Sans Proprietary",
     "fontFamilySupported": false
   },
@@ -1333,12 +1333,12 @@ Create `packages/schema/fixtures/storyboard.10s.json`:
     "durationInFrames": 300,
     "fps": 30,
     "brandColor": "#4f46e5",
-    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/saas-logo.png",
     "bgm": "tech"
   },
   "assets": {
     "screenshots": {
-      "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg"
+      "viewport": "s3://lumespec-dev/fixtures/saas-viewport.jpg"
     },
     "sourceTexts": [
       "ship production-grade ai workflows in minutes",
@@ -1394,13 +1394,13 @@ Create `packages/schema/fixtures/storyboard.30s.json`:
     "durationInFrames": 900,
     "fps": 30,
     "brandColor": "#4f46e5",
-    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/saas-logo.png",
     "bgm": "tech"
   },
   "assets": {
     "screenshots": {
-      "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
-      "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+      "viewport": "s3://lumespec-dev/fixtures/saas-viewport.jpg",
+      "fullPage": "s3://lumespec-dev/fixtures/saas-full.jpg"
     },
     "sourceTexts": [
       "ship production-grade ai workflows in minutes",
@@ -1495,13 +1495,13 @@ Create `packages/schema/fixtures/storyboard.60s.json`:
     "durationInFrames": 1800,
     "fps": 30,
     "brandColor": "#4f46e5",
-    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/saas-logo.png",
     "bgm": "cinematic"
   },
   "assets": {
     "screenshots": {
-      "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
-      "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+      "viewport": "s3://lumespec-dev/fixtures/saas-viewport.jpg",
+      "fullPage": "s3://lumespec-dev/fixtures/saas-full.jpg"
     },
     "sourceTexts": [
       "ship production-grade ai workflows in minutes",
@@ -1685,7 +1685,7 @@ Create `packages/schema/fixtures/storyboard.tierB-fallback.json`:
 
 Run:
 ```bash
-pnpm --filter @promptdemo/schema test -- fixtures
+pnpm --filter @lumespec/schema test -- fixtures
 ```
 
 Expected: PASS — all 7 fixtures parse.
@@ -1739,8 +1739,8 @@ services:
       /bin/sh -c "
       sleep 2;
       mc alias set local http://minio:9000 minioadmin minioadmin;
-      mc mb --ignore-existing local/promptdemo-dev;
-      mc anonymous set download local/promptdemo-dev;
+      mc mb --ignore-existing local/lumespec-dev;
+      mc anonymous set download local/lumespec-dev;
       exit 0;
       "
 
@@ -1760,7 +1760,7 @@ S3_ENDPOINT=http://localhost:9000
 S3_REGION=us-east-1
 S3_ACCESS_KEY_ID=minioadmin
 S3_SECRET_ACCESS_KEY=minioadmin
-S3_BUCKET=promptdemo-dev
+S3_BUCKET=lumespec-dev
 S3_FORCE_PATH_STYLE=true
 
 # Crawler
@@ -1783,7 +1783,7 @@ Run:
 docker compose -f docker-compose.dev.yaml up -d
 ```
 
-Expected: `redis` on :6379, MinIO console at http://localhost:9001, bucket `promptdemo-dev` created by `minio-init`.
+Expected: `redis` on :6379, MinIO console at http://localhost:9001, bucket `lumespec-dev` created by `minio-init`.
 
 - [ ] **Step 4: Commit**
 
@@ -1830,7 +1830,7 @@ function checkTcp(name, host, port, timeoutMs = 1500) {
 
 async function checkMinioBucket() {
   const endpoint = process.env.S3_ENDPOINT ?? 'http://localhost:9000';
-  const bucket = process.env.S3_BUCKET ?? 'promptdemo-dev';
+  const bucket = process.env.S3_BUCKET ?? 'lumespec-dev';
   const s3 = new S3Client({
     region: process.env.S3_REGION ?? 'us-east-1',
     endpoint,
@@ -1925,7 +1925,7 @@ git commit -m "chore: add infra:check preflight script for redis + minio"
 
 ```json
 {
-  "name": "@promptdemo/worker-crawler",
+  "name": "@lumespec/worker-crawler",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -1938,7 +1938,7 @@ git commit -m "chore: add infra:check preflight script for redis + minio"
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@promptdemo/schema": "workspace:*",
+    "@lumespec/schema": "workspace:*",
     "@aws-sdk/client-s3": "3.658.1",
     "bullmq": "5.21.2",
     "cheerio": "1.0.0",
@@ -2028,7 +2028,7 @@ describe('cookieBanner selectors', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- cookieBanner
+pnpm --filter @lumespec/worker-crawler test -- cookieBanner
 ```
 
 Expected: FAIL — module missing.
@@ -2063,7 +2063,7 @@ export function matchBannerSelector(tester: (selector: string) => boolean): stri
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS — 4 tests.
@@ -2120,7 +2120,7 @@ describe('detectWafBlock', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- wafDetect
+pnpm --filter @lumespec/worker-crawler test -- wafDetect
 ```
 
 Expected: FAIL.
@@ -2156,7 +2156,7 @@ export function detectWafBlock(input: { status: number; html: string }): WafChec
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -2239,7 +2239,7 @@ describe('extractSourceTexts', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- textExtractor
+pnpm --filter @lumespec/worker-crawler test -- textExtractor
 ```
 
 Expected: FAIL.
@@ -2249,7 +2249,7 @@ Expected: FAIL.
 Create `workers/crawler/src/extractors/textExtractor.ts`:
 ```ts
 import { load } from 'cheerio';
-import { normalizeText } from '@promptdemo/schema';
+import { normalizeText } from '@lumespec/schema';
 
 const SELECTORS = ['title', 'meta[name="description"]', 'h1', 'h2', 'h3', 'strong', 'li'];
 
@@ -2281,7 +2281,7 @@ export function extractSourceTexts(html: string): string[] {
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -2352,7 +2352,7 @@ describe('extractFeatures', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- featureExtractor
+pnpm --filter @lumespec/worker-crawler test -- featureExtractor
 ```
 
 Expected: FAIL.
@@ -2362,7 +2362,7 @@ Expected: FAIL.
 Create `workers/crawler/src/extractors/featureExtractor.ts`:
 ```ts
 import { load } from 'cheerio';
-import { normalizeText } from '@promptdemo/schema';
+import { normalizeText } from '@lumespec/schema';
 
 export interface ExtractedFeature {
   title: string;
@@ -2395,7 +2395,7 @@ export function extractFeatures(html: string): ExtractedFeature[] {
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -2464,7 +2464,7 @@ describe('pickDominantFromFrequencies', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- colorSampler
+pnpm --filter @lumespec/worker-crawler test -- colorSampler
 ```
 
 Expected: FAIL.
@@ -2513,7 +2513,7 @@ export function pickDominantFromFrequencies(counts: Map<string, number>): Domina
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -2571,7 +2571,7 @@ describe('pickLogoCandidate', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- logoDetector
+pnpm --filter @lumespec/worker-crawler test -- logoDetector
 ```
 
 Expected: FAIL.
@@ -2610,7 +2610,7 @@ export function pickLogoCandidate(candidates: LogoCandidate[]): LogoCandidate | 
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -2671,7 +2671,7 @@ describe('isGoogleFontSupported', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- fontDetector
+pnpm --filter @lumespec/worker-crawler test -- fontDetector
 ```
 
 Expected: FAIL.
@@ -2713,7 +2713,7 @@ export function isGoogleFontSupported(family: string): boolean {
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -2756,7 +2756,7 @@ describe('buildKey', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- s3Client
+pnpm --filter @lumespec/worker-crawler test -- s3Client
 ```
 
 Expected: FAIL.
@@ -2766,7 +2766,7 @@ Expected: FAIL.
 Create `workers/crawler/src/s3/s3Client.ts`:
 ```ts
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { toS3Uri, type S3Uri } from '@promptdemo/schema';
+import { toS3Uri, type S3Uri } from '@lumespec/schema';
 import { basename } from 'node:path/posix';
 
 export function buildKey(jobId: string, filename: string): string {
@@ -2816,7 +2816,7 @@ export async function putObject(
 export function s3ConfigFromEnv(env: NodeJS.ProcessEnv): S3Config {
   const cfg: S3Config = {
     region: env.S3_REGION ?? 'us-east-1',
-    bucket: env.S3_BUCKET ?? 'promptdemo-dev',
+    bucket: env.S3_BUCKET ?? 'lumespec-dev',
     forcePathStyle: env.S3_FORCE_PATH_STYLE === 'true',
   };
   if (env.S3_ENDPOINT) cfg.endpoint = env.S3_ENDPOINT;
@@ -2829,7 +2829,7 @@ export function s3ConfigFromEnv(env: NodeJS.ProcessEnv): S3Config {
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -2916,7 +2916,7 @@ describe('runPlaywrightTrack', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- playwrightTrack
+pnpm --filter @lumespec/worker-crawler test -- playwrightTrack
 ```
 
 Expected: FAIL — module missing.
@@ -2933,7 +2933,7 @@ import { extractFeatures, type ExtractedFeature } from '../extractors/featureExt
 import { pickPrimaryFontFamily } from '../extractors/fontDetector.js';
 import { pickLogoCandidate, type LogoCandidate } from '../extractors/logoDetector.js';
 import { pickDominantFromFrequencies, toHex, type DominantColors } from '../extractors/colorSampler.js';
-import { normalizeText } from '@promptdemo/schema';
+import { normalizeText } from '@lumespec/schema';
 
 export type PlaywrightTrackResult =
   | {
@@ -3075,7 +3075,7 @@ export async function runPlaywrightTrack(input: {
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS — 2 integration tests green. (May take ~20s.)
@@ -3139,7 +3139,7 @@ describe('runCheerioTrack', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- cheerioTrack
+pnpm --filter @lumespec/worker-crawler test -- cheerioTrack
 ```
 
 Expected: FAIL.
@@ -3173,7 +3173,7 @@ export interface HttpFetcher {
 export const defaultFetcher: HttpFetcher = async (url) => {
   const res = await fetch(url, {
     headers: {
-      'user-agent': 'Mozilla/5.0 (compatible; PromptDemoBot/0.1; +https://github.com/chadcoco1444/PromptDemo)',
+      'user-agent': 'Mozilla/5.0 (compatible; LumeSpecBot/0.1; +https://github.com/chadcoco1444/LumeSpec)',
       accept: 'text/html,*/*;q=0.8',
     },
   });
@@ -3216,7 +3216,7 @@ export async function runCheerioTrack(input: {
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -3272,7 +3272,7 @@ describe('runScreenshotOneTrack', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- screenshotOneTrack
+pnpm --filter @lumespec/worker-crawler test -- screenshotOneTrack
 ```
 
 Expected: FAIL.
@@ -3354,7 +3354,7 @@ export async function runScreenshotOneTrack(input: {
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS.
@@ -3508,7 +3508,7 @@ describe('runCrawl', () => {
 - [ ] **Step 2: Run to verify fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test -- orchestrator
+pnpm --filter @lumespec/worker-crawler test -- orchestrator
 ```
 
 Expected: FAIL.
@@ -3517,7 +3517,7 @@ Expected: FAIL.
 
 Create `workers/crawler/src/orchestrator.ts`:
 ```ts
-import { CrawlResultSchema, type CrawlResult, type S3Uri } from '@promptdemo/schema';
+import { CrawlResultSchema, type CrawlResult, type S3Uri } from '@lumespec/schema';
 import type { PlaywrightTrackResult } from './tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from './tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from './tracks/cheerioTrack.js';
@@ -3702,7 +3702,7 @@ function reasonOf(r: { kind: string; reason?: string; message?: string }): strin
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter @promptdemo/worker-crawler test
+pnpm --filter @lumespec/worker-crawler test
 ```
 
 Expected: PASS — all orchestrator tests plus prior tracks/extractors still green.
@@ -3756,7 +3756,7 @@ import { runPlaywrightTrack, closePlaywrightBrowser } from './tracks/playwrightT
 import { runScreenshotOneTrack } from './tracks/screenshotOneTrack.js';
 import { runCheerioTrack } from './tracks/cheerioTrack.js';
 import { downloadLogo } from './logoDownloader.js';
-import type { S3Uri } from '@promptdemo/schema';
+import type { S3Uri } from '@lumespec/schema';
 
 const JobPayload = z.object({ jobId: z.string().min(1), url: z.string().url() });
 type JobPayload = z.infer<typeof JobPayload>;
@@ -3836,7 +3836,7 @@ console.log('[crawler] worker started, queue=crawl');
 
 Run:
 ```bash
-pnpm --filter @promptdemo/worker-crawler typecheck
+pnpm --filter @lumespec/worker-crawler typecheck
 ```
 
 Expected: PASS.
@@ -3847,7 +3847,7 @@ Expected: PASS.
 docker compose -f docker-compose.dev.yaml up -d
 cp .env.example .env
 # edit .env to set SCREENSHOTONE_ACCESS_KEY if you want Track 2
-pnpm --filter @promptdemo/worker-crawler start &
+pnpm --filter @lumespec/worker-crawler start &
 ```
 
 In another terminal, enqueue a test job:
@@ -3859,7 +3859,7 @@ q.add('c',{jobId:'test-'+Date.now(),url:'https://example.com'}).then(()=>q.close
 "
 ```
 
-Expected: log entry `[crawler] job started/completed`, new object under `promptdemo-dev/jobs/test-*/crawlResult.json` visible at http://localhost:9001.
+Expected: log entry `[crawler] job started/completed`, new object under `lumespec-dev/jobs/test-*/crawlResult.json` visible at http://localhost:9001.
 
 - [ ] **Step 5: Commit**
 
@@ -3936,7 +3936,7 @@ CMD ["pnpm", "start"]
 - [ ] **Step 3: Build verification (optional locally)**
 
 ```bash
-docker build -f workers/crawler/Dockerfile -t promptdemo/crawler:dev .
+docker build -f workers/crawler/Dockerfile -t lumespec/crawler:dev .
 ```
 
 Expected: build succeeds.

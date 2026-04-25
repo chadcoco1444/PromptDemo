@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `pnpm demo start` reliably spawn all 5 services on Windows — no zombie accumulation, no random "only 1 service survives" failures, no PID tracking lies. `status` reports ground truth, `stop` kills everything cleanly.
+**Goal:** Make `pnpm lume start` reliably spawn all 5 services on Windows — no zombie accumulation, no random "only 1 service survives" failures, no PID tracking lies. `status` reports ground truth, `stop` kills everything cleanly.
 
 **Architecture:** Stop routing spawns through `cmd.exe → pnpm.cmd → tsx/next`. The chain loses the real node PID when each intermediate exits, so we track dead shells and leak the actual worker. New approach: resolve the `tsx` / `next` CLI's entry JS file at runtime, spawn `node.exe` directly with `detached: true + windowsHide: true + stdio → log-file fds`. The PID we save IS the real server — reliable for status checks and kill.
 
@@ -15,12 +15,12 @@
 ## File Structure
 
 ### Created
-- `scripts/lib/devCommand.ts` — pure function mapping a service config → `{ node, args, cwd }` for `child_process.spawn`. Actually, since `scripts/demo.mjs` is plain ESM JS (not TS), we keep everything in one language: create `scripts/lib/devCommand.mjs` (JS module) with JSDoc types.
+- `scripts/lib/devCommand.ts` — pure function mapping a service config → `{ node, args, cwd }` for `child_process.spawn`. Actually, since `scripts/lume.mjs` is plain ESM JS (not TS), we keep everything in one language: create `scripts/lib/devCommand.mjs` (JS module) with JSDoc types.
 - `scripts/lib/devCommand.mjs` — spawn-arg resolver.
 - `scripts/tests/devCommand.test.mjs` — unit tests (vitest reached via a root-level `test:scripts` or run ad-hoc; see Task 1 Step 2).
 
 ### Modified
-- `scripts/demo.mjs` — large surgery:
+- `scripts/lume.mjs` — large surgery:
   - Replace `spawnServiceWindows` + PowerShell bridge + `appendHeaderWithRetry` with direct-node spawn.
   - Update `stopAll` to rely on real PIDs (`taskkill /T /F /PID` actually kills the tree now).
   - Add `demo clean-all` subcommand.
@@ -63,7 +63,7 @@ Create `scripts/package.json` (tells vitest to treat this subtree as module scop
 
 ```json
 {
-  "name": "@promptdemo-internal/scripts",
+  "name": "@lumespec-internal/scripts",
   "private": true,
   "type": "module",
   "scripts": {
@@ -75,7 +75,7 @@ Create `scripts/package.json` (tells vitest to treat this subtree as module scop
 Root `package.json` gets a new script alias. Open the repo root `package.json`, find `"scripts": { ... }`, and add:
 
 ```json
-    "test:scripts": "pnpm --filter @promptdemo-internal/scripts test",
+    "test:scripts": "pnpm --filter @lumespec-internal/scripts test",
 ```
 
 Verify the new workspace was picked up: run `pnpm install` from repo root. pnpm auto-discovers workspaces via `pnpm-workspace.yaml` — if `scripts/` isn't listed there already, add `- 'scripts'` to the `packages:` array first.
@@ -96,7 +96,7 @@ describe('resolveDevCommand', () => {
   it('resolves tsx services (workers, api) to node + tsx CLI + watch + entry', () => {
     const result = resolveDevCommand({
       name: 'api',
-      filter: '@promptdemo/api',
+      filter: '@lumespec/api',
       cwd: pathResolve(repoRoot, 'apps/api'),
     });
     expect(result.node).toBe(process.execPath);
@@ -109,7 +109,7 @@ describe('resolveDevCommand', () => {
   it('resolves the web service to node + next CLI + dev -p 3001', () => {
     const result = resolveDevCommand({
       name: 'web',
-      filter: '@promptdemo/web',
+      filter: '@lumespec/web',
       cwd: pathResolve(repoRoot, 'apps/web'),
     });
     expect(result.node).toBe(process.execPath);
@@ -121,7 +121,7 @@ describe('resolveDevCommand', () => {
   it('resolves all 3 workers the same tsx way', () => {
     for (const name of ['worker-crawler', 'worker-storyboard', 'worker-render']) {
       const cwd = pathResolve(repoRoot, `workers/${name.replace('worker-', '')}`);
-      const result = resolveDevCommand({ name, filter: `@promptdemo/${name}`, cwd });
+      const result = resolveDevCommand({ name, filter: `@lumespec/${name}`, cwd });
       expect(result.node).toBe(process.execPath);
       expect(result.args[0]).toMatch(/tsx[\\/]dist[\\/]cli\.mjs$/);
       expect(result.args.slice(1)).toEqual(['watch', 'src/index.ts']);
@@ -156,7 +156,7 @@ describe('resolveDevCommand', () => {
 });
 ```
 
-Run: `pnpm --filter @promptdemo-internal/scripts test`
+Run: `pnpm --filter @lumespec-internal/scripts test`
 Expected: FAIL — "Cannot find module '../lib/devCommand.mjs'".
 
 - [ ] **Step 3: Implement the resolver**
@@ -213,7 +213,7 @@ export function resolveDevCommand(svc) {
 }
 ```
 
-Run: `pnpm --filter @promptdemo-internal/scripts test`
+Run: `pnpm --filter @lumespec-internal/scripts test`
 Expected: PASS (5 tests).
 
 - [ ] **Step 4: Commit**
@@ -228,11 +228,11 @@ git commit -m "feat(demo): resolveDevCommand — pure spawn-arg resolver w/ unit
 ## Task 2: Replace `spawnService` with direct-node spawn
 
 **Files:**
-- Modify: `scripts/demo.mjs` (replace `spawnService`, delete `spawnServiceWindows`, delete `appendHeaderWithRetry`)
+- Modify: `scripts/lume.mjs` (replace `spawnService`, delete `spawnServiceWindows`, delete `appendHeaderWithRetry`)
 
 - [ ] **Step 1: Replace `spawnService`**
 
-Find the existing `spawnService(svc)` function in `scripts/demo.mjs`. Replace it + delete `spawnServiceWindows` entirely. The new function:
+Find the existing `spawnService(svc)` function in `scripts/lume.mjs`. Replace it + delete `spawnServiceWindows` entirely. The new function:
 
 ```js
 function spawnService(svc) {
@@ -267,7 +267,7 @@ function spawnService(svc) {
 }
 ```
 
-Add the import at the top of `scripts/demo.mjs`:
+Add the import at the top of `scripts/lume.mjs`:
 
 ```js
 import { resolveDevCommand } from './lib/devCommand.mjs';
@@ -275,20 +275,20 @@ import { resolveDevCommand } from './lib/devCommand.mjs';
 
 - [ ] **Step 2: Delete dead code**
 
-In `scripts/demo.mjs`, delete:
+In `scripts/lume.mjs`, delete:
 - The entire `spawnServiceWindows(svc, log)` function and its surrounding rationale comment (the block explaining `ProcessStartInfo.CreateNoWindow` via PowerShell).
 - The entire `appendHeaderWithRetry(log, header)` helper — the new code calls `appendFileSync` once inside a try/catch.
 - Any `import { spawnSync }` if no longer used elsewhere (check — `reapPorts` uses it via `findPidsOnPort`, so probably still needed).
 
 - [ ] **Step 3: Typecheck and smoke-invoke**
 
-Run: `node --check scripts/demo.mjs`
+Run: `node --check scripts/lume.mjs`
 Expected: "syntax OK" (no output is fine too — non-zero exit would indicate a parse error).
 
 Smoke-invoke the resolver via `--print`:
 
 ```bash
-node -e "import('./scripts/lib/devCommand.mjs').then(m => console.log(JSON.stringify(m.resolveDevCommand({name:'api',filter:'@promptdemo/api',cwd:'apps/api'}), null, 2)))"
+node -e "import('./scripts/lib/devCommand.mjs').then(m => console.log(JSON.stringify(m.resolveDevCommand({name:'api',filter:'@lumespec/api',cwd:'apps/api'}), null, 2)))"
 ```
 
 Expected output: an object with `node` = path to node.exe, `args[0]` = absolute path to `tsx/dist/cli.mjs`, `args.slice(1)` = `['watch', 'src/index.ts']`, `cwd` = `apps/api`.
@@ -296,7 +296,7 @@ Expected output: an object with `node` = path to node.exe, `args[0]` = absolute 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/demo.mjs
+git add scripts/lume.mjs
 git commit -m "refactor(demo): spawn node directly, drop PowerShell+cmd.exe bridge"
 ```
 
@@ -307,7 +307,7 @@ git commit -m "refactor(demo): spawn node directly, drop PowerShell+cmd.exe brid
 **Why:** With direct-node spawn, the saved PID is the actual worker. `taskkill /T /F /PID` kills the tree; `process.kill(-pid, 'SIGTERM')` does the same on POSIX. The existing `reapPorts` stays as a safety net for zombies leaked by prior (pre-rewrite) runs.
 
 **Files:**
-- Modify: `scripts/demo.mjs` (`stopAll` function)
+- Modify: `scripts/lume.mjs` (`stopAll` function)
 
 - [ ] **Step 1: Replace `stopAll`**
 
@@ -369,12 +369,12 @@ async function stopAll() {
 
 - [ ] **Step 2: Make `reapPorts` return its kill count**
 
-Find `function reapPorts(label)` in `scripts/demo.mjs`. It currently does `return killed;` at the bottom — verify it does. If it doesn't, add `return killed;`. (The `stopAll` summary above depends on this.)
+Find `function reapPorts(label)` in `scripts/lume.mjs`. It currently does `return killed;` at the bottom — verify it does. If it doesn't, add `return killed;`. (The `stopAll` summary above depends on this.)
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add scripts/demo.mjs
+git add scripts/lume.mjs
 git commit -m "refactor(demo): rely on real PIDs for stop, reapPorts is now safety-net only"
 ```
 
@@ -382,14 +382,14 @@ git commit -m "refactor(demo): rely on real PIDs for stop, reapPorts is now safe
 
 ## Task 4: Add `demo clean-all` subcommand
 
-**Why:** A user coming from a pre-rewrite state may still have zombie node/cmd processes from the old spawn path. Give them a nuclear option: match any process whose command line contains `@promptdemo/` or a path under the repo, kill them all. Use sparingly.
+**Why:** A user coming from a pre-rewrite state may still have zombie node/cmd processes from the old spawn path. Give them a nuclear option: match any process whose command line contains `@lumespec/` or a path under the repo, kill them all. Use sparingly.
 
 **Files:**
-- Modify: `scripts/demo.mjs` (new function + switch case + help text)
+- Modify: `scripts/lume.mjs` (new function + switch case + help text)
 
 - [ ] **Step 1: Add the function**
 
-Add near `reapPorts` in `scripts/demo.mjs`:
+Add near `reapPorts` in `scripts/lume.mjs`:
 
 ```js
 /**
@@ -401,7 +401,7 @@ Add near `reapPorts` in `scripts/demo.mjs`:
 async function cleanAll() {
   if (!IS_WINDOWS) {
     // POSIX: use pgrep -f; simpler than our Windows path.
-    const r = spawnSync('sh', ['-c', `pgrep -f '@promptdemo/|${REPO_ROOT}' | xargs -r kill -9`], {
+    const r = spawnSync('sh', ['-c', `pgrep -f '@lumespec/|${REPO_ROOT}' | xargs -r kill -9`], {
       stdio: 'inherit',
     });
     console.log(`${C.bold}clean-all:${C.reset} POSIX sweep ${r.status === 0 ? 'complete' : 'exited nonzero'}`);
@@ -411,7 +411,7 @@ async function cleanAll() {
   const ps = [
     `$matches = Get-CimInstance Win32_Process | Where-Object {`,
     `  $_.CommandLine -and (`,
-    `    $_.CommandLine -match '@promptdemo/' -or`,
+    `    $_.CommandLine -match '@lumespec/' -or`,
     `    $_.CommandLine -match [regex]::Escape('${REPO_ROOT.replace(/\\/g, '\\\\')}')`,
     `  )`,
     `}`,
@@ -433,7 +433,7 @@ async function cleanAll() {
 
 - [ ] **Step 2: Wire it into the dispatch switch**
 
-Find the `switch (cmd)` block in `scripts/demo.mjs` (near the bottom). Add:
+Find the `switch (cmd)` block in `scripts/lume.mjs` (near the bottom). Add:
 
 ```js
     case 'clean-all': await cleanAll(); break;
@@ -444,18 +444,18 @@ Find the `switch (cmd)` block in `scripts/demo.mjs` (near the bottom). Add:
 Find `function help()` (or the inline help string). Add a line:
 
 ```
-  ${C.red}clean-all${C.reset}  Nuclear option — kill every node/cmd touching this repo or @promptdemo/* filters. Use after upgrading from a broken demo state.
+  ${C.red}clean-all${C.reset}  Nuclear option — kill every node/cmd touching this repo or @lumespec/* filters. Use after upgrading from a broken demo state.
 ```
 
 - [ ] **Step 4: Smoke test the help text renders**
 
-Run: `pnpm demo help`
+Run: `pnpm lume help`
 Expected: the new `clean-all` line appears without breaking the rest of the help.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/demo.mjs
+git add scripts/lume.mjs
 git commit -m "feat(demo): add clean-all nuclear option for legacy zombie cleanup"
 ```
 
@@ -466,11 +466,11 @@ git commit -m "feat(demo): add clean-all nuclear option for legacy zombie cleanu
 **Why:** The PowerShell bridge block had a ~20-line explanatory comment about CVE-2024-27980 + EINVAL. That rationale no longer applies — we don't spawn .cmd files anymore, we spawn node.exe directly. Leaving the comment misleads future readers.
 
 **Files:**
-- Modify: `scripts/demo.mjs` (comment cleanup)
+- Modify: `scripts/lume.mjs` (comment cleanup)
 
 - [ ] **Step 1: Find + prune stale comments**
 
-Search `scripts/demo.mjs` for:
+Search `scripts/lume.mjs` for:
 - "CVE-2024-27980"
 - "EINVAL"
 - "PowerShell bridge"
@@ -491,8 +491,8 @@ Search the file for `appendHeaderWithRetry` and `spawnServiceWindows`. Expect ze
 - [ ] **Step 3: Verify the file still parses + help still renders**
 
 ```bash
-node --check scripts/demo.mjs
-pnpm demo help
+node --check scripts/lume.mjs
+pnpm lume help
 ```
 
 Both should succeed, help output should look clean.
@@ -500,7 +500,7 @@ Both should succeed, help output should look clean.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/demo.mjs
+git add scripts/lume.mjs
 git commit -m "chore(demo): remove stale PowerShell/EINVAL comments after rewrite"
 ```
 
@@ -514,18 +514,18 @@ git commit -m "chore(demo): remove stale PowerShell/EINVAL comments after rewrit
 
 - [ ] **Step 1: Fresh Windows state**
 
-Run `pnpm demo clean-all` to nuke any zombies from old runs. Close ALL other PowerShell windows that might have zombie services.
+Run `pnpm lume clean-all` to nuke any zombies from old runs. Close ALL other PowerShell windows that might have zombie services.
 
 - [ ] **Step 2: Cold start acceptance**
 
 ```powershell
-pnpm demo start
+pnpm lume start
 ```
 
 - [ ] All 5 services print "started" lines with PIDs.
 - [ ] "All services started" banner appears.
 - [ ] Zero extra terminal windows pop up during start (no cmd.exe flashes).
-- [ ] `pnpm demo status` within 30s of start shows ALL 5 services UP. The PID shown for each should be the REAL node pid (check via `Get-Process -Id <pid>` → should be `node` not `cmd`).
+- [ ] `pnpm lume status` within 30s of start shows ALL 5 services UP. The PID shown for each should be the REAL node pid (check via `Get-Process -Id <pid>` → should be `node` not `cmd`).
 
 - [ ] **Step 3: Port ownership check**
 
@@ -551,11 +551,11 @@ Note the returned `jobId`. Open `http://localhost:3001/jobs/<jobId>` in the brow
 - [ ] **Step 5: Stop + restart loop**
 
 ```powershell
-pnpm demo stop
-pnpm demo status   # all DOWN
-pnpm demo start
-pnpm demo status   # all UP again
-pnpm demo stop
+pnpm lume stop
+pnpm lume status   # all DOWN
+pnpm lume start
+pnpm lume status   # all UP again
+pnpm lume stop
 ```
 
 - [ ] `stop` reports "5 tracked" on the first stop, "0 reaped via port sweep" (no orphans leaked).
@@ -569,10 +569,10 @@ If you do not have a POSIX machine handy, skip this step but flag in the commit 
 
 If POSIX is available:
 ```bash
-pnpm demo start && pnpm demo status && pnpm demo stop
+pnpm lume start && pnpm lume status && pnpm lume stop
 ```
 
-Confirm all 5 up, clean stop, no zombies (`pgrep -f @promptdemo`).
+Confirm all 5 up, clean stop, no zombies (`pgrep -f @lumespec`).
 
 - [ ] **Step 7: Tag the release**
 

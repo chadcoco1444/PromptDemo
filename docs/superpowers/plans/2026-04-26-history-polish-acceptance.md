@@ -103,7 +103,7 @@ Only the **list/grid toggle button** UI is missing.
 
 - [ ] **Step 4: Verify the toggle works**
 
-  Run `pnpm demo start`, navigate to `http://localhost:3001/history`, sign in, and confirm:
+  Run `pnpm lume start`, navigate to `http://localhost:3001/history`, sign in, and confirm:
   - Grid button (▦) renders 3-column layout on desktop
   - List button (☰) renders 1-column stacked layout
   - Buttons show active state (white bg) for the selected mode
@@ -136,7 +136,7 @@ These tests use a real pg.Pool. Run `pnpm infra:up` before running the test suit
 
   const DATABASE_URL =
     process.env.DATABASE_URL ??
-    'postgres://promptdemo:promptdemo@localhost:5432/promptdemo';
+    'postgres://lumespec:lumespec@localhost:5432/lumespec';
 
   let pool: pg.Pool;
   let testUserId: number;
@@ -238,7 +238,7 @@ These tests use a real pg.Pool. Run `pnpm infra:up` before running the test suit
 - [ ] **Step 2: Run the test to verify it fails (DB connected but debitForJob may not accept tier param)**
 
   ```bash
-  cd apps/api && DATABASE_URL=postgres://promptdemo:promptdemo@localhost:5432/promptdemo pnpm vitest run tests/credits/store.test.ts
+  cd apps/api && DATABASE_URL=postgres://lumespec:lumespec@localhost:5432/lumespec pnpm vitest run tests/credits/store.test.ts
   ```
 
   Expected: FAIL — identify which assertions fail and whether the `debitForJob` signature matches (check `apps/api/src/credits/store.ts` for exact param names and adjust test accordingly).
@@ -250,7 +250,7 @@ These tests use a real pg.Pool. Run `pnpm infra:up` before running the test suit
 - [ ] **Step 4: Run until green**
 
   ```bash
-  cd apps/api && DATABASE_URL=postgres://promptdemo:promptdemo@localhost:5432/promptdemo pnpm vitest run tests/credits/store.test.ts
+  cd apps/api && DATABASE_URL=postgres://lumespec:lumespec@localhost:5432/lumespec pnpm vitest run tests/credits/store.test.ts
   ```
 
   Expected: All 5 tests PASS.
@@ -284,7 +284,7 @@ These tests use a real pg.Pool. Run `pnpm infra:up` before running the test suit
   #!/usr/bin/env node
   /**
    * Lighthouse accessibility score checker.
-   * Requires the dev server to be running: pnpm demo start
+   * Requires the dev server to be running: pnpm lume start
    *
    * Usage:
    *   node scripts/check-a11y.mjs
@@ -369,7 +369,7 @@ These tests use a real pg.Pool. Run `pnpm infra:up` before running the test suit
 - [ ] **Step 4: Run the check with dev server running**
 
   ```bash
-  # In one terminal: pnpm demo start
+  # In one terminal: pnpm lume start
   # In another terminal:
   pnpm a11y
   ```

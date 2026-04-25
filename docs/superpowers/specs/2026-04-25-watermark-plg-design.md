@@ -1,18 +1,18 @@
 # Dynamic Watermark (PLG) Design Spec
 **Date:** 2026-04-25
-**Feature:** PromptDemo v2.2 Module 1 — Dynamic Watermark for Product-Led Growth
+**Feature:** LumeSpec v2.2 Module 1 — Dynamic Watermark for Product-Led Growth
 
 ---
 
 ## Problem
 
-PromptDemo generates demo videos that users share publicly with no branding attribution. Free users receive a fully unbranded product, leaving no organic growth loop. The goal is to embed a persistent "Made with PromptDemo" watermark into every video generated on the Free plan, making each shared video an advertisement, while giving Pro/Max subscribers a clean, watermark-free experience as an upgrade incentive.
+LumeSpec generates demo videos that users share publicly with no branding attribution. Free users receive a fully unbranded product, leaving no organic growth loop. The goal is to embed a persistent "Made with LumeSpec" watermark into every video generated on the Free plan, making each shared video an advertisement, while giving Pro/Max subscribers a clean, watermark-free experience as an upgrade incentive.
 
 ---
 
 ## Goals
 
-- Brand every Free-tier video with a visible "Made with PromptDemo" Pill Badge in the bottom-right corner
+- Brand every Free-tier video with a visible "Made with LumeSpec" Pill Badge in the bottom-right corner
 - Pro/Max users receive watermark-free videos, creating a clear upgrade incentive
 - Zero frontend bypass possible — tier enforcement is server-side only, baked into the stored storyboard JSON
 - Zero DB migration required — the existing `subscriptions` table has `tier` already
@@ -73,7 +73,7 @@ AbsoluteFill (pointerEvents: none)
        padding: '5px 14px 5px 8px'
        backdropFilter: 'blur(10px)'   ← readable on dark + light backgrounds
        ├─ div  20×20  gradient(#7c3aed → #4f46e5)  borderRadius: 5  (brand icon)
-       └─ span  "Made with PromptDemo"
+       └─ span  "Made with LumeSpec"
                 fontSize: 14, fontWeight: 600
                 color: rgba(255, 255, 255, 0.88)
                 letterSpacing: '0.02em'

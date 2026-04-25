@@ -1,4 +1,4 @@
--- PromptDemo v2.0 Feature 4 initial schema.
+-- LumeSpec v2.0 Feature 4 initial schema.
 -- Runs once on first Postgres boot (docker-compose mounts /docker-entrypoint-initdb.d).
 -- To rerun after schema changes: docker compose -f docker-compose.dev.yaml down -v && up -d.
 --
@@ -6,7 +6,7 @@
 --   1. NextAuth required tables (users / accounts / sessions /
 --      verification_token) — the @auth/pg-adapter queries them by exact
 --      canonical shape. DO NOT rename columns or change types here.
---   2. PromptDemo domain tables (subscriptions / credits /
+--   2. LumeSpec domain tables (subscriptions / credits /
 --      credit_transactions / jobs) — FK to users.id (INTEGER) as added on
 --      top of the NextAuth users table.
 --
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
   email           VARCHAR(255) UNIQUE,
   "emailVerified" TIMESTAMPTZ,
   image           TEXT,
-  -- PromptDemo extensions:
+  -- LumeSpec extensions:
   preferences     JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS verification_token (
   PRIMARY KEY (identifier, token)
 );
 
--- ========== PromptDemo domain tables ==========
+-- ========== LumeSpec domain tables ==========
 
 CREATE TABLE IF NOT EXISTS subscriptions (
   user_id                 INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

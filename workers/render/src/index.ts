@@ -16,7 +16,7 @@ import { withTempDir } from './tempDir.js';
 import { renderComposition, defaultSdk } from './renderer.js';
 import { startHealthServer } from './health.js';
 import { rewriteStoryboardUrls, defaultSigner } from './presignedRewrite.js';
-import { StoryboardSchema, makeIntel, type Storyboard, type S3Uri } from '@promptdemo/schema';
+import { StoryboardSchema, makeIntel, type Storyboard, type S3Uri } from '@lumespec/schema';
 
 const JobPayload = z.object({
   jobId: z.string().min(1),
@@ -78,7 +78,7 @@ const worker = new Worker<JobPayload>(
       console.log(`[render] bgm='${chosenBgm}' mp3 missing at ${BGM_DIR}; forcing bgm=none`);
     }
 
-    return withTempDir('promptdemo-render-', async (dir) => {
+    return withTempDir('lumespec-render-', async (dir) => {
       const outputPath = join(dir, `${payload.jobId}.mp4`);
 
       await job.updateProgress(makeIntel('render', 'Rendering frames with Remotion'));

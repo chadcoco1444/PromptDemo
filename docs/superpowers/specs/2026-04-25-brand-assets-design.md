@@ -3,7 +3,7 @@
 ## Goal
 
 Replace the Vercel-default landing video and broken README hero image with
-PromptDemo-branded assets that showcase the actual product. Update the dogfood
+LumeSpec-branded assets that showcase the actual product. Update the dogfood
 script to support generating a watermarked video for PLG marketing.
 
 ## Architecture
@@ -51,7 +51,7 @@ trusted scripts opt-in for Pro accounts.
 
 - Parse `--watermark` anywhere in `process.argv`
 - Change default URL to `https://stripe.com`
-- Change default intent to PromptDemo-specific marketing copy
+- Change default intent to LumeSpec-specific marketing copy
 - Change default duration to `30`
 - When flag set: include `forceWatermark: true` in POST body
 - Output path: `docs/readme/landing-hero-demo.mp4`
@@ -63,7 +63,7 @@ trusted scripts opt-in for Pro accounts.
 Structure:
 1. **Attention** — centered hero, gradient title, badge row, demo GIF with
    Pill Badge visible, 100-word punch paragraph
-2. **Interest** — "Why PromptDemo?" 3-card benefits grid (Creativity Engine /
+2. **Interest** — "Why LumeSpec?" 3-card benefits grid (Creativity Engine /
    Pixel-Perfect / History Vault), benefits language not feature language
 3. **Desire** — "How It Works" 5-step horizontal flow + 3-command Quickstart +
    tech stack table

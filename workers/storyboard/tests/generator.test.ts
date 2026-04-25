@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { generateStoryboard } from '../src/generator.js';
 import type { ClaudeClient } from '../src/claude/claudeClient.js';
-import crawlFixture from '@promptdemo/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
-import validStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json' with { type: 'json' };
-import type { CrawlResult } from '@promptdemo/schema';
+import crawlFixture from '@lumespec/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
+import validStoryboard from '@lumespec/schema/fixtures/storyboard.30s.json' with { type: 'json' };
+import type { CrawlResult } from '@lumespec/schema';
 
 const crawl = crawlFixture as unknown as CrawlResult;
 

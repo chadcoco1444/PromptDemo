@@ -36,7 +36,7 @@ openssl rand -hex 32
 AUTH_ENABLED=true
 
 # 4. Restart the web service so NextAuth picks up the env
-pnpm --filter @promptdemo/web dev
+pnpm --filter @lumespec/web dev
 ```
 
 Then visit `http://localhost:3001` → you'll see a "Sign in" button in the nav. Click it, complete the Google OAuth flow, and you'll land back on the home page with your avatar + a History link.

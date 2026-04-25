@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Scene, Storyboard } from '@promptdemo/schema';
+import type { Scene, Storyboard } from '@lumespec/schema';
 import { HeroRealShot } from './scenes/HeroRealShot';
 import { FeatureCallout } from './scenes/FeatureCallout';
 import { TextPunch } from './scenes/TextPunch';

@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import type { CrawlResult, Storyboard } from '@promptdemo/schema';
+import type { CrawlResult, Storyboard } from '@lumespec/schema';
 import { buildSystemPrompt } from './prompts/systemPrompt.js';
 import { buildUserMessage } from './prompts/userMessage.js';
 import { detectPacingProfile } from './prompts/pacingProfiles.js';

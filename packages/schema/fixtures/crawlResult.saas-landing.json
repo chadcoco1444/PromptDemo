@@ -2,13 +2,13 @@
   "url": "https://example-saas.com",
   "fetchedAt": 1734000000000,
   "screenshots": {
-    "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
-    "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+    "viewport": "s3://lumespec-dev/fixtures/saas-viewport.jpg",
+    "fullPage": "s3://lumespec-dev/fixtures/saas-full.jpg"
   },
   "brand": {
     "primaryColor": "#4f46e5",
     "secondaryColor": "#a78bfa",
-    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/saas-logo.png",
     "fontFamily": "Inter",
     "fontFamilySupported": true
   },

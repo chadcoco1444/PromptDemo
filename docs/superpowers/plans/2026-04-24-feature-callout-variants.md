@@ -35,7 +35,7 @@
 
 ## Task 1: Zod schema — add `variant` and `imageRegion` to FeatureCallout
 
-**Why first:** Every downstream change depends on this type. The shared `@promptdemo/schema` package is what the storyboard worker and the Remotion renderer both import.
+**Why first:** Every downstream change depends on this type. The shared `@lumespec/schema` package is what the storyboard worker and the Remotion renderer both import.
 
 **Files:**
 - Modify: `packages/schema/src/storyboard.ts:62-71`
@@ -132,7 +132,7 @@ describe('FeatureCalloutSchema variant', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @promptdemo/schema test -- storyboard.test.ts`
+Run: `pnpm --filter @lumespec/schema test -- storyboard.test.ts`
 Expected: FAIL — "Unrecognized key(s) in object: 'variant'" or similar (v1 schema doesn't know about `variant`).
 
 - [ ] **Step 3: Add the schema fields**
@@ -174,10 +174,10 @@ export type FeatureVariant = z.infer<typeof FeatureVariantSchema>;
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/schema test -- storyboard.test.ts`
+Run: `pnpm --filter @lumespec/schema test -- storyboard.test.ts`
 Expected: PASS (all 5 test cases).
 
-Also run: `pnpm --filter @promptdemo/schema build`
+Also run: `pnpm --filter @lumespec/schema build`
 Expected: PASS (no TypeScript errors).
 
 - [ ] **Step 5: Commit**
@@ -204,7 +204,7 @@ Create `workers/storyboard/tests/variantSelection.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { selectVariants } from '../src/variantSelection';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 function fc(sceneId: number, extra: Partial<{ variant: string }> = {}) {
   return {
@@ -297,7 +297,7 @@ describe('selectVariants', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm --filter @promptdemo/worker-storyboard test -- variantSelection.test.ts`
+Run: `pnpm --filter @lumespec/worker-storyboard test -- variantSelection.test.ts`
 Expected: FAIL — "Cannot find module '../src/variantSelection'".
 
 - [ ] **Step 3: Implement the selector**
@@ -305,7 +305,7 @@ Expected: FAIL — "Cannot find module '../src/variantSelection'".
 Create `workers/storyboard/src/variantSelection.ts`:
 
 ```ts
-import type { Scene, Storyboard, FeatureVariant } from '@promptdemo/schema';
+import type { Scene, Storyboard, FeatureVariant } from '@lumespec/schema';
 
 export function selectVariants(
   scenes: Scene[],
@@ -343,10 +343,10 @@ function pick(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm --filter @promptdemo/worker-storyboard test -- variantSelection.test.ts`
+Run: `pnpm --filter @lumespec/worker-storyboard test -- variantSelection.test.ts`
 Expected: PASS (all 7 tests).
 
-Run: `pnpm --filter @promptdemo/worker-storyboard build`
+Run: `pnpm --filter @lumespec/worker-storyboard build`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -396,7 +396,7 @@ describe('generator enrichment integration', () => {
 });
 ```
 
-Run: `pnpm --filter @promptdemo/worker-storyboard test -- variantSelection.test.ts`
+Run: `pnpm --filter @lumespec/worker-storyboard test -- variantSelection.test.ts`
 Expected: PASS immediately (selector is already pure; this is a regression guard).
 
 - [ ] **Step 2: Read the current enrichment function**
@@ -459,10 +459,10 @@ import { selectVariants } from './variantSelection.js';
 
 - [ ] **Step 4: Verify the build and existing tests still pass**
 
-Run: `pnpm --filter @promptdemo/worker-storyboard build`
+Run: `pnpm --filter @lumespec/worker-storyboard build`
 Expected: PASS.
 
-Run: `pnpm --filter @promptdemo/worker-storyboard test`
+Run: `pnpm --filter @lumespec/worker-storyboard test`
 Expected: PASS (all pre-existing generator tests + new variant tests).
 
 - [ ] **Step 5: Commit**
@@ -535,7 +535,7 @@ Delete the inline `const ImagePanel: React.FC<...>` definition (currently lines 
 
 - [ ] **Step 3: Verify the build still passes**
 
-Run: `pnpm --filter @promptdemo/remotion build`
+Run: `pnpm --filter @lumespec/remotion build`
 Expected: PASS.
 
 - [ ] **Step 4: Commit**
@@ -580,7 +580,7 @@ describe('KenBurnsPanel', () => {
 });
 ```
 
-Run: `pnpm --filter @promptdemo/remotion test -- featureCalloutVariants.test.tsx`
+Run: `pnpm --filter @lumespec/remotion test -- featureCalloutVariants.test.tsx`
 Expected: FAIL — module not found.
 
 - [ ] **Step 2: Implement the component (GPU-composited transforms only)**
@@ -675,7 +675,7 @@ Key guarantees enforced in code:
 
 - [ ] **Step 3: Run test**
 
-Run: `pnpm --filter @promptdemo/remotion test -- featureCalloutVariants.test.tsx`
+Run: `pnpm --filter @lumespec/remotion test -- featureCalloutVariants.test.tsx`
 Expected: PASS (renders without throwing — Remotion hooks no-op outside a Composition context in unit tests; if test harness rejects the hook, wrap test in `@remotion/test-utils`'s `mockRemotionHooks` or change to a pure JSX shape assertion. Fallback: switch the test to `it('exports a component', () => expect(typeof KenBurnsPanel).toBe('function'))`).
 
 - [ ] **Step 4: Commit**
@@ -805,7 +805,7 @@ export const CollagePanel: React.FC<CollagePanelProps> = ({ src, theme }) => {
 
 - [ ] **Step 3: Run test**
 
-Run: `pnpm --filter @promptdemo/remotion test -- featureCalloutVariants.test.tsx`
+Run: `pnpm --filter @lumespec/remotion test -- featureCalloutVariants.test.tsx`
 Expected: PASS.
 
 - [ ] **Step 4: Commit**
@@ -964,7 +964,7 @@ describe('DashboardPanel', () => {
 });
 ```
 
-Run: `pnpm --filter @promptdemo/remotion test -- featureCalloutVariants.test.tsx`
+Run: `pnpm --filter @lumespec/remotion test -- featureCalloutVariants.test.tsx`
 Expected: PASS.
 
 - [ ] **Step 4: Commit**
@@ -990,7 +990,7 @@ Overwrite the file:
 ```tsx
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
-import type { FeatureVariant } from '@promptdemo/schema';
+import type { FeatureVariant } from '@lumespec/schema';
 import { AnimatedText } from '../primitives/AnimatedText';
 import type { BrandTheme } from '../utils/brandTheme';
 import { ImagePanel } from './variants/ImagePanel';
@@ -1071,7 +1071,7 @@ function renderPanel(
 
 - [ ] **Step 2: Verify typecheck**
 
-Run: `pnpm --filter @promptdemo/remotion build`
+Run: `pnpm --filter @lumespec/remotion build`
 Expected: PASS.
 
 - [ ] **Step 3: Commit**
@@ -1123,7 +1123,7 @@ Append to `packages/remotion/tests/resolveScene.test.tsx`:
   });
 ```
 
-Run: `pnpm --filter @promptdemo/remotion test -- resolveScene.test.tsx`
+Run: `pnpm --filter @lumespec/remotion test -- resolveScene.test.tsx`
 Expected: FAIL — TypeScript will reject `variant` on `props` because the old `FeatureCallout` component signature doesn't include it (Task 8 already fixed this) OR the runtime assertion fails because resolveScene doesn't pass `variant` through yet.
 
 - [ ] **Step 2: Patch resolveScene**
@@ -1150,10 +1150,10 @@ In `packages/remotion/src/resolveScene.tsx`, replace the `FeatureCallout` case (
 
 - [ ] **Step 3: Run tests**
 
-Run: `pnpm --filter @promptdemo/remotion test`
+Run: `pnpm --filter @lumespec/remotion test`
 Expected: PASS (all resolveScene + variant tests).
 
-Run: `pnpm --filter @promptdemo/remotion build`
+Run: `pnpm --filter @lumespec/remotion build`
 Expected: PASS.
 
 - [ ] **Step 4: Commit**
@@ -1178,8 +1178,8 @@ Create `packages/remotion/tests/variantRenderSmoke.test.tsx`:
 
 ```tsx
 import { describe, it, expect } from 'vitest';
-import type { Storyboard } from '@promptdemo/schema';
-import { StoryboardSchema } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
+import { StoryboardSchema } from '@lumespec/schema';
 
 describe('variant storyboard validation smoke', () => {
   it('a storyboard with one of each variant parses against v2 schema', () => {
@@ -1225,14 +1225,14 @@ describe('variant storyboard validation smoke', () => {
 
 - [ ] **Step 2: Run the smoke test**
 
-Run: `pnpm --filter @promptdemo/remotion test -- variantRenderSmoke.test.tsx`
+Run: `pnpm --filter @lumespec/remotion test -- variantRenderSmoke.test.tsx`
 Expected: PASS.
 
 - [ ] **Step 3: Run full suites for both affected packages**
 
-Run: `pnpm --filter @promptdemo/remotion test`
-Run: `pnpm --filter @promptdemo/worker-storyboard test`
-Run: `pnpm --filter @promptdemo/schema test`
+Run: `pnpm --filter @lumespec/remotion test`
+Run: `pnpm --filter @lumespec/worker-storyboard test`
+Run: `pnpm --filter @lumespec/schema test`
 Expected: ALL PASS.
 
 Run: `pnpm -r build`
@@ -1243,7 +1243,7 @@ Expected: PASS.
 Run the demo lifecycle end-to-end against a site known to have both screenshots:
 
 ```bash
-pnpm demo start
+pnpm lume start
 # wait for "all services healthy"
 curl -X POST http://localhost:3000/api/jobs \
   -H 'Content-Type: application/json' \
@@ -1275,7 +1275,7 @@ git push origin main --tags
 
 ## Self-Review Against Spec
 
-Cross-check against `docs/superpowers/specs/2026-04-24-promptdemo-v2-design.md` Part 1 Feature 1 + Part 2 Section 1 + Post-Review Amendment D:
+Cross-check against `docs/superpowers/specs/2026-04-24-lumespec-v2-design.md` Part 1 Feature 1 + Part 2 Section 1 + Post-Review Amendment D:
 
 | Spec requirement | Where addressed |
 |------------------|-----------------|

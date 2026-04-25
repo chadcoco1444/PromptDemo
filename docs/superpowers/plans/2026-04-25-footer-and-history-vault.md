@@ -206,7 +206,7 @@ describe('LandingFooter', () => {
 
   it('renders copyright text', () => {
     render(<LandingFooter />);
-    expect(screen.getByText(/2026 PromptDemo Inc/)).toBeTruthy();
+    expect(screen.getByText(/2026 LumeSpec Inc/)).toBeTruthy();
   });
 
   it('renders GitHub social link', () => {
@@ -224,7 +224,7 @@ describe('LandingFooter', () => {
 cd apps/web && pnpm test -- --reporter=verbose 2>&1 | grep -A5 "LandingFooter"
 ```
 
-Expected: 3 failures — "Company" not found, "2026 PromptDemo Inc" not found, GitHub link count wrong.
+Expected: 3 failures — "Company" not found, "2026 LumeSpec Inc" not found, GitHub link count wrong.
 
 - [ ] **Step 2.3: Rewrite `LandingFooter.tsx`**
 
@@ -249,7 +249,7 @@ const PRODUCT = [
 const SUPPORT = [
   { label: 'Documentation', href: '/docs' },
   { label: 'Help Center', href: '/help' },
-  { label: 'Contact', href: 'mailto:hi@promptdemo.dev' },
+  { label: 'Contact', href: 'mailto:hi@lumespec.dev' },
 ];
 
 const LEGAL = [
@@ -314,12 +314,12 @@ export function LandingFooter() {
         </div>
         <div className="mt-16 pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="font-bold text-white text-sm">PromptDemo</span>
-            <span className="text-xs text-gray-500">© 2026 PromptDemo Inc.</span>
+            <span className="font-bold text-white text-sm">LumeSpec</span>
+            <span className="text-xs text-gray-500">© 2026 LumeSpec Inc.</span>
           </div>
           <div className="flex items-center gap-4">
             <a
-              href="https://twitter.com/promptdemo"
+              href="https://twitter.com/lumespec"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-300 transition-colors"
@@ -328,7 +328,7 @@ export function LandingFooter() {
               <TwitterIcon />
             </a>
             <a
-              href="https://github.com/chadcoco1444/PromptDemo"
+              href="https://github.com/chadcoco1444/LumeSpec"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-300 transition-colors"
@@ -337,7 +337,7 @@ export function LandingFooter() {
               <GitHubIcon />
             </a>
             <a
-              href="https://discord.gg/promptdemo"
+              href="https://discord.gg/lumespec"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-300 transition-colors"
@@ -537,7 +537,7 @@ export async function GET(request: Request, ctx: { params: { jobId: string } }) 
 
   const filename =
     type === 'mp4'
-      ? `promptdemo-${jobId}.mp4`
+      ? `lumespec-${jobId}.mp4`
       : `storyboard-${jobId}.json`;
 
   const s3 = getS3Client();
@@ -1367,7 +1367,7 @@ git commit -m "feat(web): fork & edit — forkId prefill on /create with skip-cr
 - [ ] **Step 8.1: Full monorepo test run**
 
 ```bash
-cd c:/Users/88698/Desktop/Workspace/promptdemo && pnpm -r test
+cd c:/Users/88698/Desktop/Workspace/lumespec && pnpm -r test
 ```
 
 Expected: all tests pass across all packages.

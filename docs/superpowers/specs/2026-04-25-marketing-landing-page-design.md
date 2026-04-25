@@ -1,9 +1,9 @@
-# PromptDemo Marketing Landing Page — Design Spec
+# LumeSpec Marketing Landing Page — Design Spec
 
 **Brainstorm completed:** 2026-04-25
 **Visual Paradigm Shift (v2):** 2026-04-25 — FloatingHero + IntentShowcase + framer-motion scroll reveals
 **Status:** ✅ implemented
-**Predecessor:** [v2.1 hardening spec](2026-04-25-promptdemo-v2-1-design.md) — Phase 4 floor (Inter, glassmorphism, framer-motion) is the visual baseline this spec builds on.
+**Predecessor:** [v2.1 hardening spec](2026-04-25-lumespec-v2-1-design.md) — Phase 4 floor (Inter, glassmorphism, framer-motion) is the visual baseline this spec builds on.
 
 **Goal.** B2B SaaS marketing landing page at remotion.dev quality: full-screen floating hero, animated intent showcase, glassmorphism feature grid with scroll-reveal, deep black (#0a0a0a) background.
 
@@ -114,7 +114,7 @@ Hero input → `/create?url=<encoded>` → `CreatePage` reads `url` param → `C
 - **Secondary CTA** (link, no chrome): `Watch the demo` — scrolls to a `#demo` anchor (the right-column video, but expanded inline if mobile)
 - **Submit-when-signed-out interception:** form's onSubmit checks `useSession()`. If signed out, encodes `{ url, intent, duration }` as base64 query and redirects to `/api/auth/signin?callbackUrl=/create?prefill=<base64>`. The new `/create` page reads `prefill`, decodes, hydrates form state, auto-submits.
 
-  **Known limitation:** very long intent text (the textarea max is 500 chars) can produce a base64 URL parameter that pushes total URL length toward common limits — Google OAuth's `state`+`callbackUrl` round-trip starts truncating around 2KB, and some browsers/proxies cap at ~8KB total. Form's URL field has its own URL-validation limit, so the practical worst case stays manageable, but isn't guaranteed safe. **v1 acceptable**; if we hit a 414 in practice, fall back to writing `{ url, intent, duration }` to `localStorage` under a TTL'd key (`promptdemo:pending-prefill`) and just use a stable `callbackUrl=/create?prefill=local`. The `/create` page reads from localStorage on mount and clears the key. Tracked in [followup #pending-prefill-storage].
+  **Known limitation:** very long intent text (the textarea max is 500 chars) can produce a base64 URL parameter that pushes total URL length toward common limits — Google OAuth's `state`+`callbackUrl` round-trip starts truncating around 2KB, and some browsers/proxies cap at ~8KB total. Form's URL field has its own URL-validation limit, so the practical worst case stays manageable, but isn't guaranteed safe. **v1 acceptable**; if we hit a 414 in practice, fall back to writing `{ url, intent, duration }` to `localStorage` under a TTL'd key (`lumespec:pending-prefill`) and just use a stable `callbackUrl=/create?prefill=local`. The `/create` page reads from localStorage on mount and clears the key. Tracked in [followup #pending-prefill-storage].
 
 ### Right column — Demo video
 
@@ -152,7 +152,7 @@ inside the hero itself rather than to a separate section.
 
 > **Ship the demo, not the screenshot.**
 
-Centered above the grid, font-weight 700, letter-spacing -0.02em, gradient text (white → brand-300), `clamp(28px, 3.5vw, 44px)`. Subhead optional: small italic `gray-400` line below — `Three things make PromptDemo different from the slideshow exporters.`
+Centered above the grid, font-weight 700, letter-spacing -0.02em, gradient text (white → brand-300), `clamp(28px, 3.5vw, 44px)`. Subhead optional: small italic `gray-400` line below — `Three things make LumeSpec different from the slideshow exporters.`
 
 ### Grid layout
 
@@ -213,7 +213,7 @@ Minimal, two rows, max-w-7xl:
 
 **Row 2 — bottom strip:**
 
-- Left: PromptDemo wordmark + `Made with PromptDemo. Of course.`
+- Left: LumeSpec wordmark + `Made with LumeSpec. Of course.`
 - Right: copyright + version tag (`v2.1`)
 
 Border-t at the row-1/row-2 boundary, `border-white/10`. Body text `gray-500`, hover `brand-300`. Links use the same focus ring as the rest of the app (existing pattern).

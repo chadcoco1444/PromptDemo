@@ -2,11 +2,11 @@
   "url": "https://example-shop.com",
   "fetchedAt": 1734000000000,
   "screenshots": {
-    "viewport": "s3://promptdemo-dev/fixtures/shop-viewport.jpg"
+    "viewport": "s3://lumespec-dev/fixtures/shop-viewport.jpg"
   },
   "brand": {
     "primaryColor": "#db2777",
-    "logoUrl": "s3://promptdemo-dev/fixtures/shop-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/shop-logo.png",
     "fontFamily": "Poppins",
     "fontFamilySupported": true
   },

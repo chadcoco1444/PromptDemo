@@ -123,7 +123,7 @@ describe('LandingBackdrop', () => {
 - [ ] **Step 4: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingBackdrop.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingBackdrop.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -176,7 +176,7 @@ export function LandingBackdrop({ children, className = '' }: LandingBackdropPro
 - [ ] **Step 6: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingBackdrop.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingBackdrop.test.tsx
 ```
 
 Expected: 2 tests pass.
@@ -257,7 +257,7 @@ describe('signInRedirectFor', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/lib/prefill.test.ts
+pnpm -F @lumespec/web test tests/lib/prefill.test.ts
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -332,7 +332,7 @@ export function signInRedirectFor(p: Prefill): string {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/lib/prefill.test.ts
+pnpm -F @lumespec/web test tests/lib/prefill.test.ts
 ```
 
 Expected: 5 tests pass.
@@ -425,7 +425,7 @@ describe('PreviewForm', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/PreviewForm.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/PreviewForm.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -485,7 +485,7 @@ export function PreviewForm({ onAuthedSubmit, initialHint }: PreviewFormProps) {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/PreviewForm.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/PreviewForm.test.tsx
 ```
 
 Expected: 3 tests pass.
@@ -552,7 +552,7 @@ describe('LandingHero', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingHero.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingHero.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -580,7 +580,7 @@ export function LandingHero({ onAuthedSubmit }: LandingHeroProps) {
           {/* LEFT — copy + form (5/12) */}
           <div className="lg:col-span-5">
             <div className="text-[11px] tracking-[0.18em] text-brand-300 uppercase font-medium">
-              PromptDemo
+              LumeSpec
             </div>
             <h1
               className="mt-3 font-extrabold leading-[1.05] tracking-tight text-transparent bg-clip-text"
@@ -624,13 +624,13 @@ export function LandingHero({ onAuthedSubmit }: LandingHeroProps) {
                 muted
                 playsInline
                 preload="auto"
-                aria-label="PromptDemo example output — vercel.com rendered as a 60-second demo video"
+                aria-label="LumeSpec example output — vercel.com rendered as a 60-second demo video"
               >
                 <source src="/landing-hero-demo.mp4" type="video/mp4" />
               </video>
             </div>
             <p className="mt-3 text-xs text-gray-500 italic text-center">
-              Made with PromptDemo. Source: vercel.com
+              Made with LumeSpec. Source: vercel.com
             </p>
           </div>
         </div>
@@ -643,7 +643,7 @@ export function LandingHero({ onAuthedSubmit }: LandingHeroProps) {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingHero.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingHero.test.tsx
 ```
 
 Expected: 4 tests pass.
@@ -697,7 +697,7 @@ describe('LandingFeatures', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingFeatures.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingFeatures.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -752,7 +752,7 @@ export function LandingFeatures() {
             Ship the demo, not the screenshot.
           </h2>
           <p className="mt-3 text-sm italic text-gray-400">
-            Three things make PromptDemo different from the slideshow exporters.
+            Three things make LumeSpec different from the slideshow exporters.
           </p>
         </div>
 
@@ -782,7 +782,7 @@ export function LandingFeatures() {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingFeatures.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingFeatures.test.tsx
 ```
 
 Expected: 3 tests pass.
@@ -834,7 +834,7 @@ describe('LandingFinalCTA', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingFinalCTA.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingFinalCTA.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -882,7 +882,7 @@ export function LandingFinalCTA() {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingFinalCTA.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingFinalCTA.test.tsx
 ```
 
 Expected: 3 tests pass.
@@ -914,7 +914,7 @@ import { LandingFooter } from '../../../src/components/landing/LandingFooter';
 describe('LandingFooter', () => {
   it('renders the wordmark', () => {
     render(<LandingFooter />);
-    expect(screen.getByText(/PromptDemo/i)).toBeInTheDocument();
+    expect(screen.getByText(/LumeSpec/i)).toBeInTheDocument();
   });
 
   it('renders three link clusters', () => {
@@ -926,7 +926,7 @@ describe('LandingFooter', () => {
 
   it('renders the dogfood credit', () => {
     render(<LandingFooter />);
-    expect(screen.getByText(/Made with PromptDemo. Of course\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Made with LumeSpec. Of course\./i)).toBeInTheDocument();
   });
 });
 ```
@@ -934,7 +934,7 @@ describe('LandingFooter', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingFooter.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingFooter.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -952,14 +952,14 @@ const PRODUCT = [
   { label: 'Status', href: '/' },
 ];
 const BUILD = [
-  { label: 'Source', href: 'https://github.com/chadcoco1444/PromptDemo' },
+  { label: 'Source', href: 'https://github.com/chadcoco1444/LumeSpec' },
   { label: 'Architecture', href: '/' },
   { label: 'Design decisions', href: '/' },
 ];
 const LEGAL = [
   { label: 'Privacy', href: '/' },
   { label: 'Terms', href: '/' },
-  { label: 'Contact', href: 'mailto:hi@promptdemo.dev' },
+  { label: 'Contact', href: 'mailto:hi@lumespec.dev' },
 ];
 
 function LinkCluster({ heading, links }: { heading: string; links: typeof PRODUCT }) {
@@ -993,10 +993,10 @@ export function LandingFooter() {
         </div>
         <div className="mt-16 pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs text-gray-500">
           <div>
-            <span className="font-semibold text-gray-300">PromptDemo</span>
-            <span className="ml-3 italic">Made with PromptDemo. Of course.</span>
+            <span className="font-semibold text-gray-300">LumeSpec</span>
+            <span className="ml-3 italic">Made with LumeSpec. Of course.</span>
           </div>
-          <div>© 2026 PromptDemo · v2.1</div>
+          <div>© 2026 LumeSpec · v2.1</div>
         </div>
       </div>
     </footer>
@@ -1007,7 +1007,7 @@ export function LandingFooter() {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/LandingFooter.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/LandingFooter.test.tsx
 ```
 
 Expected: 3 tests pass.
@@ -1057,7 +1057,7 @@ describe('MarketingLanding', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/MarketingLanding.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/MarketingLanding.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -1094,7 +1094,7 @@ export function MarketingLanding({ onAuthedSubmit }: MarketingLandingProps) {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/landing/MarketingLanding.test.tsx
+pnpm -F @lumespec/web test tests/components/landing/MarketingLanding.test.tsx
 ```
 
 Expected: 1 test passes.
@@ -1152,7 +1152,7 @@ describe('CreatePageBody', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/CreatePageBody.test.tsx
+pnpm -F @lumespec/web test tests/components/CreatePageBody.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -1264,7 +1264,7 @@ export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, init
 - [ ] **Step 5: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/CreatePageBody.test.tsx tests/components/JobForm.test.tsx
+pnpm -F @lumespec/web test tests/components/CreatePageBody.test.tsx tests/components/JobForm.test.tsx
 ```
 
 Expected: all CreatePageBody + JobForm tests pass.
@@ -1308,7 +1308,7 @@ export default function CreatePage({ searchParams }: PageProps) {
 Start the dev stack if not running:
 
 ```bash
-pnpm demo restart
+pnpm lume restart
 ```
 
 Then visit:
@@ -1400,7 +1400,7 @@ export function MarketingLandingClientShell() {
 Start the dev stack:
 
 ```bash
-pnpm demo restart
+pnpm lume restart
 ```
 
 Then in the browser:
@@ -1470,7 +1470,7 @@ git commit -m "feat(landing): /landing-preview dev-only debug route"
 - [ ] **Step 1: Run all web tests**
 
 ```bash
-pnpm -F @promptdemo/web test
+pnpm -F @lumespec/web test
 ```
 
 Expected: all tests pass. Count should be ≥ previous (91) + 8 new test files (LandingBackdrop 2, prefill 5, PreviewForm 3, LandingHero 4, LandingFeatures 3, LandingFinalCTA 3, LandingFooter 3, MarketingLanding 1, CreatePageBody 2 = 26 new tests). Target: ≥ 117.

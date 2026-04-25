@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildUserMessage } from '../src/prompts/userMessage.js';
-import crawlFixture from '@promptdemo/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
-import type { CrawlResult } from '@promptdemo/schema';
+import crawlFixture from '@lumespec/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
+import type { CrawlResult } from '@lumespec/schema';
 
 const crawl = crawlFixture as unknown as CrawlResult;
 

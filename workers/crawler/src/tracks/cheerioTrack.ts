@@ -23,7 +23,7 @@ export interface HttpFetcher {
 export const defaultFetcher: HttpFetcher = async (url) => {
   const res = await fetch(url, {
     headers: {
-      'user-agent': 'Mozilla/5.0 (compatible; PromptDemoBot/0.1; +https://github.com/chadcoco1444/PromptDemo)',
+      'user-agent': 'Mozilla/5.0 (compatible; LumeSpecBot/0.1; +https://github.com/chadcoco1444/LumeSpec)',
       accept: 'text/html,*/*;q=0.8',
     },
   });

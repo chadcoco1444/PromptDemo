@@ -3,7 +3,7 @@
 **Brainstorm completed:** 2026-04-25
 **Status:** awaiting user review before writing-plans handoff
 **Predecessors:**
-- [v2.1 design](2026-04-25-promptdemo-v2-1-design.md) — Phase 4 visual baseline (Inter, framer-motion, brand-glow), 3-state badges + crawl-screenshot cover proxy already shipped.
+- [v2.1 design](2026-04-25-lumespec-v2-1-design.md) — Phase 4 visual baseline (Inter, framer-motion, brand-glow), 3-state badges + crawl-screenshot cover proxy already shipped.
 - [Marketing landing](2026-04-25-marketing-landing-page-design.md) — defines the "Pro Max" quality bar this spec inherits.
 - [Remaining-work](../remaining-work.md) §4 — 6 promised History sub-items being closed.
 

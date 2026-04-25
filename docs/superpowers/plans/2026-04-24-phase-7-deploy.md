@@ -1,14 +1,14 @@
-# PromptDemo v1.0 — Plan 7: Docker + Cloud Run Deploy
+# LumeSpec v1.0 — Plan 7: Docker + Cloud Run Deploy
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans. Many tasks here create cloud resources — **confirm with user before running any `gcloud` command that provisions billable resources**.
 
-**Goal:** Deploy all 6 PromptDemo packages (web, api, crawler, storyboard, render + shared schema) to GCP Cloud Run with Memorystore Redis, GCS (S3-compat interop mode), Artifact Registry, and Secret Manager. Ship a reproducible deploy script + GitHub Actions workflow so future tags auto-deploy.
+**Goal:** Deploy all 6 LumeSpec packages (web, api, crawler, storyboard, render + shared schema) to GCP Cloud Run with Memorystore Redis, GCS (S3-compat interop mode), Artifact Registry, and Secret Manager. Ship a reproducible deploy script + GitHub Actions workflow so future tags auto-deploy.
 
 **Architecture:** 5 Cloud Run services — `web` and `api` are public HTTP; `crawler`, `storyboard`, `render` are "worker" services that run a BullMQ loop plus a minimal HTTP health endpoint (Cloud Run requires HTTP; the health endpoint is just a liveness signal, the real work is queue-driven). All services share one Memorystore Redis and one GCS bucket. Each service has a dedicated IAM service account with least-privilege roles.
 
 **Tech Stack:** gcloud CLI (imperative, checked-in scripts), Cloud Run, Cloud Build, Artifact Registry, Memorystore for Redis, GCS (S3-compat via interoperability mode), Secret Manager, Cloud Logging, GitHub Actions.
 
-**Spec reference:** `docs/superpowers/specs/2026-04-20-promptdemo-design.md` §1.
+**Spec reference:** `docs/superpowers/specs/2026-04-20-lumespec-design.md` §1.
 
 **Predecessors:** All prior plans (`v0.1.0` through `v0.6.0`). Plan 7 tags `v1.0.0-mvp` when deployed and smoke-tested.
 
@@ -138,9 +138,9 @@ echo "Done. Confirm active account has roles: Owner or (Cloud Run Admin + Servic
 # Copy to deploy/.env.deploy (gitignored) and fill in:
 GCP_PROJECT_ID=
 GCP_REGION=us-central1
-GCS_BUCKET_NAME=promptdemo-prod
-REDIS_INSTANCE_NAME=promptdemo-redis
-AR_REPO_NAME=promptdemo
+GCS_BUCKET_NAME=lumespec-prod
+REDIS_INSTANCE_NAME=lumespec-redis
+AR_REPO_NAME=lumespec
 AR_REPO_LOCATION=us-central1
 
 # Will be populated by 02-gcs-bucket.sh — do NOT fill in manually:
@@ -160,7 +160,7 @@ deploy/.env.deploy
 - [ ] **Step 3: `DEPLOYMENT.md` skeleton**
 
 ```markdown
-# PromptDemo Deployment Runbook
+# LumeSpec Deployment Runbook
 
 Target: GCP Cloud Run + Memorystore + GCS (S3-compat).
 
@@ -227,7 +227,7 @@ set -euo pipefail
 
 : "${GCP_PROJECT_ID:?}"
 : "${AR_REPO_LOCATION:=us-central1}"
-: "${AR_REPO_NAME:=promptdemo}"
+: "${AR_REPO_NAME:=lumespec}"
 
 if gcloud artifacts repositories describe "$AR_REPO_NAME" --location="$AR_REPO_LOCATION" >/dev/null 2>&1; then
   echo "Artifact Registry repo '$AR_REPO_NAME' already exists in $AR_REPO_LOCATION."
@@ -237,7 +237,7 @@ fi
 gcloud artifacts repositories create "$AR_REPO_NAME" \
   --repository-format=docker \
   --location="$AR_REPO_LOCATION" \
-  --description="PromptDemo container images"
+  --description="LumeSpec container images"
 
 gcloud auth configure-docker "${AR_REPO_LOCATION}-docker.pkg.dev" --quiet
 
@@ -270,11 +270,11 @@ else
 fi
 
 echo "Generating HMAC keys for S3-interop access (one-time)..."
-SA_EMAIL="promptdemo-storage@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+SA_EMAIL="lumespec-storage@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
 
 if ! gcloud iam service-accounts describe "$SA_EMAIL" >/dev/null 2>&1; then
-  gcloud iam service-accounts create promptdemo-storage \
-    --display-name="PromptDemo S3-interop service account"
+  gcloud iam service-accounts create lumespec-storage \
+    --display-name="LumeSpec S3-interop service account"
 fi
 
 gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET_NAME}" \
@@ -310,7 +310,7 @@ set -euo pipefail
 
 : "${GCP_PROJECT_ID:?}"
 : "${GCP_REGION:=us-central1}"
-: "${REDIS_INSTANCE_NAME:=promptdemo-redis}"
+: "${REDIS_INSTANCE_NAME:=lumespec-redis}"
 : "${REDIS_TIER:=BASIC}"           # BASIC (no HA) for MVP; STANDARD_HA for prod
 : "${REDIS_SIZE_GB:=1}"
 
@@ -344,13 +344,13 @@ Amendment to `DEPLOYMENT.md`:
 ## Serverless VPC Connector (one-time, for Redis access)
 
 ```bash
-gcloud compute networks vpc-access connectors create promptdemo-connector \
+gcloud compute networks vpc-access connectors create lumespec-connector \
   --region="$GCP_REGION" \
   --network=default \
   --range=10.8.0.0/28
 ```
 
-Each worker service's deploy command passes `--vpc-connector=promptdemo-connector` so it can reach the Memorystore instance.
+Each worker service's deploy command passes `--vpc-connector=lumespec-connector` so it can reach the Memorystore instance.
 ```
 
 Commit: `feat(deploy): Memorystore Redis provisioning + VPC connector docs`
@@ -374,25 +374,25 @@ set -euo pipefail
 SERVICES=(web api crawler storyboard render)
 
 for svc in "${SERVICES[@]}"; do
-  EMAIL="promptdemo-${svc}@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+  EMAIL="lumespec-${svc}@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
   if ! gcloud iam service-accounts describe "$EMAIL" >/dev/null 2>&1; then
-    gcloud iam service-accounts create "promptdemo-${svc}" \
-      --display-name="PromptDemo ${svc}"
+    gcloud iam service-accounts create "lumespec-${svc}" \
+      --display-name="LumeSpec ${svc}"
   fi
 done
 
 # Storage SA already created by 02-gcs-bucket.sh. Grant per-service access:
-STORAGE_BUCKET="${GCS_BUCKET_NAME:-promptdemo-prod}"
+STORAGE_BUCKET="${GCS_BUCKET_NAME:-lumespec-prod}"
 
 # web: no GCS access (it's a pure frontend)
 # api: read GCS (storyboard + video artifacts for debug endpoint)
 gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET}" \
-  --member="serviceAccount:promptdemo-api@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+  --member="serviceAccount:lumespec-api@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/storage.objectViewer"
 # crawler, storyboard, render: full object access (create + read + sign)
 for svc in crawler storyboard render; do
   gcloud storage buckets add-iam-policy-binding "gs://${STORAGE_BUCKET}" \
-    --member="serviceAccount:promptdemo-${svc}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+    --member="serviceAccount:lumespec-${svc}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
     --role="roles/storage.objectAdmin"
 done
 
@@ -440,18 +440,18 @@ grant() {
     --role="roles/secretmanager.secretAccessor"
 }
 
-grant gcs-hmac-access-id promptdemo-crawler
-grant gcs-hmac-secret    promptdemo-crawler
-grant gcs-hmac-access-id promptdemo-storyboard
-grant gcs-hmac-secret    promptdemo-storyboard
-grant gcs-hmac-access-id promptdemo-render
-grant gcs-hmac-secret    promptdemo-render
-grant gcs-hmac-access-id promptdemo-api
-grant gcs-hmac-secret    promptdemo-api
-grant anthropic-api-key  promptdemo-storyboard
+grant gcs-hmac-access-id lumespec-crawler
+grant gcs-hmac-secret    lumespec-crawler
+grant gcs-hmac-access-id lumespec-storyboard
+grant gcs-hmac-secret    lumespec-storyboard
+grant gcs-hmac-access-id lumespec-render
+grant gcs-hmac-secret    lumespec-render
+grant gcs-hmac-access-id lumespec-api
+grant gcs-hmac-secret    lumespec-api
+grant anthropic-api-key  lumespec-storyboard
 
 if [[ -n "$SCREENSHOTONE_ACCESS_KEY" ]]; then
-  grant screenshotone-access-key promptdemo-crawler
+  grant screenshotone-access-key lumespec-crawler
 fi
 
 echo "Secrets provisioned + IAM bindings granted."
@@ -536,7 +536,7 @@ No push.
 ```ts
 import { describe, it, expect, vi } from 'vitest';
 import { rewriteStoryboardUrls } from '../src/presignedRewrite.js';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 const sb = {
   videoConfig: {
@@ -586,7 +586,7 @@ describe('rewriteStoryboardUrls', () => {
 - [ ] **Step 2: Impl**
 
 ```ts
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 export type UriSigner = (s3Uri: string) => Promise<string>;
 
@@ -624,7 +624,7 @@ export async function rewriteStoryboardUrls(
 // Default signer using @aws-sdk/s3-request-presigner against the S3/GCS-interop endpoint
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { parseS3Uri } from '@promptdemo/schema';
+import { parseS3Uri } from '@lumespec/schema';
 
 export function defaultSigner(client: S3Client, ttlSeconds: number = 1800): UriSigner {
   return async (uri) => {
@@ -663,8 +663,8 @@ Replace the older TODO comment about pre-signed URLs — it's no longer a TODO.
 
 ```bash
 pnpm install   # new dep
-pnpm --filter @promptdemo/worker-render typecheck
-pnpm --filter @promptdemo/worker-render test
+pnpm --filter @lumespec/worker-render typecheck
+pnpm --filter @lumespec/worker-render test
 ```
 
 - [ ] **Step 5: Commit**
@@ -702,7 +702,7 @@ spec:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "10"
     spec:
-      serviceAccountName: promptdemo-web@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-web@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 80
       timeoutSeconds: 60
       containers:
@@ -737,10 +737,10 @@ spec:
       annotations:
         autoscaling.knative.dev/minScale: "1"      # keep warm for SSE
         autoscaling.knative.dev/maxScale: "10"
-        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/lumespec-connector
         run.googleapis.com/vpc-access-egress: private-ranges-only
     spec:
-      serviceAccountName: promptdemo-api@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-api@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 80
       timeoutSeconds: 3600                         # allow long-lived SSE
       containers:
@@ -788,11 +788,11 @@ spec:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "5"
         run.googleapis.com/cpu-throttling: "false"  # always-allocated CPU for BullMQ worker loop
-        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/lumespec-connector
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/startup-cpu-boost: "true"
     spec:
-      serviceAccountName: promptdemo-crawler@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-crawler@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 1
       timeoutSeconds: 600
       containers:
@@ -842,9 +842,9 @@ spec:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "3"
         run.googleapis.com/cpu-throttling: "false"
-        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/lumespec-connector
     spec:
-      serviceAccountName: promptdemo-storyboard@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-storyboard@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 1
       timeoutSeconds: 300
       containers:
@@ -892,11 +892,11 @@ spec:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "10"
         run.googleapis.com/cpu-throttling: "false"
-        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/lumespec-connector
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/startup-cpu-boost: "true"
     spec:
-      serviceAccountName: promptdemo-render@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-render@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 1
       timeoutSeconds: 600
       containers:
@@ -1155,10 +1155,10 @@ set -euo pipefail
 : "${GCP_PROJECT_ID:?}"
 : "${GCP_REGION:?}"
 : "${GCS_BUCKET_NAME:?}"
-: "${REDIS_INSTANCE_NAME:=promptdemo-redis}"
-: "${AR_REPO_NAME:=promptdemo}"
+: "${REDIS_INSTANCE_NAME:=lumespec-redis}"
+: "${AR_REPO_NAME:=lumespec}"
 
-read -p "Nuke all PromptDemo resources in project $GCP_PROJECT_ID? (type YES) " ack
+read -p "Nuke all LumeSpec resources in project $GCP_PROJECT_ID? (type YES) " ack
 [[ "$ack" == "YES" ]] || { echo "Aborted."; exit 1; }
 
 for svc in web api crawler storyboard render; do
@@ -1170,14 +1170,14 @@ gcloud storage rm -r "gs://${GCS_BUCKET_NAME}" || true
 gcloud artifacts repositories delete "$AR_REPO_NAME" --location="$GCP_REGION" --quiet || true
 
 for sa in web api crawler storyboard render storage; do
-  gcloud iam service-accounts delete "promptdemo-${sa}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" --quiet || true
+  gcloud iam service-accounts delete "lumespec-${sa}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" --quiet || true
 done
 
 for secret in anthropic-api-key gcs-hmac-access-id gcs-hmac-secret screenshotone-access-key; do
   gcloud secrets delete "$secret" --quiet || true
 done
 
-gcloud compute networks vpc-access connectors delete promptdemo-connector --region="$GCP_REGION" --quiet || true
+gcloud compute networks vpc-access connectors delete lumespec-connector --region="$GCP_REGION" --quiet || true
 
 echo "Teardown complete."
 ```

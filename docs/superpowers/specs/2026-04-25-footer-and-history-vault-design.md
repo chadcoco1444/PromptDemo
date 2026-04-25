@@ -13,10 +13,10 @@ Four link columns:
 |---|---|---|---|
 | About → `/about` | Features → `/features` | Documentation → `/docs` | Privacy Policy → `/privacy` |
 | Blog → `/blog` | API Docs → `/api-docs` | Help Center → `/help` | Terms of Service → `/terms` |
-| Careers → `/careers` | Pricing → `/billing` | Contact → `mailto:hi@promptdemo.dev` | Security → `/security` |
+| Careers → `/careers` | Pricing → `/billing` | Contact → `mailto:hi@lumespec.dev` | Security → `/security` |
 | | History → `/history` | | |
 
-Bottom bar: PromptDemo logo text + "© 2026 PromptDemo Inc." + three SVG social icons (Twitter/X, GitHub, Discord).
+Bottom bar: LumeSpec logo text + "© 2026 LumeSpec Inc." + three SVG social icons (Twitter/X, GitHub, Discord).
 
 Visual: `bg-[#0a0a0a] border-t border-white/10`. Grid collapses to 2 columns on mobile, 4 on desktop.
 
@@ -52,7 +52,7 @@ Three independent changes:
 
 S3 URI format: `s3://bucket/path/to/key`. Parse with regex `^s3://([^/]+)/(.+)$`.
 
-`type=mp4`: query `video_url` from DB. Generate presigned URL with `ResponseContentDisposition: attachment; filename="promptdemo-${jobId}.mp4"`.
+`type=mp4`: query `video_url` from DB. Generate presigned URL with `ResponseContentDisposition: attachment; filename="lumespec-${jobId}.mp4"`.
 
 `type=storyboard`: query `storyboard_uri` from DB. Generate presigned URL with `ResponseContentDisposition: attachment; filename="storyboard-${jobId}.json"`.
 

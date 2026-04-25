@@ -1,6 +1,6 @@
 # How to record the demo GIF
 
-The README references `docs/readme/demo.gif`. To produce it — we dogfood by using PromptDemo to demo itself.
+The README references `docs/readme/demo.gif`. To produce it — we dogfood by using LumeSpec to demo itself.
 
 ## Recommended workflow
 
@@ -8,7 +8,7 @@ The README references `docs/readme/demo.gif`. To produce it — we dogfood by us
 
 Any compelling product landing page works. Good candidates:
 - `https://www.anthropic.com` — clean marketing layout, Claude brand color = our indigo, meta.
-- `https://remotion.dev` — explicitly the tech stack PromptDemo uses, visually rich.
+- `https://remotion.dev` — explicitly the tech stack LumeSpec uses, visually rich.
 - `https://vercel.com` — dense feature grid that shows off our `collage` + `kenBurns` variants.
 - Your own product URL — ship-ready demo.
 
@@ -18,7 +18,7 @@ I recommend **remotion.dev** because the output video literally shows off the re
 
 ```powershell
 # Make sure stack is up
-pnpm demo start
+pnpm lume start
 
 # Open browser
 start http://localhost:3001
@@ -66,7 +66,7 @@ If the GIF is over 5MB, drop fps to 10 or scale to 640.
 
 ```bash
 git add docs/readme/demo.gif
-git commit -m "docs(readme): add demo GIF (PromptDemo dogfooding remotion.dev)"
+git commit -m "docs(readme): add demo GIF (LumeSpec dogfooding remotion.dev)"
 git push
 ```
 

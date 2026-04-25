@@ -1,5 +1,5 @@
 {
-  "name": "@promptdemo/remotion",
+  "name": "@lumespec/remotion",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@promptdemo/schema": "workspace:*",
+    "@lumespec/schema": "workspace:*",
     "@remotion/bundler": "4.0.218",
     "@remotion/cli": "4.0.218",
     "@remotion/google-fonts": "4.0.218",

@@ -1,12 +1,12 @@
 # Creativity Engine Design Spec
 **Date:** 2026-04-25
-**Feature:** PromptDemo 影片生成多樣性與創造力提升
+**Feature:** LumeSpec 影片生成多樣性與創造力提升
 
 ---
 
 ## Problem
 
-PromptDemo 穩定但「模板化」。不同 URL 產出的 Storyboard 場景序列幾乎相同：HeroRealShot → FeatureCallout × N → CTA，缺乏針對產品特性的結構差異。根本原因有三：
+LumeSpec 穩定但「模板化」。不同 URL 產出的 Storyboard 場景序列幾乎相同：HeroRealShot → FeatureCallout × N → CTA，缺乏針對產品特性的結構差異。根本原因有三：
 
 1. `V1_IMPLEMENTED_SCENE_TYPES` 只有 5 種積木，選擇空間不足
 2. `RHYTHM_TEMPLATES` 寫得太死，Claude 幾乎沒有自由度

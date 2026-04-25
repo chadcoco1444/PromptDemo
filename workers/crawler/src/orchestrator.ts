@@ -1,4 +1,4 @@
-import { CrawlResultSchema, type CrawlResult, type S3Uri } from '@promptdemo/schema';
+import { CrawlResultSchema, type CrawlResult, type S3Uri } from '@lumespec/schema';
 import type { PlaywrightTrackResult } from './tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from './tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from './tracks/cheerioTrack.js';

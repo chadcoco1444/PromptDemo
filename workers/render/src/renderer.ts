@@ -1,4 +1,4 @@
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 export interface RendererSdk {
   bundle(opts: { entryPoint: string }): Promise<string>;

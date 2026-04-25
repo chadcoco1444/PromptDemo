@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // Local demo lifecycle manager.
 // Usage:
-//   pnpm demo start    - docker up + spawn 5 services in background
-//   pnpm demo stop     - kill background services + docker down
-//   pnpm demo status   - health check all services
-//   pnpm demo test     - end-to-end smoke test (POST /api/jobs, poll until done)
-//   pnpm demo logs     - tail all logs (or a single service: pnpm demo logs api)
-//   pnpm demo restart  - stop + start
-//   pnpm demo run      - foreground (all output mixed, Ctrl-C stops)
+//   pnpm lume start    - docker up + spawn 5 services in background
+//   pnpm lume stop     - kill background services + docker down
+//   pnpm lume status   - health check all services
+//   pnpm lume test     - end-to-end smoke test (POST /api/jobs, poll until done)
+//   pnpm lume logs     - tail all logs (or a single service: pnpm lume logs api)
+//   pnpm lume restart  - stop + start
+//   pnpm lume run      - foreground (all output mixed, Ctrl-C stops)
 //
 // State: services run detached; PIDs + logs at .tmp/demo/{pids,logs}/
 // Requires: Docker Desktop running. ANTHROPIC_API_KEY in .env (or shell).
@@ -39,11 +39,11 @@ const C = {
 // locally. In Cloud Run each service runs on its own instance, so PORT=8080 is fine
 // there — this override is dev-only.
 const SERVICES = [
-  { name: 'crawler',    filter: '@promptdemo/worker-crawler',    color: C.red,     kind: 'worker', port: 8081, cwd: resolve(REPO_ROOT, 'workers/crawler') },
-  { name: 'storyboard', filter: '@promptdemo/worker-storyboard', color: C.green,   kind: 'worker', port: 8082, cwd: resolve(REPO_ROOT, 'workers/storyboard') },
-  { name: 'render',     filter: '@promptdemo/worker-render',     color: C.blue,    kind: 'worker', port: 8083, cwd: resolve(REPO_ROOT, 'workers/render') },
-  { name: 'api',        filter: '@promptdemo/api',               color: C.yellow,  kind: 'http',   port: 3000, url: 'http://localhost:3000/healthz', cwd: resolve(REPO_ROOT, 'apps/api') },
-  { name: 'web',        filter: '@promptdemo/web',               color: C.magenta, kind: 'http',   port: 3001, url: 'http://localhost:3001',           cwd: resolve(REPO_ROOT, 'apps/web') },
+  { name: 'crawler',    filter: '@lumespec/worker-crawler',    color: C.red,     kind: 'worker', port: 8081, cwd: resolve(REPO_ROOT, 'workers/crawler') },
+  { name: 'storyboard', filter: '@lumespec/worker-storyboard', color: C.green,   kind: 'worker', port: 8082, cwd: resolve(REPO_ROOT, 'workers/storyboard') },
+  { name: 'render',     filter: '@lumespec/worker-render',     color: C.blue,    kind: 'worker', port: 8083, cwd: resolve(REPO_ROOT, 'workers/render') },
+  { name: 'api',        filter: '@lumespec/api',               color: C.yellow,  kind: 'http',   port: 3000, url: 'http://localhost:3000/healthz', cwd: resolve(REPO_ROOT, 'apps/api') },
+  { name: 'web',        filter: '@lumespec/web',               color: C.magenta, kind: 'http',   port: 3001, url: 'http://localhost:3001',           cwd: resolve(REPO_ROOT, 'apps/web') },
 ];
 
 // --- .env loader ---
@@ -70,7 +70,7 @@ function applyDefaults() {
     S3_REGION: 'us-east-1',
     S3_ACCESS_KEY_ID: 'minioadmin',
     S3_SECRET_ACCESS_KEY: 'minioadmin',
-    S3_BUCKET: 'promptdemo-dev',
+    S3_BUCKET: 'lumespec-dev',
     S3_FORCE_PATH_STYLE: 'true',
     CRAWLER_RESCUE_ENABLED: 'false',
     PLAYWRIGHT_TIMEOUT_MS: '15000',
@@ -82,7 +82,7 @@ function applyDefaults() {
     NEXT_PUBLIC_S3_ENDPOINT: 'http://localhost:9000',
     // Feature 4 Postgres default — matches docker-compose.dev.yaml. Only
     // actually consumed when AUTH_ENABLED=true, but harmless otherwise.
-    DATABASE_URL: 'postgresql://promptdemo:promptdemo@localhost:5432/promptdemo',
+    DATABASE_URL: 'postgresql://lumespec:lumespec@localhost:5432/lumespec',
   };
   for (const [k, v] of Object.entries(defaults)) {
     if (!process.env[k]) process.env[k] = v;
@@ -193,7 +193,7 @@ function dockerUpPostgres() {
 function pgExec(sql) {
   const r = spawnSync(
     'docker',
-    ['exec', '-i', 'promptdemo-postgres-1', 'psql', '-U', 'promptdemo', '-d', 'promptdemo', '-t', '-A', '-c', sql],
+    ['exec', '-i', 'lumespec-postgres-1', 'psql', '-U', 'lumespec', '-d', 'lumespec', '-t', '-A', '-c', sql],
     { encoding: 'utf8', shell: false, windowsHide: true },
   );
   if (r.status !== 0) return null;
@@ -312,7 +312,7 @@ function openLogFdWithRetry(log, svcName) {
   throw new Error(
     `Log file ${log} is locked (10 retries). Likely a zombie ${svcName} worker ` +
     `from a previous run is still holding the file handle. Fix: ` +
-    `pnpm demo clean-all --yes`
+    `pnpm lume clean-all --yes`
   );
 }
 
@@ -387,7 +387,7 @@ async function startAll() {
   console.log(`  ${C.magenta}Web${C.reset}   -> http://localhost:3001`);
   console.log(`  ${C.cyan}MinIO${C.reset} -> http://localhost:9001 (minioadmin/minioadmin)`);
   console.log('');
-  console.log(`  ${C.dim}pnpm demo status${C.reset} | ${C.dim}pnpm demo test${C.reset} | ${C.dim}pnpm demo logs${C.reset} | ${C.dim}pnpm demo stop${C.reset}`);
+  console.log(`  ${C.dim}pnpm lume status${C.reset} | ${C.dim}pnpm lume test${C.reset} | ${C.dim}pnpm lume logs${C.reset} | ${C.dim}pnpm lume stop${C.reset}`);
   console.log('');
   console.log(`${C.dim}[info]${C.reset} first startup is slow: workers install chromium/redis/bullmq, next install google-fonts — watch logs for "worker started".`);
 }
@@ -468,7 +468,7 @@ async function dbReset() {
           console.log(`${C.dim}[db:reset]${C.reset} tables: ${tables.split('\n').join(', ')}`);
         }
         console.log('');
-        console.log(`${C.bold}Next:${C.reset} ${C.dim}pnpm demo start${C.reset}`);
+        console.log(`${C.bold}Next:${C.reset} ${C.dim}pnpm lume start${C.reset}`);
         return;
       }
     }
@@ -486,14 +486,14 @@ async function dbReset() {
  */
 function dbTables() {
   if (!tcpCheckSync(5432)) {
-    console.error(`${C.red}[db:tables]${C.reset} Postgres is not reachable on :5432. Start it first: pnpm demo db:reset`);
+    console.error(`${C.red}[db:tables]${C.reset} Postgres is not reachable on :5432. Start it first: pnpm lume db:reset`);
     process.exit(1);
   }
   const tables = pgExec(
     "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name",
   );
   if (!tables) {
-    console.error(`${C.red}[db:tables]${C.reset} could not query Postgres. Is the container named promptdemo-postgres-1?`);
+    console.error(`${C.red}[db:tables]${C.reset} could not query Postgres. Is the container named lumespec-postgres-1?`);
     process.exit(1);
   }
   console.log(`${C.bold}Tables:${C.reset}`);
@@ -507,7 +507,7 @@ function dbTables() {
  * Set a user's subscription tier in the dev DB and reset their credit balance
  * to the tier's monthly allowance. Single atomic transaction.
  *
- * Usage: pnpm demo tier:set <email> <free|pro|max>
+ * Usage: pnpm lume tier:set <email> <free|pro|max>
  */
 function tierSet(email, tier) {
   loadDotenv();
@@ -516,7 +516,7 @@ function tierSet(email, tier) {
   const ALLOWANCES = { free: 30, pro: 300, max: 2000 };
 
   if (!email || !tier) {
-    console.error(`${C.red}[tier:set]${C.reset} Usage: pnpm demo tier:set <email> <free|pro|max>`);
+    console.error(`${C.red}[tier:set]${C.reset} Usage: pnpm lume tier:set <email> <free|pro|max>`);
     process.exit(1);
   }
   if (!(tier in ALLOWANCES)) {
@@ -544,8 +544,8 @@ function tierSet(email, tier) {
     `WHERE u.email = '${email}';`;
 
   const pgArgs = (sql) => [
-    'exec', '-i', 'promptdemo-postgres-1',
-    'psql', '-U', 'promptdemo', '-d', 'promptdemo', '-c', sql,
+    'exec', '-i', 'lumespec-postgres-1',
+    'psql', '-U', 'lumespec', '-d', 'lumespec', '-c', sql,
   ];
 
   console.log('\nBefore:');
@@ -577,7 +577,7 @@ function tierSet(email, tier) {
  * Render the hardcoded PromoComposition → docs/readme/demo.mp4
  * (and optionally docs/readme/demo.gif when --gif is passed through).
  *
- * Usage: pnpm demo render:promo [--gif]
+ * Usage: pnpm lume render:promo [--gif]
  */
 function renderPromo(extraArgs = []) {
   // Script lives inside packages/remotion/ so Node ESM resolves @remotion/*
@@ -631,7 +631,7 @@ function reapPorts(label) {
  */
 async function cleanAll(arg) {
   if (arg !== '--yes' && !process.env.DEMO_CLEAN_ALL_CONFIRM) {
-    console.error(`${C.red}clean-all is destructive${C.reset} — SIGKILLs any node/pnpm/tsx process touching this repo or @promptdemo/*. Re-run with \`--yes\` or DEMO_CLEAN_ALL_CONFIRM=1.`);
+    console.error(`${C.red}clean-all is destructive${C.reset} — SIGKILLs any node/pnpm/tsx process touching this repo or @lumespec/*. Re-run with \`--yes\` or DEMO_CLEAN_ALL_CONFIRM=1.`);
     process.exit(1);
   }
   // Wipe pid files FIRST so a self-kill of the orchestrator can't leave them stale.
@@ -641,7 +641,7 @@ async function cleanAll(arg) {
     // BSD xargs on macOS lacks the GNU no-run-if-empty flag, so the old pgrep pipeline was not portable. The combined
     // regex forces a node/pnpm/tsx process-name prefix AND the repo/filter pattern,
     // avoiding false-positives on editors whose argv happens to contain the repo path.
-    const pattern = `(node|pnpm|tsx).*(@promptdemo/|${REPO_ROOT})`;
+    const pattern = `(node|pnpm|tsx).*(@lumespec/|${REPO_ROOT})`;
     const r = spawnSync('sh', ['-c', `pkill -9 -f '${pattern}'`], {
       stdio: 'inherit',
     });
@@ -654,7 +654,7 @@ async function cleanAll(arg) {
     const ps = [
       `$procsToKill = Get-CimInstance Win32_Process | Where-Object {`,
       // Exclude the PowerShell running this very sweep: our own CommandLine
-      // contains '@promptdemo/' (it's the pattern we're searching for), so
+      // contains '@lumespec/' (it's the pattern we're searching for), so
       // without this guard the sweep Stop-Processes itself mid-loop and
       // exits with -1 before finishing the kill list.
       `  $_.ProcessId -ne $PID -and`,
@@ -667,7 +667,7 @@ async function cleanAll(arg) {
       // compiled regex had quad-backslashes and never matched the single-slash
       // paths in CommandLine. The only char we still need to escape is ' for
       // the PowerShell single-quoted string literal.
-      `    $_.CommandLine -match '@promptdemo/' -or`,
+      `    $_.CommandLine -match '@lumespec/' -or`,
       `    $_.CommandLine.Contains('${REPO_ROOT.replace(/'/g, "''")}')`,
       `  )`,
       `}`,
@@ -758,13 +758,13 @@ async function statusAll() {
   const pgHint = pgOk
     ? ''
     : authEnabled()
-    ? ` ${C.dim}(run: pnpm demo db:reset)${C.reset}`
+    ? ` ${C.dim}(run: pnpm lume db:reset)${C.reset}`
     : ` ${C.dim}(optional — only needed when AUTH_ENABLED=true)${C.reset}`;
   console.log(`  Postgres  ${pgStatus}${C.reset}${pgHint}`);
 
   if (pgOk) {
     // Quick schema + data sanity check. pgExec uses `docker exec` so it
-    // fails gracefully if the container isn't named promptdemo-postgres-1.
+    // fails gracefully if the container isn't named lumespec-postgres-1.
     const tableCount = pgExec(
       "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'",
     );
@@ -816,7 +816,7 @@ async function runTest() {
   console.log(`${C.bold}[test]${C.reset} API base: ${api}`);
 
   if (!(await httpOk(`${api}/healthz`, 3000))) {
-    console.error(`${C.red}[test]${C.reset} API healthz failed. Is 'pnpm demo start' running?`);
+    console.error(`${C.red}[test]${C.reset} API healthz failed. Is 'pnpm lume start' running?`);
     process.exit(1);
   }
   console.log(`${C.green}[test]${C.reset} API healthy`);
@@ -919,7 +919,7 @@ async function runForeground() {
   const procs = SERVICES.map((svc) => {
     // shell:IS_WINDOWS makes Node spawn `cmd.exe /d /s /c "pnpm ..."`. Without
     // windowsHide:true, that cmd.exe briefly flashes a console window every
-    // time we launch a service — five flashes per `pnpm demo run`. Hiding it
+    // time we launch a service — five flashes per `pnpm lume run`. Hiding it
     // costs nothing here because stdio is piped back to the parent terminal.
     const p = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
       env: serviceEnv(svc), shell: IS_WINDOWS, stdio: ['ignore', 'pipe', 'pipe'],
@@ -960,12 +960,12 @@ async function runForeground() {
 }
 
 function help() {
-  console.log(`${C.bold}PromptDemo local demo manager${C.reset}
+  console.log(`${C.bold}LumeSpec local demo manager${C.reset}
 
 Commands:
   ${C.green}start${C.reset}      Docker up + spawn 5 services in background
   ${C.red}stop${C.reset}       Kill background services + Docker down
-  ${C.red}clean-all${C.reset}  Nuclear option — kill every node/pnpm/tsx touching this repo or @promptdemo/* filters. Use after upgrading from a broken demo state.
+  ${C.red}clean-all${C.reset}  Nuclear option — kill every node/pnpm/tsx touching this repo or @lumespec/* filters. Use after upgrading from a broken demo state.
              Destructive: requires ${C.bold}--yes${C.reset} arg or DEMO_CLEAN_ALL_CONFIRM=1 env var.
   ${C.cyan}status${C.reset}     Check infra + service health
   ${C.yellow}test${C.reset}       End-to-end smoke: POST /api/jobs, poll until done
@@ -981,7 +981,7 @@ ${C.bold}Database (Feature 4 Postgres, AUTH_ENABLED=true):${C.reset}
              Destructive: also drops Redis + MinIO volumes in the same sweep.
   ${C.magenta}db:tables${C.reset}  List all tables + row counts in the dev database.
   ${C.magenta}tier:set${C.reset}   Set a user's subscription tier + reset credits balance.
-             Usage: pnpm demo tier:set <email> <free|pro|max>
+             Usage: pnpm lume tier:set <email> <free|pro|max>
              Tiers: free (30s) | pro (300s) | max (2000s)
 
   help       This message

@@ -11,7 +11,7 @@ spec:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "10"
     spec:
-      serviceAccountName: promptdemo-web@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-web@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 80
       timeoutSeconds: 60
       containers:

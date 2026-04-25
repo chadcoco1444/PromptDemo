@@ -1,5 +1,5 @@
 import { load } from 'cheerio';
-import { normalizeText } from '@promptdemo/schema';
+import { normalizeText } from '@lumespec/schema';
 
 export interface ExtractedFeature {
   title: string;

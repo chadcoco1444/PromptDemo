@@ -11,8 +11,8 @@ TAG="${1:-latest}"
 REGISTRY="${AR_REPO_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO_NAME}"
 IMAGE_STORYBOARD="${REGISTRY}/storyboard:${TAG}"
 
-REDIS_HOST=$(gcloud redis instances describe "${REDIS_INSTANCE_NAME:-promptdemo-redis}" --region="$GCP_REGION" --format="value(host)")
-REDIS_PORT=$(gcloud redis instances describe "${REDIS_INSTANCE_NAME:-promptdemo-redis}" --region="$GCP_REGION" --format="value(port)")
+REDIS_HOST=$(gcloud redis instances describe "${REDIS_INSTANCE_NAME:-lumespec-redis}" --region="$GCP_REGION" --format="value(host)")
+REDIS_PORT=$(gcloud redis instances describe "${REDIS_INSTANCE_NAME:-lumespec-redis}" --region="$GCP_REGION" --format="value(port)")
 export REDIS_HOST REDIS_PORT
 export IMAGE_STORYBOARD GCS_BUCKET_NAME GCP_PROJECT_ID GCP_REGION
 

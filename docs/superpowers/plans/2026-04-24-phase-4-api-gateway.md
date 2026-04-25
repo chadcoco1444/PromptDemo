@@ -1,4 +1,4 @@
-# PromptDemo v1.0 — Plan 4: API Gateway + Job Orchestrator
+# LumeSpec v1.0 — Plan 4: API Gateway + Job Orchestrator
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans.
 
@@ -6,9 +6,9 @@
 
 **Architecture:** Fastify REST API + SSE. On `POST /api/jobs`: validate input, create Redis-hashed Job, enqueue the first stage (crawl). BullMQ `QueueEvents` drive stage transitions: crawl completes → enqueue storyboard with the crawlResult URI → storyboard completes → gate-check render queue backpressure → if capacity, enqueue render, else mark `waiting_render_slot`. Render completes → job becomes `done` with `videoUrl`. SSE stream fans out stage events to subscribed clients.
 
-**Tech Stack:** Fastify 5, `@fastify/rate-limit`, `@fastify/cors`, `@fastify/sensible`, BullMQ 5, ioredis, zod, `@promptdemo/schema`.
+**Tech Stack:** Fastify 5, `@fastify/rate-limit`, `@fastify/cors`, `@fastify/sensible`, BullMQ 5, ioredis, zod, `@lumespec/schema`.
 
-**Spec reference:** `docs/superpowers/specs/2026-04-20-promptdemo-design.md` §1, §3.
+**Spec reference:** `docs/superpowers/specs/2026-04-20-lumespec-design.md` §1, §3.
 
 **Predecessor:** Plan 2 (`v0.2.0-storyboard-ai`) + Plan 3 (`v0.3.0-remotion-mvp`).
 
@@ -101,7 +101,7 @@ Also: `pnpm-workspace.yaml` already includes `apps/*` — `pnpm install` will pi
 
 ```json
 {
-  "name": "@promptdemo/api",
+  "name": "@lumespec/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -114,7 +114,7 @@ Also: `pnpm-workspace.yaml` already includes `apps/*` — `pnpm install` will pi
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@promptdemo/schema": "workspace:*",
+    "@lumespec/schema": "workspace:*",
     "@fastify/cors": "10.0.1",
     "@fastify/rate-limit": "10.1.1",
     "@fastify/sensible": "6.0.1",
@@ -157,7 +157,7 @@ console.log('api bootstrap pending');
 
 ```bash
 pnpm install
-pnpm --filter @promptdemo/api typecheck
+pnpm --filter @lumespec/api typecheck
 ```
 
 - [ ] **Step 5: Commit**
@@ -245,7 +245,7 @@ describe('JobSchema', () => {
 
 ```ts
 import { z } from 'zod';
-import { S3UriSchema } from '@promptdemo/schema';
+import { S3UriSchema } from '@lumespec/schema';
 
 export const JobStatusSchema = z.enum([
   'queued',
@@ -610,7 +610,7 @@ describe('reduceEvent', () => {
 
 ```ts
 import type { Job } from '../model/job.js';
-import type { S3Uri } from '@promptdemo/schema';
+import type { S3Uri } from '@lumespec/schema';
 
 export type OrchestratorEvent =
   | { kind: 'crawl:active'; progress?: number }
@@ -788,7 +788,7 @@ import type { QueueBundle } from '../queues.js';
 import type { JobStore } from '../jobStore.js';
 import type { Broker } from '../sse/broker.js';
 import type { Job } from '../model/job.js';
-import type { S3Uri } from '@promptdemo/schema';
+import type { S3Uri } from '@lumespec/schema';
 import { reduceEvent } from './stateMachine.js';
 import { shouldDeferRender, renderQueueDepth, DEFAULT_RENDER_CAP } from './backpressure.js';
 
@@ -1316,8 +1316,8 @@ export async function fabricateJobTimeline(jobId: string, store: JobStore, broke
   await push({ status: 'generating', stage: 'storyboard', progress: 0 }, { event: 'progress', data: { stage: 'storyboard', pct: 0 } });
   await push({ status: 'rendering', stage: 'render', progress: 0 }, { event: 'progress', data: { stage: 'render', pct: 0 } });
   await push(
-    { status: 'done', progress: 100, videoUrl: 's3://promptdemo-dev/mock/video.mp4' as any },
-    { event: 'done', data: { videoUrl: 's3://promptdemo-dev/mock/video.mp4' } }
+    { status: 'done', progress: 100, videoUrl: 's3://lumespec-dev/mock/video.mp4' as any },
+    { event: 'done', data: { videoUrl: 's3://lumespec-dev/mock/video.mp4' } }
   );
 }
 ```
@@ -1513,7 +1513,7 @@ git commit -m "feat(api): slim node Dockerfile with tini"
 
 git tag -a v0.4.0-api -m "Phase 4: API Gateway + job orchestrator
 
-Adds @promptdemo/api:
+Adds @lumespec/api:
 - Fastify 5 REST + SSE service
 - Job model (Zod) persisted in Redis hash with 7-day TTL
 - POST /api/jobs with rate limit (10/min/IP default)

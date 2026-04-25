@@ -1,4 +1,4 @@
-import type { Scene, Storyboard, FeatureVariant } from '@promptdemo/schema';
+import type { Scene, Storyboard, FeatureVariant } from '@lumespec/schema';
 
 export function selectVariants(
   scenes: Scene[],

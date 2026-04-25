@@ -17,7 +17,7 @@
 | Decision | Options considered | Chosen | Reason |
 |---|---|---|---|
 | Duration auto-correct tolerance | 5% (current) / 10% / 15% / unlimited | **10%** | 8.3% drift prorates invisibly; >10% signals a real Claude planning error worth retrying |
-| terminal hiding for `pnpm demo start` | VBS wrapper / Job Object / accept cosmetic | **Accept** | Per user's priority 3 (velocity), cosmetic terminal windows shouldn't block feature work. Documented as known issue. |
+| terminal hiding for `pnpm lume start` | VBS wrapper / Job Object / accept cosmetic | **Accept** | Per user's priority 3 (velocity), cosmetic terminal windows shouldn't block feature work. Documented as known issue. |
 | Feature 4 full integration vs scaffold-only | full / scaffold-only + guide | **Full integration** | After user provided Google OAuth creds, installing NextAuth + wiring auth.ts was feasible within the session. Still gated behind AUTH_ENABLED=false so it can't break the pipeline until user opts in. |
 | Feature 5 scaffolding | scaffold stubs / plan-only | **Plan-only** | Stripe keys not provided; every Stripe call path would be a useless stub. Detailed 9-task implementation guide written instead. |
 | Extractive check comma splitting | strong-separator only / add comma / fuzzy threshold up | **Add comma + segment normalization** | Real user case used commas + "and"; safe because per-segment whitelist match still prevents hallucinations |
@@ -50,7 +50,7 @@ All pushed to `main` on `origin`.
 
 ## User action items for tomorrow
 
-1. **Verify E2E works** — the 4 storyboard pipeline fixes (extractive list, duration, parseJson repair, integer coerce) should keep `pnpm demo test` passing across more URLs now. If a new failure class surfaces, it's probably still in parseJson's repair gaps — add the specific input to `parseJson.test.ts`.
+1. **Verify E2E works** — the 4 storyboard pipeline fixes (extractive list, duration, parseJson repair, integer coerce) should keep `pnpm lume test` passing across more URLs now. If a new failure class surfaces, it's probably still in parseJson's repair gaps — add the specific input to `parseJson.test.ts`.
 
 2. **Rotate the Google OAuth secret.** Transmitted via chat in plaintext. Google Cloud Console → Credentials → reset the secret, update `.env`.
 
@@ -67,7 +67,7 @@ All pushed to `main` on `origin`.
 
 ## Known issues (documented, not blocking)
 
-- **Windows 5 terminals** on `pnpm demo start` — cosmetic, doesn't affect services. Documented in `docs/superpowers/followups/2026-04-24-demo-orchestration-rewrite.md`. Fix would need Windows Job Objects (4-6h, fragile across versions).
+- **Windows 5 terminals** on `pnpm lume start` — cosmetic, doesn't affect services. Documented in `docs/superpowers/followups/2026-04-24-demo-orchestration-rewrite.md`. Fix would need Windows Job Objects (4-6h, fragile across versions).
 - **History page is skeleton-only** — `/api/users/me/jobs` endpoint + job store dual-write still to build. 2-3 hours to finish.
 - **SSE live-intel per stage** — spec Part 3 mockup shows "Frame 127/900 · fps 31.2" per stage. Current StageRail shows stage progress bar. Full intel requires 3-worker + orchestrator SSE event enrichment, ~2 hours. Punted.
 
@@ -87,7 +87,7 @@ After the original wrap-up (~00:40), user returned and asked to finish the items
   - 2 new api.test.ts cases pin the new 429 + 402 copy.
 
 ### Final user-visible improvements this extension
-- **E2E pipeline much more resilient** — 6 proactive Claude-output fixes total landed in this session. User confirmed `pnpm demo test` PASSES after the last storyboard fix.
+- **E2E pipeline much more resilient** — 6 proactive Claude-output fixes total landed in this session. User confirmed `pnpm lume test` PASSES after the last storyboard fix.
 - **History page actually works** — signs in, fetches, shows empty-state or real cards. Full flow: home → sign in → upload → `/history` shows the job.
 - **Submit errors read like a product**, not a stack trace (429 was the trigger; same friendly copy applies to 402 / 5xx).
 

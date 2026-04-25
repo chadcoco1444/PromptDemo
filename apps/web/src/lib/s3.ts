@@ -25,5 +25,5 @@ export function getS3Client(): S3Client {
 }
 
 export function getS3Bucket(): string {
-  return process.env.S3_BUCKET ?? 'promptdemo';
+  return process.env.S3_BUCKET ?? 'lumespec';
 }

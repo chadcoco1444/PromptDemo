@@ -9,11 +9,11 @@ spec:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "5"
         run.googleapis.com/cpu-throttling: "false"  # always-allocated CPU for BullMQ worker loop
-        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/lumespec-connector
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/startup-cpu-boost: "true"
     spec:
-      serviceAccountName: promptdemo-crawler@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-crawler@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 1
       timeoutSeconds: 600
       containers:

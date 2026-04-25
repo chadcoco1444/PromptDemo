@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { StoryboardSchema, type Storyboard } from '@promptdemo/schema';
+import { StoryboardSchema, type Storyboard } from '@lumespec/schema';
 
 const FIXTURES_DIR = fileURLToPath(
   new URL('../../../packages/schema/fixtures/', import.meta.url)

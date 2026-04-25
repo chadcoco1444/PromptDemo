@@ -13,7 +13,7 @@ describe('LandingFooter', () => {
 
   it('renders copyright text', () => {
     render(<LandingFooter />);
-    expect(screen.getByText(/2026 PromptDemo Inc/)).toBeTruthy();
+    expect(screen.getByText(/2026 LumeSpec Inc/)).toBeTruthy();
   });
 
   it('renders GitHub social link', () => {

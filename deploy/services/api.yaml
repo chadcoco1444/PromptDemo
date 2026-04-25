@@ -10,10 +10,10 @@ spec:
       annotations:
         autoscaling.knative.dev/minScale: "1"      # keep warm for SSE
         autoscaling.knative.dev/maxScale: "10"
-        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/promptdemo-connector
+        run.googleapis.com/vpc-access-connector: projects/${GCP_PROJECT_ID}/locations/${GCP_REGION}/connectors/lumespec-connector
         run.googleapis.com/vpc-access-egress: private-ranges-only
     spec:
-      serviceAccountName: promptdemo-api@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      serviceAccountName: lumespec-api@${GCP_PROJECT_ID}.iam.gserviceaccount.com
       containerConcurrency: 80
       timeoutSeconds: 3600                         # allow long-lived SSE
       containers:

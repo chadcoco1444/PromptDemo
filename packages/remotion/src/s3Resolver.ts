@@ -1,4 +1,4 @@
-import { parseS3Uri } from '@promptdemo/schema';
+import { parseS3Uri } from '@lumespec/schema';
 
 export interface S3ResolverConfig {
   endpoint: string; // http(s)://host[:port]

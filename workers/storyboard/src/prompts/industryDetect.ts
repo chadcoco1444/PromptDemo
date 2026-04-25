@@ -1,4 +1,4 @@
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 
 export type IndustryCategory =
   | 'developer_tool'

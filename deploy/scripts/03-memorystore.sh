@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${GCP_PROJECT_ID:?}"
 : "${GCP_REGION:=us-central1}"
-: "${REDIS_INSTANCE_NAME:=promptdemo-redis}"
+: "${REDIS_INSTANCE_NAME:=lumespec-redis}"
 : "${REDIS_TIER:=BASIC}"           # BASIC (no HA) for MVP; STANDARD_HA for prod
 : "${REDIS_SIZE_GB:=1}"
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
 import { TransitionSeries } from '@remotion/transitions';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 import { deriveTheme } from './utils/brandTheme';
 import { makeS3Resolver } from './s3Resolver';
 import { resolveScene } from './resolveScene';

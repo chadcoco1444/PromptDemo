@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { S3UriSchema } from '@promptdemo/schema';
+import { S3UriSchema } from '@lumespec/schema';
 
 export const JobStatusSchema = z.enum([
   'queued',

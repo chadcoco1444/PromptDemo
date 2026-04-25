@@ -35,7 +35,7 @@ importers:
       '@fastify/sensible':
         specifier: 6.0.1
         version: 6.0.1
-      '@promptdemo/schema':
+      '@lumespec/schema':
         specifier: workspace:*
         version: link:../../packages/schema
       bullmq:
@@ -163,7 +163,7 @@ importers:
 
   packages/remotion:
     dependencies:
-      '@promptdemo/schema':
+      '@lumespec/schema':
         specifier: workspace:*
         version: link:../schema
       '@remotion/bundler':
@@ -236,7 +236,7 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.658.1
         version: 3.658.1
-      '@promptdemo/schema':
+      '@lumespec/schema':
         specifier: workspace:*
         version: link:../../packages/schema
       bullmq:
@@ -276,10 +276,10 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.658.1
         version: 3.658.1
-      '@promptdemo/remotion':
+      '@lumespec/remotion':
         specifier: workspace:*
         version: link:../../packages/remotion
-      '@promptdemo/schema':
+      '@lumespec/schema':
         specifier: workspace:*
         version: link:../../packages/schema
       '@remotion/bundler':
@@ -322,7 +322,7 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.658.1
         version: 3.658.1
-      '@promptdemo/schema':
+      '@lumespec/schema':
         specifier: workspace:*
         version: link:../../packages/schema
       bullmq:

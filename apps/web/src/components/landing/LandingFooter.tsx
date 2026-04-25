@@ -18,7 +18,7 @@ const PRODUCT = [
 const SUPPORT = [
   { label: 'Documentation', href: '/docs' },
   { label: 'Help Center', href: '/help' },
-  { label: 'Contact', href: 'mailto:hi@promptdemo.dev' },
+  { label: 'Contact', href: 'mailto:hi@lumespec.dev' },
 ];
 
 const LEGAL = [
@@ -72,9 +72,9 @@ function DiscordIcon() {
 }
 
 const SOCIAL = [
-  { label: 'Twitter', href: 'https://twitter.com/promptdemo', Icon: TwitterIcon },
-  { label: 'GitHub', href: 'https://github.com/chadcoco1444/PromptDemo', Icon: GitHubIcon },
-  { label: 'Discord', href: 'https://discord.gg/promptdemo', Icon: DiscordIcon },
+  { label: 'Twitter', href: 'https://twitter.com/lumespec', Icon: TwitterIcon },
+  { label: 'GitHub', href: 'https://github.com/chadcoco1444/LumeSpec', Icon: GitHubIcon },
+  { label: 'Discord', href: 'https://discord.gg/lumespec', Icon: DiscordIcon },
 ];
 
 export function LandingFooter() {
@@ -89,8 +89,8 @@ export function LandingFooter() {
         </div>
         <div className="mt-16 pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="font-bold text-white text-sm">PromptDemo</span>
-            <span className="text-xs text-gray-500">© 2026 PromptDemo Inc.</span>
+            <span className="font-bold text-white text-sm">LumeSpec</span>
+            <span className="text-xs text-gray-500">© 2026 LumeSpec Inc.</span>
           </div>
           <div className="flex items-center gap-4">
             {SOCIAL.map(({ label, href, Icon }) => (

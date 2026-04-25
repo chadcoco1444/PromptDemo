@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { Storyboard } from '@promptdemo/schema';
-import { StoryboardSchema } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
+import { StoryboardSchema } from '@lumespec/schema';
 
 describe('variant storyboard validation smoke', () => {
   it('a storyboard with one of each variant parses against v2 schema', () => {

@@ -62,7 +62,7 @@ export function LandingFeatures() {
             Ship the demo, not the screenshot.
           </h2>
           <p className="mt-3 text-sm italic text-gray-400">
-            Three things make PromptDemo different from the slideshow exporters.
+            Three things make LumeSpec different from the slideshow exporters.
           </p>
         </motion.div>
 

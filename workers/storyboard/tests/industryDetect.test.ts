@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { detectIndustry, STYLE_MODIFIERS } from '../src/prompts/industryDetect.js';
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 
 // Minimal fixture — extend only the fields detectIndustry actually reads
 function make(overrides: {

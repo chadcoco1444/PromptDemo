@@ -3,7 +3,7 @@
  * Renders PromoComposition → docs/readme/demo.mp4
  *
  * Lives inside packages/remotion/ so Node ESM can resolve @remotion/* from
- * this package's own node_modules. Invoked via `pnpm demo render:promo`.
+ * this package's own node_modules. Invoked via `pnpm lume render:promo`.
  *
  * Usage:
  *   node packages/remotion/render-promo.mjs [--gif]

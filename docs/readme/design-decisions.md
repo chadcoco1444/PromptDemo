@@ -59,7 +59,7 @@ Every failure mode below was a real bug a user hit during E2E testing. Each one 
 
 ## Direct node spawn for Windows PID tracking
 
-`pnpm demo start` originally spawned services via `spawn('cmd.exe', ['/c', 'pnpm', '--filter', svc, 'dev'])`. Problem: the chain is `cmd → pnpm.cmd → node`. `pnpm.cmd` is a batch file that spawns node then exits; `cmd.exe` reaps the dead `pnpm.cmd` and itself exits. **The PID we saved to `.tmp/demo/pids/<svc>.pid` died within 500ms**, while the actual worker `node.exe` kept running as an orphan process group.
+`pnpm lume start` originally spawned services via `spawn('cmd.exe', ['/c', 'pnpm', '--filter', svc, 'dev'])`. Problem: the chain is `cmd → pnpm.cmd → node`. `pnpm.cmd` is a batch file that spawns node then exits; `cmd.exe` reaps the dead `pnpm.cmd` and itself exits. **The PID we saved to `.tmp/demo/pids/<svc>.pid` died within 500ms**, while the actual worker `node.exe` kept running as an orphan process group.
 
 Downstream symptoms:
 - `demo status` reported DOWN (saved PID is dead → `isAlive(pid)` false) even though the service was serving requests.
@@ -78,7 +78,7 @@ The parent process we track IS the long-running node. `taskkill /T` propagates t
 
 ## Why `terminal hiding` is the known-hard followup
 
-`spawn(node, args, { detached: true, windowsHide: true, shell: false })` successfully hides the node.exe console. But tsx's internal `child_process.spawn` for the watched script doesn't propagate `windowsHide`, and Next.js's bundler worker fork doesn't either. Every `pnpm demo start` on Windows pops 5 empty console windows for the grandchildren.
+`spawn(node, args, { detached: true, windowsHide: true, shell: false })` successfully hides the node.exe console. But tsx's internal `child_process.spawn` for the watched script doesn't propagate `windowsHide`, and Next.js's bundler worker fork doesn't either. Every `pnpm lume start` on Windows pops 5 empty console windows for the grandchildren.
 
 Options evaluated:
 1. **VBScript wrapper** (`WScript.Shell.Run ..., 0, False`) — `vbHide` hides reliably but PID tracking gets ugly: VBS doesn't expose the child PID, so we'd have to scrape it from netstat or a sentinel file.

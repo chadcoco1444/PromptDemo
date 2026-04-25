@@ -1,4 +1,4 @@
-# PromptDemo v2.0 — PRD + Architecture Review
+# LumeSpec v2.0 — PRD + Architecture Review
 
 **Date:** 2026-04-24
 **Status:** Design spec — approved by architecture review 2026-04-24; ready for per-feature `writing-plans`. See "Post-Review Amendments" at bottom for final tweaks.
@@ -6,7 +6,7 @@
 
 ---
 
-# Part 1: PromptDemo v2.0 PRD
+# Part 1: LumeSpec v2.0 PRD
 
 ## Executive Summary
 

@@ -29,7 +29,7 @@ function checkTcp(name, host, port, timeoutMs = 1500) {
 
 async function checkMinioBucket() {
   const endpoint = process.env.S3_ENDPOINT ?? 'http://localhost:9000';
-  const bucket = process.env.S3_BUCKET ?? 'promptdemo-dev';
+  const bucket = process.env.S3_BUCKET ?? 'lumespec-dev';
   const s3 = new S3Client({
     region: process.env.S3_REGION ?? 'us-east-1',
     endpoint,

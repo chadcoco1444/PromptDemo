@@ -1,4 +1,4 @@
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 import { rescaleFrames } from '../rescaleFrames.js';
 
 type MinimalScene = { durationInFrames: number };

@@ -1,4 +1,4 @@
-# PromptDemo v1.0 — Plan 2: Storyboard AI Worker
+# LumeSpec v1.0 — Plan 2: Storyboard AI Worker
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -6,9 +6,9 @@
 
 **Architecture:** One worker, one BullMQ queue (`storyboard`). Reads `CrawlResult` from S3 via the s3:// URI handed off by the crawler. Calls `claude-sonnet-4-6` with a cached system prompt. Runs a 5-stage validation pipeline (parse → Zod → extractive → duration → done). Retries up to 3× with error feedback for self-correction. Writes the validated `Storyboard` JSON back to S3 and reports the URI.
 
-**Tech Stack:** TypeScript, `@anthropic-ai/sdk` (with prompt caching), `fuse.js` (Latin extractive match), BullMQ, ioredis, vitest, `@promptdemo/schema` (CrawlResult, Storyboard, normalizeText).
+**Tech Stack:** TypeScript, `@anthropic-ai/sdk` (with prompt caching), `fuse.js` (Latin extractive match), BullMQ, ioredis, vitest, `@lumespec/schema` (CrawlResult, Storyboard, normalizeText).
 
-**Spec reference:** `docs/superpowers/specs/2026-04-20-promptdemo-design.md` §5.
+**Spec reference:** `docs/superpowers/specs/2026-04-20-lumespec-design.md` §5.
 
 **Predecessor:** Plan 1 (`v0.1.0-foundation` tag, 29 commits).
 
@@ -90,7 +90,7 @@ Phase 2 is 14 tasks. Pacing: Tasks 2.1–2.2 are scaffolding; 2.3–2.9 are pure
 
 ```json
 {
-  "name": "@promptdemo/worker-storyboard",
+  "name": "@lumespec/worker-storyboard",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -103,7 +103,7 @@ Phase 2 is 14 tasks. Pacing: Tasks 2.1–2.2 are scaffolding; 2.3–2.9 are pure
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@promptdemo/schema": "workspace:*",
+    "@lumespec/schema": "workspace:*",
     "@anthropic-ai/sdk": "0.30.1",
     "@aws-sdk/client-s3": "3.658.1",
     "bullmq": "5.21.2",
@@ -148,7 +148,7 @@ console.log('storyboard worker bootstrap pending');
 
 ```bash
 pnpm install
-pnpm --filter @promptdemo/worker-storyboard typecheck
+pnpm --filter @lumespec/worker-storyboard typecheck
 ```
 
 Expected: install succeeds, typecheck green.
@@ -179,7 +179,7 @@ No push.
 Append to the copied file:
 ```ts
 import { GetObjectCommand } from '@aws-sdk/client-s3';
-import { parseS3Uri } from '@promptdemo/schema';
+import { parseS3Uri } from '@lumespec/schema';
 
 export async function getObjectJson<T>(client: S3Client, uri: string): Promise<T> {
   const { bucket, key } = parseS3Uri(uri);
@@ -195,8 +195,8 @@ export async function getObjectJson<T>(client: S3Client, uri: string): Promise<T
 - [ ] **Step 4: Typecheck + test**
 
 ```bash
-pnpm --filter @promptdemo/worker-storyboard typecheck
-pnpm --filter @promptdemo/worker-storyboard test
+pnpm --filter @lumespec/worker-storyboard typecheck
+pnpm --filter @lumespec/worker-storyboard test
 ```
 
 Expected: 2 tests pass (buildKey cases).
@@ -268,7 +268,7 @@ describe('rescaleFrames', () => {
 - [ ] **Step 2: Run — must fail**
 
 ```bash
-pnpm --filter @promptdemo/worker-storyboard test -- rescaleFrames
+pnpm --filter @lumespec/worker-storyboard test -- rescaleFrames
 ```
 
 - [ ] **Step 3: Implement**
@@ -378,7 +378,7 @@ describe('adjustDuration', () => {
 - [ ] **Step 3: Implement**
 
 ```ts
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 import { rescaleFrames } from '../rescaleFrames.js';
 
 type MinimalScene = { durationInFrames: number };
@@ -522,7 +522,7 @@ git commit -m "feat(storyboard): JSON parser with markdown fence stripping"
 ```ts
 import { describe, it, expect } from 'vitest';
 import { zodValidate } from '../src/validation/zodValidate.js';
-import validStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json' with { type: 'json' };
+import validStoryboard from '@lumespec/schema/fixtures/storyboard.30s.json' with { type: 'json' };
 
 describe('zodValidate', () => {
   it('accepts valid fixture', () => {
@@ -544,7 +544,7 @@ describe('zodValidate', () => {
 - [ ] **Step 2: Impl**
 
 ```ts
-import { StoryboardSchema, type Storyboard } from '@promptdemo/schema';
+import { StoryboardSchema, type Storyboard } from '@lumespec/schema';
 
 export type ValidateResult =
   | { kind: 'ok'; storyboard: Storyboard }
@@ -573,7 +573,7 @@ git commit -m "feat(storyboard): Zod validate stage with flattened issue list"
 
 - **Latin**: Fuse.js threshold 0.3.
 - **CJK** (detect via Unicode range in the candidate text): fall back to normalized substring match within the concatenated sourceTexts pool — Fuse.js's whitespace tokenizer breaks on CJK.
-- Both sides use `normalizeText` from `@promptdemo/schema`.
+- Both sides use `normalizeText` from `@lumespec/schema`.
 
 **Files:**
 - Create: `workers/storyboard/src/validation/extractiveCheck.ts`
@@ -584,7 +584,7 @@ git commit -m "feat(storyboard): Zod validate stage with flattened issue list"
 ```ts
 import { describe, it, expect } from 'vitest';
 import { extractiveCheck, collectSceneTexts } from '../src/validation/extractiveCheck.js';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 const basePool = [
   'ship production-grade ai workflows in minutes',
@@ -721,7 +721,7 @@ describe('extractiveCheck (CJK)', () => {
 
 ```ts
 import Fuse from 'fuse.js';
-import { normalizeText, type Scene, type Storyboard } from '@promptdemo/schema';
+import { normalizeText, type Scene, type Storyboard } from '@lumespec/schema';
 
 const FUSE_THRESHOLD = 0.3;
 const CJK_RE = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/;
@@ -828,7 +828,7 @@ git commit -m "feat(storyboard): extractive check with Latin Fuse + CJK N-gram f
 - [ ] **Step 1: Write `sceneTypeCatalog.ts`** — human-readable scene descriptions for Claude:
 
 ```ts
-import { SCENE_TYPES } from '@promptdemo/schema';
+import { SCENE_TYPES } from '@lumespec/schema';
 
 export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
   HeroRealShot:
@@ -970,8 +970,8 @@ git commit -m "feat(storyboard): cached system prompt + scene type catalog"
 ```ts
 import { describe, it, expect } from 'vitest';
 import { buildUserMessage } from '../src/prompts/userMessage.js';
-import crawlFixture from '@promptdemo/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
-import type { CrawlResult } from '@promptdemo/schema';
+import crawlFixture from '@lumespec/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
+import type { CrawlResult } from '@lumespec/schema';
 
 const crawl = crawlFixture as CrawlResult;
 
@@ -1012,7 +1012,7 @@ describe('buildUserMessage', () => {
 - [ ] **Step 2: Impl**
 
 ```ts
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 
 const DURATION_TO_FRAMES = { 10: 300, 30: 900, 60: 1800 } as const;
 
@@ -1200,9 +1200,9 @@ git commit -m "feat(storyboard): claude client wrapper with prompt caching"
 import { describe, it, expect, vi } from 'vitest';
 import { generateStoryboard } from '../src/generator.js';
 import type { ClaudeClient } from '../src/claude/claudeClient.js';
-import crawlFixture from '@promptdemo/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
-import validStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json' with { type: 'json' };
-import type { CrawlResult } from '@promptdemo/schema';
+import crawlFixture from '@lumespec/schema/fixtures/crawlResult.saas-landing.json' with { type: 'json' };
+import validStoryboard from '@lumespec/schema/fixtures/storyboard.30s.json' with { type: 'json' };
+import type { CrawlResult } from '@lumespec/schema';
 
 const crawl = crawlFixture as CrawlResult;
 
@@ -1277,7 +1277,7 @@ describe('generateStoryboard', () => {
 - [ ] **Step 2: Impl**
 
 ```ts
-import type { CrawlResult, Storyboard } from '@promptdemo/schema';
+import type { CrawlResult, Storyboard } from '@lumespec/schema';
 import { buildSystemPrompt } from './prompts/systemPrompt.js';
 import { buildUserMessage } from './prompts/userMessage.js';
 import { parseJson } from './validation/parseJson.js';
@@ -1376,7 +1376,7 @@ git commit -m "feat(storyboard): pipeline orchestrator with self-correcting retr
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { StoryboardSchema, type Storyboard } from '@promptdemo/schema';
+import { StoryboardSchema, type Storyboard } from '@lumespec/schema';
 
 const FIXTURES_DIR = fileURLToPath(
   new URL('../../../../packages/schema/fixtures/', import.meta.url)
@@ -1424,7 +1424,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Worker, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
-import { CrawlResultSchema, type Storyboard } from '@promptdemo/schema';
+import { CrawlResultSchema, type Storyboard } from '@lumespec/schema';
 import { makeS3Client, putObject, buildKey, s3ConfigFromEnv, getObjectJson } from './s3/s3Client.js';
 import { generateStoryboard } from './generator.js';
 import { createClaudeClient } from './claude/claudeClient.js';
@@ -1518,8 +1518,8 @@ console.log(`[storyboard] worker started, queue=storyboard, mock=${mockMode}`);
 - [ ] **Step 4: Typecheck + test**
 
 ```bash
-pnpm --filter @promptdemo/worker-storyboard typecheck
-pnpm --filter @promptdemo/worker-storyboard test
+pnpm --filter @lumespec/worker-storyboard typecheck
+pnpm --filter @lumespec/worker-storyboard test
 ```
 
 - [ ] **Step 5: Commit**
@@ -1590,7 +1590,7 @@ Expected: 88 (Plan 1) + ~35 (Plan 2 storyboard tests) = ~123 total, all green.
 ```bash
 git tag -a v0.2.0-storyboard-ai -m "Phase 2: Storyboard AI worker complete
 
-Adds @promptdemo/worker-storyboard:
+Adds @lumespec/worker-storyboard:
 - Cached system prompt with 10 scene type catalog + extractive rules
 - User message builder with regenerate context
 - 5-stage validation pipeline (parse → Zod → extractive → duration → done)

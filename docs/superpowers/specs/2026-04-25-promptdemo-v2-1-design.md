@@ -1,4 +1,4 @@
-# PromptDemo v2.1 — Hardening + UX Polish Design Spec
+# LumeSpec v2.1 — Hardening + UX Polish Design Spec
 
 **Status:** as-built. Phases 1–5 shipped 2026-04-25.
 
@@ -16,7 +16,7 @@
 
 **Problem.** Plaintext `X-User-Id` was trusted by Fastify. Anyone reaching apps/api directly could forge any userId.
 
-**Decision.** HS256 JWT signed with `INTERNAL_API_SECRET` at the Next.js BFF, verified at Fastify. 60s exp, `iss=promptdemo-web`, `aud=promptdemo-api`. Plain `X-User-Id` is rejected unconditionally when `requireUserIdHeader=true`.
+**Decision.** HS256 JWT signed with `INTERNAL_API_SECRET` at the Next.js BFF, verified at Fastify. 60s exp, `iss=lumespec-web`, `aud=lumespec-api`. Plain `X-User-Id` is rejected unconditionally when `requireUserIdHeader=true`.
 
 **Tradeoffs considered:**
 - **A) JWT (chosen)** — Standard, libraries handle replay window via exp. ~30KB jose.
@@ -36,7 +36,7 @@
 
 ### 1.3 Windows hidden launcher
 
-**Decision.** Wrote `scripts/start-hidden.vbs` (20 lines) that runs `pnpm demo start` with `windowStyle=0`. Defense-in-depth supplement to the `windowsHide:true` flags shipped in `a0b0d0d`. Completed within timebox.
+**Decision.** Wrote `scripts/start-hidden.vbs` (20 lines) that runs `pnpm lume start` with `windowStyle=0`. Defense-in-depth supplement to the `windowsHide:true` flags shipped in `a0b0d0d`. Completed within timebox.
 
 ---
 

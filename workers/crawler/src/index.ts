@@ -13,7 +13,7 @@ import { runScreenshotOneTrack } from './tracks/screenshotOneTrack.js';
 import { runCheerioTrack } from './tracks/cheerioTrack.js';
 import { downloadLogo } from './logoDownloader.js';
 import { startHealthServer } from './health.js';
-import { makeIntel, type S3Uri } from '@promptdemo/schema';
+import { makeIntel, type S3Uri } from '@lumespec/schema';
 
 const JobPayload = z.object({ jobId: z.string().min(1), url: z.string().url() });
 type JobPayload = z.infer<typeof JobPayload>;

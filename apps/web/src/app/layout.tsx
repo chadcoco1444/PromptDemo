@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: 'PromptDemo',
+  title: 'LumeSpec',
   description: 'Turn any URL into a demo video',
 };
 
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-md">
           <div className="max-w-5xl mx-auto p-4 flex items-center gap-4">
             <a href="/" className="font-semibold text-lg tracking-tight">
-              PromptDemo
+              LumeSpec
             </a>
             <div className="ml-auto flex items-center gap-3">
               <UsageIndicator />

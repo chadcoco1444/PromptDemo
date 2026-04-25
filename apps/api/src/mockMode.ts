@@ -1,7 +1,7 @@
 import type { Broker } from './sse/broker.js';
 import type { JobStore } from './jobStore.js';
 import type { Job } from './model/job.js';
-import type { S3Uri } from '@promptdemo/schema';
+import type { S3Uri } from '@lumespec/schema';
 
 export async function fabricateJobTimeline(
   jobId: string,
@@ -27,7 +27,7 @@ export async function fabricateJobTimeline(
     { status: 'rendering', stage: 'render', progress: 0 },
     { event: 'progress', data: { stage: 'render', pct: 0 } }
   );
-  const mockVideoUrl = 's3://promptdemo-dev/mock/video.mp4' as S3Uri;
+  const mockVideoUrl = 's3://lumespec-dev/mock/video.mp4' as S3Uri;
   await push(
     { status: 'done', progress: 100, videoUrl: mockVideoUrl },
     { event: 'done', data: { videoUrl: mockVideoUrl } }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { runCrawl } from '../src/orchestrator.js';
-import { toS3Uri, type S3Uri } from '@promptdemo/schema';
+import { toS3Uri, type S3Uri } from '@lumespec/schema';
 import type { PlaywrightTrackResult } from '../src/tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from '../src/tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from '../src/tracks/cheerioTrack.js';

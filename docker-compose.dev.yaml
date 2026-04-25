@@ -27,8 +27,8 @@ services:
       /bin/sh -c "
       sleep 2;
       mc alias set local http://minio:9000 minioadmin minioadmin;
-      mc mb --ignore-existing local/promptdemo-dev;
-      mc anonymous set download local/promptdemo-dev;
+      mc mb --ignore-existing local/lumespec-dev;
+      mc anonymous set download local/lumespec-dev;
       exit 0;
       "
 
@@ -41,14 +41,14 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: promptdemo
-      POSTGRES_PASSWORD: promptdemo
-      POSTGRES_DB: promptdemo
+      POSTGRES_USER: lumespec
+      POSTGRES_PASSWORD: lumespec
+      POSTGRES_DB: lumespec
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U promptdemo -d promptdemo']
+      test: ['CMD-SHELL', 'pg_isready -U lumespec -d lumespec']
       interval: 5s
       timeout: 3s
       retries: 10

@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js';
-import { normalizeText, type Scene, type Storyboard } from '@promptdemo/schema';
+import { normalizeText, type Scene, type Storyboard } from '@lumespec/schema';
 
 const FUSE_THRESHOLD = 0.3;
 const CJK_RE = /[぀-ヿ㐀-䶿一-鿿가-힯豈-﫿]/;

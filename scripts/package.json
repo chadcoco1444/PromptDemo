@@ -1,5 +1,5 @@
 {
-  "name": "@promptdemo-internal/scripts",
+  "name": "@lumespec-internal/scripts",
   "private": true,
   "type": "module",
   "scripts": {

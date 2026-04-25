@@ -36,18 +36,18 @@ grant() {
     --role="roles/secretmanager.secretAccessor"
 }
 
-grant gcs-hmac-access-id promptdemo-crawler
-grant gcs-hmac-secret    promptdemo-crawler
-grant gcs-hmac-access-id promptdemo-storyboard
-grant gcs-hmac-secret    promptdemo-storyboard
-grant gcs-hmac-access-id promptdemo-render
-grant gcs-hmac-secret    promptdemo-render
-grant gcs-hmac-access-id promptdemo-api
-grant gcs-hmac-secret    promptdemo-api
-grant anthropic-api-key  promptdemo-storyboard
+grant gcs-hmac-access-id lumespec-crawler
+grant gcs-hmac-secret    lumespec-crawler
+grant gcs-hmac-access-id lumespec-storyboard
+grant gcs-hmac-secret    lumespec-storyboard
+grant gcs-hmac-access-id lumespec-render
+grant gcs-hmac-secret    lumespec-render
+grant gcs-hmac-access-id lumespec-api
+grant gcs-hmac-secret    lumespec-api
+grant anthropic-api-key  lumespec-storyboard
 
 if [[ -n "$SCREENSHOTONE_ACCESS_KEY" ]]; then
-  grant screenshotone-access-key promptdemo-crawler
+  grant screenshotone-access-key lumespec-crawler
 fi
 
 echo "Secrets provisioned + IAM bindings granted."

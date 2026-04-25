@@ -4,15 +4,15 @@ import { makeS3Resolver } from '../src/s3Resolver.js';
 describe('makeS3Resolver', () => {
   it('maps s3://bucket/key → endpoint/bucket/key for path-style access', () => {
     const resolve = makeS3Resolver({ endpoint: 'http://localhost:9000', forcePathStyle: true });
-    expect(resolve('s3://promptdemo-dev/jobs/j/hero.jpg')).toBe(
-      'http://localhost:9000/promptdemo-dev/jobs/j/hero.jpg'
+    expect(resolve('s3://lumespec-dev/jobs/j/hero.jpg')).toBe(
+      'http://localhost:9000/lumespec-dev/jobs/j/hero.jpg'
     );
   });
 
   it('maps s3://bucket/key → https://bucket.endpoint/key for virtual-host style', () => {
     const resolve = makeS3Resolver({ endpoint: 'https://s3.amazonaws.com', forcePathStyle: false });
-    expect(resolve('s3://promptdemo-prod/x/y.jpg')).toBe(
-      'https://promptdemo-prod.s3.amazonaws.com/x/y.jpg'
+    expect(resolve('s3://lumespec-prod/x/y.jpg')).toBe(
+      'https://lumespec-prod.s3.amazonaws.com/x/y.jpg'
     );
   });
 

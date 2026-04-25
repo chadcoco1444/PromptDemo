@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Scene, CrawlResult } from '@promptdemo/schema';
+import type { Scene, CrawlResult } from '@lumespec/schema';
 import { resolveScene } from '../src/resolveScene.js';
 import { deriveTheme } from '../src/utils/brandTheme.js';
 
@@ -90,4 +90,4 @@ describe('resolveScene', () => {
 });
 
 // Minimal type import so tests are self-contained
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';

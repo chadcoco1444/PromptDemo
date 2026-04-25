@@ -1,4 +1,4 @@
-import type { CrawlResult } from '@promptdemo/schema';
+import type { CrawlResult } from '@lumespec/schema';
 import { detectIndustry, STYLE_MODIFIERS } from './industryDetect.js';
 
 const DURATION_TO_FRAMES = { 10: 300, 30: 900, 60: 1800 } as const;

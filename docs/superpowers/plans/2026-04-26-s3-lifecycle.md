@@ -175,8 +175,8 @@ MinIO uses the AWS S3 lifecycle XML format (not the GCS JSON format). It support
       /bin/sh -c "
       sleep 2;
       mc alias set local http://minio:9000 minioadmin minioadmin;
-      mc mb --ignore-existing local/promptdemo-dev;
-      mc anonymous set download local/promptdemo-dev;
+      mc mb --ignore-existing local/lumespec-dev;
+      mc anonymous set download local/lumespec-dev;
       exit 0;
       "
   ```
@@ -194,9 +194,9 @@ MinIO uses the AWS S3 lifecycle XML format (not the GCS JSON format). It support
       /bin/sh -c "
       sleep 2;
       mc alias set local http://minio:9000 minioadmin minioadmin;
-      mc mb --ignore-existing local/promptdemo-dev;
-      mc anonymous set download local/promptdemo-dev;
-      mc ilm import local/promptdemo-dev < /lifecycle.xml;
+      mc mb --ignore-existing local/lumespec-dev;
+      mc anonymous set download local/lumespec-dev;
+      mc ilm import local/lumespec-dev < /lifecycle.xml;
       echo '[minio-init] lifecycle policy applied';
       exit 0;
       "
@@ -212,9 +212,9 @@ MinIO uses the AWS S3 lifecycle XML format (not the GCS JSON format). It support
   ```bash
   docker compose -f docker-compose.dev.yaml exec -T minio-init sh -c "
     mc alias set local http://minio:9000 minioadmin minioadmin 2>/dev/null;
-    mc ilm ls local/promptdemo-dev
-  " 2>/dev/null || docker run --rm --network=promptdemo_default minio/mc:RELEASE.2024-10-02T08-27-28Z \
-    sh -c "mc alias set local http://minio:9000 minioadmin minioadmin && mc ilm ls local/promptdemo-dev"
+    mc ilm ls local/lumespec-dev
+  " 2>/dev/null || docker run --rm --network=lumespec_default minio/mc:RELEASE.2024-10-02T08-27-28Z \
+    sh -c "mc alias set local http://minio:9000 minioadmin minioadmin && mc ilm ls local/lumespec-dev"
   ```
 
   Expected output: shows 1 rule for `jobs/` with expiry 7 days.

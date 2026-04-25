@@ -1,5 +1,5 @@
 import { load } from 'cheerio';
-import { normalizeText } from '@promptdemo/schema';
+import { normalizeText } from '@lumespec/schema';
 
 const SELECTORS = ['title', 'meta[name="description"]', 'h1', 'h2', 'h3', 'strong', 'li'];
 

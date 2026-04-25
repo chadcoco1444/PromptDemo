@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { zodValidate } from '../src/validation/zodValidate.js';
-import validStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json' with { type: 'json' };
+import validStoryboard from '@lumespec/schema/fixtures/storyboard.30s.json' with { type: 'json' };
 
 describe('zodValidate', () => {
   it('accepts valid fixture', () => {

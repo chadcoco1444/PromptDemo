@@ -1,4 +1,4 @@
-# PromptDemo Deployment Runbook
+# LumeSpec Deployment Runbook
 
 Target: GCP Cloud Run + Memorystore + GCS (S3-compat).
 
@@ -44,13 +44,13 @@ Push a tag matching `v*.*.*-deploy` — GitHub Actions rebuilds + redeploys all 
 ## Serverless VPC Connector (one-time, for Redis access)
 
 ```bash
-gcloud compute networks vpc-access connectors create promptdemo-connector \
+gcloud compute networks vpc-access connectors create lumespec-connector \
   --region="$GCP_REGION" \
   --network=default \
   --range=10.8.0.0/28
 ```
 
-Each worker service's deploy command passes `--vpc-connector=promptdemo-connector` so it can reach the Memorystore instance.
+Each worker service's deploy command passes `--vpc-connector=lumespec-connector` so it can reach the Memorystore instance.
 
 ## Cost preview (us-central1, fair-use)
 
@@ -98,7 +98,7 @@ Cause: Cloud Run service is missing the Serverless VPC Connector, or the
 connector is in a different network than the Memorystore instance.
 
 Fix: confirm `run.googleapis.com/vpc-access-connector` annotation in the
-service YAML points to `projects/$GCP_PROJECT_ID/locations/$GCP_REGION/connectors/promptdemo-connector`,
+service YAML points to `projects/$GCP_PROJECT_ID/locations/$GCP_REGION/connectors/lumespec-connector`,
 and that the connector and Memorystore share the same `authorizedNetwork`
 (typically `default`). Re-run `gcloud run services replace` after fixing.
 
@@ -117,7 +117,7 @@ with:
 gcloud storage buckets get-iam-policy "gs://$GCS_BUCKET_NAME"
 ```
 
-The HMAC keypair is tied to the `promptdemo-storage` service account — if you
+The HMAC keypair is tied to the `lumespec-storage` service account — if you
 rotate HMAC keys, the new key inherits that SA's roles.
 
 ### Cloud Run quota: `CPU allocation exceeded`

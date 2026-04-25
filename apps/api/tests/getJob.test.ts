@@ -5,7 +5,7 @@ import { getJobRoute } from '../src/routes/getJob.js';
 import { getStoryboardRoute } from '../src/routes/getStoryboard.js';
 import { makeJobStore } from '../src/jobStore.js';
 import type { Job } from '../src/model/job.js';
-import { S3UriSchema } from '@promptdemo/schema';
+import { S3UriSchema } from '@lumespec/schema';
 
 const sample: Job = {
   jobId: 'j1',

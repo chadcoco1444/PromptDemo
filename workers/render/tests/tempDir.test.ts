@@ -6,7 +6,7 @@ import { join } from 'node:path';
 describe('withTempDir', () => {
   it('creates dir, runs fn, cleans up on success', async () => {
     let path = '';
-    const result = await withTempDir('promptdemo-render-', async (dir) => {
+    const result = await withTempDir('lumespec-render-', async (dir) => {
       path = dir;
       writeFileSync(join(dir, 'hello.txt'), 'hi');
       return 42;
@@ -18,7 +18,7 @@ describe('withTempDir', () => {
   it('cleans up even when the fn throws', async () => {
     let path = '';
     await expect(
-      withTempDir('promptdemo-render-', async (dir) => {
+      withTempDir('lumespec-render-', async (dir) => {
         path = dir;
         throw new Error('boom');
       })

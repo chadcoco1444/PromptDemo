@@ -1,4 +1,4 @@
-import { StoryboardSchema, type Storyboard } from '@promptdemo/schema';
+import { StoryboardSchema, type Storyboard } from '@lumespec/schema';
 import { getPacingRules, type PacingProfile } from '../prompts/pacingProfiles.js';
 
 export type ValidateResult =

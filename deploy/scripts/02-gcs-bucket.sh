@@ -14,11 +14,11 @@ else
 fi
 
 echo "Generating HMAC keys for S3-interop access (one-time)..."
-SA_EMAIL="promptdemo-storage@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+SA_EMAIL="lumespec-storage@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
 
 if ! gcloud iam service-accounts describe "$SA_EMAIL" >/dev/null 2>&1; then
-  gcloud iam service-accounts create promptdemo-storage \
-    --display-name="PromptDemo S3-interop service account"
+  gcloud iam service-accounts create lumespec-storage \
+    --display-name="LumeSpec S3-interop service account"
 fi
 
 gcloud storage buckets add-iam-policy-binding "gs://${GCS_BUCKET_NAME}" \

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { selectVariants } from '../src/variantSelection';
-import type { Scene, Storyboard, FeatureVariant } from '@promptdemo/schema';
+import type { Scene, Storyboard, FeatureVariant } from '@lumespec/schema';
 
 function fc(sceneId: number, extra: Partial<{ variant: FeatureVariant }> = {}): Scene {
   return {

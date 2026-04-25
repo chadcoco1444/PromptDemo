@@ -89,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_intent_trgm
 - [ ] **Step 2: Apply the migration to the dev DB**
 
 ```bash
-docker exec -i promptdemo-postgres-1 psql -U promptdemo -d promptdemo < db/migrations/003_history_polish.sql
+docker exec -i lumespec-postgres-1 psql -U lumespec -d lumespec < db/migrations/003_history_polish.sql
 ```
 
 Expected: two `CREATE` lines, no errors. (Re-run is safe — both statements are idempotent.)
@@ -97,7 +97,7 @@ Expected: two `CREATE` lines, no errors. (Re-run is safe — both statements are
 - [ ] **Step 3: Verify the index is queryable**
 
 ```bash
-docker exec promptdemo-postgres-1 psql -U promptdemo -d promptdemo -c "\\di idx_jobs_intent_trgm"
+docker exec lumespec-postgres-1 psql -U lumespec -d lumespec -c "\\di idx_jobs_intent_trgm"
 ```
 
 Expected: one row showing `idx_jobs_intent_trgm | gin | jobs`.
@@ -197,7 +197,7 @@ describe('serializeHistoryQuery', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/lib/history-query.test.ts
+pnpm -F @lumespec/web test tests/lib/history-query.test.ts
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -290,7 +290,7 @@ export function serializeHistoryQuery(q: HistoryQuery): URLSearchParams {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/lib/history-query.test.ts
+pnpm -F @lumespec/web test tests/lib/history-query.test.ts
 ```
 
 Expected: 8 tests pass.
@@ -363,7 +363,7 @@ describe('hostnameMatches', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/lib/url-utils.test.ts
+pnpm -F @lumespec/web test tests/lib/url-utils.test.ts
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -406,7 +406,7 @@ export function hostnameMatches(a: string, b: string): boolean {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/lib/url-utils.test.ts
+pnpm -F @lumespec/web test tests/lib/url-utils.test.ts
 ```
 
 Expected: 7 tests pass.
@@ -544,7 +544,7 @@ The existing `try { … } catch (err) { … }` and the `before` URL-param read a
 Restart the dev stack:
 
 ```bash
-pnpm demo restart
+pnpm lume restart
 ```
 
 Then in a browser logged-in tab, hit:
@@ -577,7 +577,7 @@ The render worker already produces the MP4. After upload, render frame 45 with `
 - [ ] **Step 1: Add `sharp` dependency**
 
 ```bash
-pnpm -F @promptdemo/render-worker add sharp
+pnpm -F @lumespec/render-worker add sharp
 ```
 
 Expected: package.json gains a `sharp` entry under `dependencies`. Build is fine (sharp ships prebuilt binaries for win32-x64).
@@ -641,8 +641,8 @@ The `Storyboard` import already covers `videoConfig`, no schema change needed. T
 - [ ] **Step 4: Verify the worker compiles and existing tests pass**
 
 ```bash
-pnpm -F @promptdemo/render-worker typecheck
-pnpm -F @promptdemo/render-worker test
+pnpm -F @lumespec/render-worker typecheck
+pnpm -F @lumespec/render-worker test
 ```
 
 Expected: clean typecheck, all existing render tests still pass (the change is in the success path which existing tests don't exercise — `renderReal.test.ts` is skipped).
@@ -710,7 +710,7 @@ Expected: shows `thumbUrl: S3UriSchema.optional()` already present. (If it's not
 - [ ] **Step 4: Run api tests**
 
 ```bash
-pnpm -F @promptdemo/api test
+pnpm -F @lumespec/api test
 ```
 
 Expected: all existing tests still pass. (No new tests for this micro-change; the integration is exercised end-to-end via the next browser smoke.)
@@ -796,7 +796,7 @@ describe('SearchInput', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/SearchInput.test.tsx
+pnpm -F @lumespec/web test tests/components/history/SearchInput.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -876,7 +876,7 @@ export function SearchInput({ value, onChange, debounceMs = 300, placeholder = '
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/SearchInput.test.tsx
+pnpm -F @lumespec/web test tests/components/history/SearchInput.test.tsx
 ```
 
 Expected: 5 tests pass.
@@ -946,7 +946,7 @@ describe('ChipGroup', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/ChipGroup.test.tsx
+pnpm -F @lumespec/web test tests/components/history/ChipGroup.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -1006,7 +1006,7 @@ export function ChipGroup<V extends string>({ label, options, value, onChange }:
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/ChipGroup.test.tsx
+pnpm -F @lumespec/web test tests/components/history/ChipGroup.test.tsx
 ```
 
 Expected: 4 tests pass.
@@ -1070,7 +1070,7 @@ describe('LoadMoreButton', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/LoadMoreButton.test.tsx
+pnpm -F @lumespec/web test tests/components/history/LoadMoreButton.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -1137,7 +1137,7 @@ export function LoadMoreButton({ state, onClick }: LoadMoreButtonProps) {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/LoadMoreButton.test.tsx
+pnpm -F @lumespec/web test tests/components/history/LoadMoreButton.test.tsx
 ```
 
 Expected: 4 tests pass.
@@ -1213,7 +1213,7 @@ describe('LineageBadge', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/LineageBadge.test.tsx
+pnpm -F @lumespec/web test tests/components/history/LineageBadge.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -1268,7 +1268,7 @@ export function LineageBadge({ parent, currentUrl }: LineageBadgeProps) {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/LineageBadge.test.tsx
+pnpm -F @lumespec/web test tests/components/history/LineageBadge.test.tsx
 ```
 
 Expected: 4 tests pass.
@@ -1354,7 +1354,7 @@ describe('HistoryCard', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/HistoryCard.test.tsx
+pnpm -F @lumespec/web test tests/components/history/HistoryCard.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -1480,7 +1480,7 @@ export function HistoryCard({ job }: { job: HistoryJob }) {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/HistoryCard.test.tsx
+pnpm -F @lumespec/web test tests/components/history/HistoryCard.test.tsx
 ```
 
 Expected: 5 tests pass.
@@ -1542,7 +1542,7 @@ import { within } from '@testing-library/react';
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/FilterBar.test.tsx
+pnpm -F @lumespec/web test tests/components/history/FilterBar.test.tsx
 ```
 
 Expected: FAIL with "Cannot find module".
@@ -1635,7 +1635,7 @@ export function FilterBar({ query, onChange }: FilterBarProps) {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/history/FilterBar.test.tsx
+pnpm -F @lumespec/web test tests/components/history/FilterBar.test.tsx
 ```
 
 Expected: 3 tests pass.
@@ -1926,7 +1926,7 @@ describe('HistoryGrid', () => {
 - [ ] **Step 3: Run tests**
 
 ```bash
-pnpm -F @promptdemo/web test tests/components/HistoryGrid.test.tsx tests/components/history
+pnpm -F @lumespec/web test tests/components/HistoryGrid.test.tsx tests/components/history
 ```
 
 Expected: all pass.
@@ -1934,7 +1934,7 @@ Expected: all pass.
 - [ ] **Step 4: Verify typecheck**
 
 ```bash
-pnpm -F @promptdemo/web typecheck
+pnpm -F @lumespec/web typecheck
 ```
 
 Expected: clean.
@@ -1953,7 +1953,7 @@ git commit -m "feat(history): HistoryGrid v2.2 — URL-synced filters, load-more
 - [ ] **Step 1: Run the full web test suite**
 
 ```bash
-pnpm -F @promptdemo/web test
+pnpm -F @lumespec/web test
 ```
 
 Expected: all tests pass. Count should be ≥ existing + 6 new test files (history-query 8 + url-utils 7 + SearchInput 5 + ChipGroup 4 + LoadMoreButton 4 + LineageBadge 4 + HistoryCard 5 + FilterBar 3 = 40 new tests). Target: ≥ 158.
@@ -1969,7 +1969,7 @@ Expected: clean across all 8 workspaces.
 - [ ] **Step 3: Restart the dev stack**
 
 ```bash
-pnpm demo restart
+pnpm lume restart
 ```
 
 - [ ] **Step 4: Manual smoke**

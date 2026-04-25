@@ -1,4 +1,4 @@
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 
 export type UriSigner = (s3Uri: string) => Promise<string>;
 
@@ -36,7 +36,7 @@ export async function rewriteStoryboardUrls(
 // Default signer using @aws-sdk/s3-request-presigner against the S3/GCS-interop endpoint
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { parseS3Uri } from '@promptdemo/schema';
+import { parseS3Uri } from '@lumespec/schema';
 
 export function defaultSigner(client: S3Client, ttlSeconds: number = 1800): UriSigner {
   return async (uri) => {

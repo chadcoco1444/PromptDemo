@@ -1,12 +1,12 @@
-# PromptDemo — Design Spec
+# LumeSpec — Design Spec
 
 **Date:** 2026-04-20
-**Repository:** https://github.com/chadcoco1444/PromptDemo
+**Repository:** https://github.com/chadcoco1444/LumeSpec
 **Status:** Brainstorm complete, awaiting user review before implementation planning.
 
 ## Summary
 
-PromptDemo is an automated demo-video generation system. Input: a target URL, a user intent, and a duration (10s / 30s / 60s). Output: a rendered MP4 demo video. The pipeline crawls the target site, generates a structured storyboard via Claude, then renders with Remotion.
+LumeSpec is an automated demo-video generation system. Input: a target URL, a user intent, and a duration (10s / 30s / 60s). Output: a rendered MP4 demo video. The pipeline crawls the target site, generates a structured storyboard via Claude, then renders with Remotion.
 
 This spec captures the decisions made during brainstorming — what we're building, why, and what tradeoffs we accepted.
 

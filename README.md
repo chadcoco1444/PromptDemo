@@ -1,6 +1,6 @@
 <div align="center">
 
-# PromptDemo
+# LumeSpec
 
 ### Turn any webpage into a polished demo video. In 60 seconds.
 
@@ -15,19 +15,19 @@
 
 <br/>
 
-<img src="docs/readme/demo.gif" alt="PromptDemo — paste a URL, get a demo video" width="720" />
+<img src="docs/readme/demo.gif" alt="LumeSpec — paste a URL, get a demo video" width="720" />
 
 <br/>
 
 **Every SaaS founder knows the pain:** your product ships, and suddenly you need a crisp demo video — yesterday. Screen recordings look amateurish. Motion designers cost thousands. And the moment you update your UI, everything is stale anyway.
 
-PromptDemo fixes this permanently. Paste your product URL, describe the story you want to tell, and our AI pipeline — powered by Claude 3.5 Sonnet and Remotion — generates a pixel-perfect, code-driven demo video in under a minute. No editing software. No reshoots. No stale assets. And yes — every video ships with our **"Made with PromptDemo"** badge in the corner, because the best demo of our product is *made by* our product.
+LumeSpec fixes this permanently. Paste your product URL, describe the story you want to tell, and our AI pipeline — powered by Claude 3.5 Sonnet and Remotion — generates a pixel-perfect, code-driven demo video in under a minute. No editing software. No reshoots. No stale assets. And yes — every video ships with our **"Made with LumeSpec"** badge in the corner, because the best demo of our product is *made by* our product.
 
 </div>
 
 ---
 
-## The Magic Behind PromptDemo
+## The Magic Behind LumeSpec
 
 <table>
 <tr>
@@ -53,7 +53,7 @@ A 7-layer defense pipeline catches and repairs every edge case Claude might prod
 
 ### 🚀 Built for Growth (PLG)
 
-Your **History Vault** stores every video you've ever generated. Fork any past job to remix the storyboard without re-crawling. Download as MP4 in one click. Free-tier videos include a tasteful "Made with PromptDemo" badge that markets itself — upgrade to Pro for the white-label experience.
+Your **History Vault** stores every video you've ever generated. Fork any past job to remix the storyboard without re-crawling. Download as MP4 in one click. Free-tier videos include a tasteful "Made with LumeSpec" badge that markets itself — upgrade to Pro for the white-label experience.
 
 Your demo library grows with your product.
 
@@ -65,12 +65,12 @@ Your demo library grows with your product.
 
 ## The Interface Feels as Premium as the Output
 
-PromptDemo's UI is a dark glassmorphic shell — deep violet gradients, frosted-glass cards, and SSE-powered live progress bars that update in real time as your video renders. We built it this way deliberately: the tool you use to make first impressions should make one itself. Every interaction — from pasting a URL to clicking Download — is designed to feel effortless and a little bit magical.
+LumeSpec's UI is a dark glassmorphic shell — deep violet gradients, frosted-glass cards, and SSE-powered live progress bars that update in real time as your video renders. We built it this way deliberately: the tool you use to make first impressions should make one itself. Every interaction — from pasting a URL to clicking Download — is designed to feel effortless and a little bit magical.
 
 <details>
 <summary>Why this matters for your brand</summary>
 
-When you share a PromptDemo-generated video, the production value signals "this team ships quality." The interface you used to make it reflects the same standard. It's not cosmetic — it's product philosophy.
+When you share a LumeSpec-generated video, the production value signals "this team ships quality." The interface you used to make it reflects the same standard. It's not cosmetic — it's product philosophy.
 
 </details>
 
@@ -133,8 +133,8 @@ See [docs/readme/design-decisions.md](docs/readme/design-decisions.md) for the f
 
 ```bash
 # 1 · Clone and install dependencies
-git clone https://github.com/chadcoco1444/PromptDemo.git
-cd PromptDemo
+git clone https://github.com/chadcoco1444/LumeSpec.git
+cd LumeSpec
 pnpm install
 
 # 2 · Boot infrastructure (Postgres + Redis + MinIO, all in Docker)
@@ -147,7 +147,7 @@ cp apps/api/.env.example apps/api/.env
 # → Set NEXTAUTH_SECRET in apps/web/.env.local (any random string works locally)
 
 # 4 · Launch everything
-pnpm demo start
+pnpm lume start
 # → Web UI at   http://localhost:3001
 # → API health  http://localhost:3000/healthz
 ```
@@ -167,9 +167,9 @@ NEXTAUTH_URL=http://localhost:3001
 ### Dev commands
 
 ```bash
-pnpm demo status          # check which services are running
-pnpm demo stop            # clean shutdown — no zombie processes
-pnpm demo render:promo    # re-render the PromoComposition marketing video
+pnpm lume status          # check which services are running
+pnpm lume stop            # clean shutdown — no zombie processes
+pnpm lume render:promo    # re-render the PromoComposition marketing video
 pnpm test                 # full test suite (188 tests across 33 files)
 pnpm typecheck            # type-check the whole monorepo
 ```
@@ -212,11 +212,11 @@ We're building the fastest path from "product exists" to "demo is live." The roa
 
 ## Contributing
 
-PromptDemo is built in the open. Every PR — from typo fixes to new scene types — is welcome.
+LumeSpec is built in the open. Every PR — from typo fixes to new scene types — is welcome.
 
-- **Found a bug?** [Open an issue](https://github.com/chadcoco1444/PromptDemo/issues)
+- **Found a bug?** [Open an issue](https://github.com/chadcoco1444/LumeSpec/issues)
 - **Have a scene idea?** The renderer is modular; each scene is a self-contained React component in `packages/remotion/src/`
-- **Want to add a voiceover engine, crawling strategy, or new worker?** [Start a Discussion](https://github.com/chadcoco1444/PromptDemo/discussions)
+- **Want to add a voiceover engine, crawling strategy, or new worker?** [Start a Discussion](https://github.com/chadcoco1444/LumeSpec/discussions)
 
 See [docs/readme/demo-gif-howto.md](docs/readme/demo-gif-howto.md) for instructions on recording and compressing the demo GIF.
 
@@ -224,10 +224,10 @@ See [docs/readme/demo-gif-howto.md](docs/readme/demo-gif-howto.md) for instructi
 
 <div align="center">
 
-**If PromptDemo saved you an hour of video editing, consider starring the repo — it helps more developers find it.**
+**If LumeSpec saved you an hour of video editing, consider starring the repo — it helps more developers find it.**
 
-[⭐ Star on GitHub](https://github.com/chadcoco1444/PromptDemo) · [Open an Issue](https://github.com/chadcoco1444/PromptDemo/issues) · [Start a Discussion](https://github.com/chadcoco1444/PromptDemo/discussions)
+[⭐ Star on GitHub](https://github.com/chadcoco1444/LumeSpec) · [Open an Issue](https://github.com/chadcoco1444/LumeSpec/issues) · [Start a Discussion](https://github.com/chadcoco1444/LumeSpec/discussions)
 
-<sub>MIT License · Built with Claude + Remotion · The demo GIF above was generated by PromptDemo itself.</sub>
+<sub>MIT License · Built with Claude + Remotion · The demo GIF above was generated by LumeSpec itself.</sub>
 
 </div>

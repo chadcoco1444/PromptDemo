@@ -12,10 +12,10 @@
  * Flags:
  *   --watermark   Force showWatermark=true regardless of account tier.
  *                 Use this to generate PLG marketing assets (README GIF, landing
- *                 page hero) that deliberately show the "Made with PromptDemo"
+ *                 page hero) that deliberately show the "Made with LumeSpec"
  *                 Pill Badge even when the account is on a Pro/Max plan.
  *
- * Defaults: stripe.com / 30s / PromptDemo-showcase intent.
+ * Defaults: stripe.com / 30s / LumeSpec-showcase intent.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, createWriteStream } from 'node:fs';
@@ -27,7 +27,7 @@ import { createHmac } from 'node:crypto';
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(__filename), '..');
 
-// --- env loader (same heuristic as scripts/demo.mjs) ---
+// --- env loader (same heuristic as scripts/lume.mjs) ---
 function loadDotenv() {
   const path = resolve(REPO_ROOT, '.env');
   if (!existsSync(path)) return;
@@ -48,7 +48,7 @@ const url = positional[0] ?? 'https://stripe.com';
 const intent = positional[1] ?? (
   'A fast-paced product showcase that opens on a sleek URL input field, ' +
   'cuts to an AI Creativity Engine analysing the page, then reveals the ' +
-  'rendered video complete with the "Made with PromptDemo" badge — finishing ' +
+  'rendered video complete with the "Made with LumeSpec" badge — finishing ' +
   'on the History Vault where the user downloads the MP4 in one click. ' +
   'Tone: confident, modern, developer-friendly.'
 );
@@ -71,7 +71,7 @@ function mintJwt(sub, ttlSec = 600) {
   // 10-minute TTL so the token survives a slow render queue
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'HS256', typ: 'JWT' };
-  const payload = { sub: String(sub), iat: now, exp: now + ttlSec, iss: 'promptdemo-web', aud: 'promptdemo-api' };
+  const payload = { sub: String(sub), iat: now, exp: now + ttlSec, iss: 'lumespec-web', aud: 'lumespec-api' };
   const headerB64 = b64url(JSON.stringify(header));
   const payloadB64 = b64url(JSON.stringify(payload));
   const signingInput = `${headerB64}.${payloadB64}`;

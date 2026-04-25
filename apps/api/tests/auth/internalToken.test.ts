@@ -16,8 +16,8 @@ async function mintToken(opts: {
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setSubject(opts.sub ?? 'user-42')
     .setIssuedAt()
-    .setIssuer(opts.issuer ?? 'promptdemo-web')
-    .setAudience(opts.audience ?? 'promptdemo-api')
+    .setIssuer(opts.issuer ?? 'lumespec-web')
+    .setAudience(opts.audience ?? 'lumespec-api')
     .setExpirationTime(`${opts.expSeconds ?? 60}s`);
   return builder.sign(encoder.encode(opts.secret ?? SECRET));
 }

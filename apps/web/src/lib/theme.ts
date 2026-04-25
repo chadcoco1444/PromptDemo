@@ -11,7 +11,7 @@
 export type Theme = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
-export const THEME_STORAGE_KEY = 'promptdemo:theme';
+export const THEME_STORAGE_KEY = 'lumespec:theme';
 
 /**
  * Inline script string that runs BEFORE React hydration. Injected into <head>

@@ -1,4 +1,4 @@
-# PromptDemo — Remaining Work
+# LumeSpec — Remaining Work
 
 Audit against shipped state as of `c508375` (2026-04-25, post-v2.1). Sections in order of likely sequencing for a production launch.
 
@@ -103,7 +103,7 @@ Shipped in v2.1 Phase 3: 3-state badges (Generating/Done/Failed), crawl-screensh
 
 The tier table promises these but they're not enforced:
 
-- **Watermark on Free-tier renders.** Render worker should branch on `tier === 'free'` (passed from orchestrator into the render job payload) and overlay a small bottom-right "Made with PromptDemo" mark in the Remotion composition.
+- **Watermark on Free-tier renders.** Render worker should branch on `tier === 'free'` (passed from orchestrator into the render job payload) and overlay a small bottom-right "Made with LumeSpec" mark in the Remotion composition.
 - **History retention by tier.** Free=30d, Pro=90d, Max=365d. Add a daily cron that deletes (or soft-deletes) `jobs` rows + their S3 objects beyond the retention window. **Coordinate with Object Lifecycle Management** (next item) — cheaper to let cloud-storage rules do the S3 part and only run a SQL DELETE on the metadata.
 
 ---
@@ -114,7 +114,7 @@ The tier table promises these but they're not enforced:
 
 **Tasks:**
 - Add `lifecycle.json` for prod S3 (or GCS equivalent): expire `jobs/*/crawlResult.json` and `jobs/*/storyboard.json` after 7 days, MP4s after 365 days (longest tier retention).
-- For MinIO local dev: `mc ilm import promptdemo-bucket lifecycle.json` is enough; document in [docs/readme/design-decisions.md](../readme/design-decisions.md).
+- For MinIO local dev: `mc ilm import lumespec-bucket lifecycle.json` is enough; document in [docs/readme/design-decisions.md](../readme/design-decisions.md).
 
 ---
 
@@ -156,8 +156,8 @@ For sanity, things the spec promised that ARE done:
 - Feature 5 (minus Stripe): credit ledger, transactional debit/refund, concurrency cap, 402/429/403 responses, `UsageIndicator` pill, `/billing` page with disabled upgrade CTAs, refund hook on job failure per Amendment C.
 - Postgres dual-write + canonical schema (Amendment A).
 - Live-intel SSE (spec §3.3 — workers emit phase messages, **cross-fade transitions in v2.1**).
-- Demo orchestration: direct-node spawn, port-based liveness, db:reset / db:tables, full-stack `pnpm demo` lifecycle, terminal-flash hidden on Windows.
-- **v2.1 hardening**: storyboard whitelist filter, bilingual pacing profiles (Marketing Hype / Tutorial), profile-aware Zod, locale lock, `start-hidden.vbs`, Anthropic daily spend guard, Fastify per-user rate limit. See [v2.1 design spec](specs/2026-04-25-promptdemo-v2-1-design.md).
+- Demo orchestration: direct-node spawn, port-based liveness, db:reset / db:tables, full-stack `pnpm lume` lifecycle, terminal-flash hidden on Windows.
+- **v2.1 hardening**: storyboard whitelist filter, bilingual pacing profiles (Marketing Hype / Tutorial), profile-aware Zod, locale lock, `start-hidden.vbs`, Anthropic daily spend guard, Fastify per-user rate limit. See [v2.1 design spec](specs/2026-04-25-lumespec-v2-1-design.md).
 
 ---
 

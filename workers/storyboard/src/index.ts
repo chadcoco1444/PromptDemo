@@ -3,7 +3,7 @@ import { Worker, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
 import type { Pool } from 'pg';
-import { CrawlResultSchema, makeIntel, type Storyboard } from '@promptdemo/schema';
+import { CrawlResultSchema, makeIntel, type Storyboard } from '@lumespec/schema';
 import { makeS3Client, putObject, buildKey, s3ConfigFromEnv, getObjectJson } from './s3/s3Client.js';
 import { generateStoryboard } from './generator.js';
 import { createClaudeClient } from './claude/claudeClient.js';

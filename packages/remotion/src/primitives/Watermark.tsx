@@ -37,7 +37,7 @@ export const Watermark: React.FC = () => (
           whiteSpace: 'nowrap',
         }}
       >
-        Made with PromptDemo
+        Made with LumeSpec
       </span>
     </div>
   </AbsoluteFill>

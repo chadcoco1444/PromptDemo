@@ -73,7 +73,7 @@ export async function GET(request: Request, ctx: { params: { jobId: string } }) 
 
   const filename =
     type === 'mp4'
-      ? `promptdemo-${jobId}.mp4`
+      ? `lumespec-${jobId}.mp4`
       : `storyboard-${jobId}.json`;
 
   try {

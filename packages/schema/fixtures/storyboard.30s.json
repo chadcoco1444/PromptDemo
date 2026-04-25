@@ -3,13 +3,13 @@
     "durationInFrames": 900,
     "fps": 30,
     "brandColor": "#4f46e5",
-    "logoUrl": "s3://promptdemo-dev/fixtures/saas-logo.png",
+    "logoUrl": "s3://lumespec-dev/fixtures/saas-logo.png",
     "bgm": "tech"
   },
   "assets": {
     "screenshots": {
-      "viewport": "s3://promptdemo-dev/fixtures/saas-viewport.jpg",
-      "fullPage": "s3://promptdemo-dev/fixtures/saas-full.jpg"
+      "viewport": "s3://lumespec-dev/fixtures/saas-viewport.jpg",
+      "fullPage": "s3://lumespec-dev/fixtures/saas-full.jpg"
     },
     "sourceTexts": [
       "ship production-grade ai workflows in minutes",

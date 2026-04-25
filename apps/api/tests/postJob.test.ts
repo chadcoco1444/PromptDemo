@@ -12,8 +12,8 @@ async function bearerFor(userId: string): Promise<string> {
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setSubject(userId)
     .setIssuedAt()
-    .setIssuer('promptdemo-web')
-    .setAudience('promptdemo-api')
+    .setIssuer('lumespec-web')
+    .setAudience('lumespec-api')
     .setExpirationTime('60s')
     .sign(enc.encode(TEST_SECRET));
   return `Bearer ${token}`;
@@ -217,8 +217,8 @@ describe('POST /api/jobs', () => {
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
       .setSubject('user-evil')
       .setIssuedAt()
-      .setIssuer('promptdemo-web')
-      .setAudience('promptdemo-api')
+      .setIssuer('lumespec-web')
+      .setAudience('lumespec-api')
       .setExpirationTime('60s')
       .sign(enc.encode('b'.repeat(64)));
     const res = await app.inject({

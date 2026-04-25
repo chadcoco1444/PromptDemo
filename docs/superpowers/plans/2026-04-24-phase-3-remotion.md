@@ -1,4 +1,4 @@
-# PromptDemo v1.0 — Plan 3: Remotion Package + 5 MVP Scenes
+# LumeSpec v1.0 — Plan 3: Remotion Package + 5 MVP Scenes
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
@@ -6,9 +6,9 @@
 
 **Architecture:** Single composition (`MainComposition`) reads the `Storyboard` JSON as `defaultProps`. Scenes are wrapped in `<TransitionSeries>` so each scene's `entryAnimation`/`exitAnimation` controls the cross-fade. A discriminated-union dispatcher (`resolveScene`) routes each scene entry to the right component. Primitives (`BrowserChrome`, `LogoMark`, `AnimatedText`, `BGMTrack`) are shared across scenes. Fonts load via `delayRender`/`continueRender` against an `@remotion/google-fonts` whitelist; brand-color theming derives a palette from `videoConfig.brandColor`.
 
-**Tech Stack:** React 18, Remotion 4, `@remotion/google-fonts`, `@remotion/bundler`, `@remotion/renderer`, vitest, `@promptdemo/schema`.
+**Tech Stack:** React 18, Remotion 4, `@remotion/google-fonts`, `@remotion/bundler`, `@remotion/renderer`, vitest, `@lumespec/schema`.
 
-**Spec reference:** `docs/superpowers/specs/2026-04-20-promptdemo-design.md` §2, §6.
+**Spec reference:** `docs/superpowers/specs/2026-04-20-lumespec-design.md` §2, §6.
 
 **MVP scope:** 5 scene types. `HeroStylized`, `CursorDemo`, `UseCaseStory`, `StatsBand`, `BentoGrid` are deferred to v1.1 — their `type` stays in the Zod schema (forward-compat) but their components are NOT built here. The dispatcher throws a descriptive error if an unimplemented type slips in at runtime.
 
@@ -109,7 +109,7 @@ Phase 3 is 15 tasks. TDD applies cleanly to pure logic (tasks 3.3–3.5, 3.9). R
 
 ```json
 {
-  "name": "@promptdemo/remotion",
+  "name": "@lumespec/remotion",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -122,7 +122,7 @@ Phase 3 is 15 tasks. TDD applies cleanly to pure logic (tasks 3.3–3.5, 3.9). R
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@promptdemo/schema": "workspace:*",
+    "@lumespec/schema": "workspace:*",
     "@remotion/bundler": "4.0.218",
     "@remotion/cli": "4.0.218",
     "@remotion/google-fonts": "4.0.218",
@@ -200,7 +200,7 @@ registerRoot(RemotionRoot);
 
 ```bash
 pnpm install
-pnpm --filter @promptdemo/remotion typecheck
+pnpm --filter @lumespec/remotion typecheck
 ```
 
 - [ ] **Step 6: Commit**
@@ -229,15 +229,15 @@ import { makeS3Resolver } from '../src/s3Resolver.js';
 describe('makeS3Resolver', () => {
   it('maps s3://bucket/key → endpoint/bucket/key for path-style access', () => {
     const resolve = makeS3Resolver({ endpoint: 'http://localhost:9000', forcePathStyle: true });
-    expect(resolve('s3://promptdemo-dev/jobs/j/hero.jpg')).toBe(
-      'http://localhost:9000/promptdemo-dev/jobs/j/hero.jpg'
+    expect(resolve('s3://lumespec-dev/jobs/j/hero.jpg')).toBe(
+      'http://localhost:9000/lumespec-dev/jobs/j/hero.jpg'
     );
   });
 
   it('maps s3://bucket/key → https://bucket.endpoint/key for virtual-host style', () => {
     const resolve = makeS3Resolver({ endpoint: 'https://s3.amazonaws.com', forcePathStyle: false });
-    expect(resolve('s3://promptdemo-prod/x/y.jpg')).toBe(
-      'https://promptdemo-prod.s3.amazonaws.com/x/y.jpg'
+    expect(resolve('s3://lumespec-prod/x/y.jpg')).toBe(
+      'https://lumespec-prod.s3.amazonaws.com/x/y.jpg'
     );
   });
 
@@ -256,7 +256,7 @@ describe('makeS3Resolver', () => {
 - [ ] **Step 2: Impl**
 
 ```ts
-import { parseS3Uri } from '@promptdemo/schema';
+import { parseS3Uri } from '@lumespec/schema';
 
 export interface S3ResolverConfig {
   endpoint: string; // http(s)://host[:port]
@@ -1204,7 +1204,7 @@ Commit: `feat(remotion): CTA scene`
 
 ```tsx
 import { describe, it, expect } from 'vitest';
-import type { Scene, CrawlResult } from '@promptdemo/schema';
+import type { Scene, CrawlResult } from '@lumespec/schema';
 import { resolveScene } from '../src/resolveScene.js';
 import { deriveTheme } from '../src/utils/brandTheme.js';
 
@@ -1243,14 +1243,14 @@ describe('resolveScene', () => {
 });
 
 // Minimal type import so tests are self-contained
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 ```
 
 - [ ] **Step 2: Impl**
 
 ```tsx
 import React from 'react';
-import type { Scene, Storyboard } from '@promptdemo/schema';
+import type { Scene, Storyboard } from '@lumespec/schema';
 import { HeroRealShot } from './scenes/HeroRealShot.js';
 import { FeatureCallout } from './scenes/FeatureCallout.js';
 import { TextPunch } from './scenes/TextPunch.js';
@@ -1343,7 +1343,7 @@ git commit -m "feat(remotion): resolveScene dispatcher for 5 MVP scenes"
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
 import { TransitionSeries } from '@remotion/transitions';
-import type { Storyboard } from '@promptdemo/schema';
+import type { Storyboard } from '@lumespec/schema';
 import { deriveTheme } from './utils/brandTheme.js';
 import { makeS3Resolver } from './s3Resolver.js';
 import { resolveScene } from './resolveScene.js';
@@ -1417,8 +1417,8 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
 import React from 'react';
 import { registerRoot, Composition } from 'remotion';
 import { MainComposition } from './MainComposition';
-import defaultStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json';
-import type { Storyboard } from '@promptdemo/schema';
+import defaultStoryboard from '@lumespec/schema/fixtures/storyboard.30s.json';
+import type { Storyboard } from '@lumespec/schema';
 
 const defaults = defaultStoryboard as Storyboard;
 
@@ -1504,7 +1504,7 @@ describe.skipIf(!GATED)('renderSmoke (gated behind REMOTION_SMOKE=true)', () => 
     const main = comps.find((c) => c.id === 'MainComposition');
     expect(main).toBeDefined();
 
-    const outDir = mkdtempSync(join(tmpdir(), 'promptdemo-smoke-'));
+    const outDir = mkdtempSync(join(tmpdir(), 'lumespec-smoke-'));
     const outPath = join(outDir, 'smoke.mp4');
     try {
       await renderMedia({
@@ -1532,7 +1532,7 @@ git add packages/remotion/tests/renderSmoke.test.ts
 git commit -m "test(remotion): gated render smoke test (REMOTION_SMOKE=true)"
 ```
 
-Note: run locally once with `REMOTION_SMOKE=true pnpm --filter @promptdemo/remotion test` to verify end-to-end rendering before tagging. Requires MinIO running with the `promptdemo-dev` bucket containing the saas-landing fixture screenshots (or the Hero scene will fail asset load).
+Note: run locally once with `REMOTION_SMOKE=true pnpm --filter @lumespec/remotion test` to verify end-to-end rendering before tagging. Requires MinIO running with the `lumespec-dev` bucket containing the saas-landing fixture screenshots (or the Hero scene will fail asset load).
 
 ---
 
@@ -1556,7 +1556,7 @@ Expected totals:
 ```bash
 git tag -a v0.3.0-remotion-mvp -m "Phase 3: Remotion package + 5 MVP scenes complete
 
-Adds @promptdemo/remotion:
+Adds @lumespec/remotion:
 - React 18 + Remotion 4 composition package
 - 5 v1 scene components: HeroRealShot, FeatureCallout, TextPunch,
   SmoothScroll, CTA. Deferred v1.1 types throw at dispatch with a
@@ -1595,7 +1595,7 @@ Adds @promptdemo/remotion:
 **Placeholders:** BGM `.mp3` files are intentionally not checked in; `assets/bgm/README.md` documents licensing. Dispatcher throws for v1.1 types with a clear message — this is the intended behavior.
 
 **Type consistency:**
-- `Storyboard`/`Scene` types come from `@promptdemo/schema` — single source of truth ✓
+- `Storyboard`/`Scene` types come from `@lumespec/schema` — single source of truth ✓
 - `BrandTheme` shape consistent across scenes + MainComposition ✓
 - `entryAnimation` enum values match `ANIMATION_ENUM` and `AnimationEnum` in schema ✓
 - `BgmMood` enum in BGMTrack aligned with `videoConfig.bgm` Zod enum ✓

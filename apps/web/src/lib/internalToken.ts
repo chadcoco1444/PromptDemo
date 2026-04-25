@@ -36,8 +36,8 @@ export async function signInternalToken(userId: string): Promise<string> {
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setSubject(userId)
     .setIssuedAt()
-    .setIssuer('promptdemo-web')
-    .setAudience('promptdemo-api')
+    .setIssuer('lumespec-web')
+    .setAudience('lumespec-api')
     .setExpirationTime(`${TOKEN_TTL_SECONDS}s`)
     .sign(getSecret());
 }

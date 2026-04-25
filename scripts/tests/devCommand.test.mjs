@@ -9,7 +9,7 @@ describe('resolveDevCommand', () => {
   it('resolves tsx services (workers, api) to node + tsx CLI + watch + entry', () => {
     const result = resolveDevCommand({
       name: 'api',
-      filter: '@promptdemo/api',
+      filter: '@lumespec/api',
       cwd: pathResolve(repoRoot, 'apps/api'),
     });
     expect(result.node).toBe(process.execPath);
@@ -21,7 +21,7 @@ describe('resolveDevCommand', () => {
   it('resolves the web service to node + next CLI + dev -p 3001', () => {
     const result = resolveDevCommand({
       name: 'web',
-      filter: '@promptdemo/web',
+      filter: '@lumespec/web',
       cwd: pathResolve(repoRoot, 'apps/web'),
     });
     expect(result.node).toBe(process.execPath);
@@ -33,7 +33,7 @@ describe('resolveDevCommand', () => {
   it('resolves all 3 workers the same tsx way', () => {
     for (const name of ['worker-crawler', 'worker-storyboard', 'worker-render']) {
       const cwd = pathResolve(repoRoot, `workers/${name.replace('worker-', '')}`);
-      const result = resolveDevCommand({ name, filter: `@promptdemo/${name}`, cwd });
+      const result = resolveDevCommand({ name, filter: `@lumespec/${name}`, cwd });
       expect(result.node).toBe(process.execPath);
       expect(result.args[0]).toMatch(/tsx[\\/]dist[\\/]cli\.mjs$/);
       expect(result.args.slice(1)).toEqual(['watch', 'src/index.ts']);
