@@ -12,16 +12,19 @@ import { trackIntentPresetSelected } from '../lib/telemetry';
 export interface JobFormProps {
   onSubmit: (input: JobInput) => Promise<{ jobId: string }>;
   initialHint?: string;
+  initialUrl?: string;
+  initialIntent?: string;
+  initialDuration?: 10 | 30 | 60;
   parentJobId?: string;
 }
 
 const INPUT_CLASSES =
   'w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent transition-colors';
 
-export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
-  const [url, setUrl] = useState('');
-  const [intent, setIntent] = useState(initialHint ?? '');
-  const [duration, setDuration] = useState<10 | 30 | 60>(30);
+export function JobForm({ onSubmit, initialHint, initialUrl, initialIntent, initialDuration, parentJobId }: JobFormProps) {
+  const [url, setUrl] = useState(initialUrl ?? '');
+  const [intent, setIntent] = useState(initialIntent ?? initialHint ?? '');
+  const [duration, setDuration] = useState<10 | 30 | 60>(initialDuration ?? 30);
   const [error, setError] = useState<string | null>(null);
   const [shakeNonce, setShakeNonce] = useState(0); // re-trigger shake anim on each invalid submit
   const [pending, setPending] = useState(false);
