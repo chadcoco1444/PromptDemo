@@ -38,9 +38,24 @@ export interface ClampResult {
 export function clampPacing(input: ClampInput): ClampResult | null {
   if (input.profile === 'default') return null;
   const rules = getPacingRules(input.profile);
-  const min = rules.minSceneFrames ?? 1;
-  const max = rules.maxSceneFrames ?? Number.POSITIVE_INFINITY;
-  if (input.scenes.length === 0) return null;
+  const sceneCount = input.scenes.length;
+  if (sceneCount === 0) return null;
+
+  // Feasibility softening: pacing profiles are a *target*, not a hard
+  // contract. Claude doesn't reliably produce enough scenes to honor the
+  // strict cap on every video — e.g., marketing_hype caps at 60f/scene
+  // (2s) but if Claude returns only 13 scenes for a 60s video, we'd need
+  // ≥30 scenes for the math to work. When that happens, soften the cap
+  // to ceil(totalFrames / sceneCount) so pacing degrades gracefully
+  // instead of throwing STORYBOARD_GEN_FAILED.
+  let max = rules.maxSceneFrames ?? Number.POSITIVE_INFINITY;
+  let min = rules.minSceneFrames ?? 1;
+  if (max !== Number.POSITIVE_INFINITY && max * sceneCount < input.totalFrames) {
+    max = Math.ceil(input.totalFrames / sceneCount);
+  }
+  if (min > 1 && min * sceneCount > input.totalFrames) {
+    min = Math.max(1, Math.floor(input.totalFrames / sceneCount));
+  }
 
   // Step 1: clamp each scene; track which were clamped (= no longer free
   // to absorb drift).
@@ -78,19 +93,27 @@ export function clampPacing(input: ClampInput): ClampResult | null {
         c.durationInFrames = Math.max(min, Math.min(max, next));
       }
     }
-    // Final balance: any residual drift goes to the longest scene that
-    // still has room. Single integer fix-up so the sum exactly equals the
-    // target frame count (Zod requires exact equality).
+    // Final balance: redistribute residual integer drift one frame at a
+    // time across scenes that can absorb it within [min, max]. Walking
+    // frame-by-frame ensures we never push a single scene past the cap
+    // (Zod requires the sum to exactly equal the target).
     total = clamped.reduce((acc, c) => acc + c.durationInFrames, 0);
     drift = total - input.totalFrames;
-    if (drift !== 0) {
-      const candidates = drift > 0
-        ? clamped.filter((c) => c.durationInFrames - drift >= min) // need to shrink
-        : clamped.filter((c) => c.durationInFrames - drift <= max); // need to grow (drift<0 → -drift>0)
-      if (candidates.length === 0) return null;
-      candidates.sort((a, b) => b.durationInFrames - a.durationInFrames);
-      candidates[0]!.durationInFrames -= drift;
+    let remaining = Math.abs(drift);
+    const direction = drift > 0 ? -1 : 1;
+    const maxAttempts = clamped.length * 4 + remaining;
+    let attempts = 0;
+    while (remaining > 0 && attempts < maxAttempts) {
+      attempts++;
+      const candidate = clamped.find((c) => {
+        const next = c.durationInFrames + direction;
+        return next >= min && next <= max;
+      });
+      if (!candidate) break;
+      candidate.durationInFrames += direction;
+      remaining--;
     }
+    if (remaining > 0) return null;
   }
 
   return {

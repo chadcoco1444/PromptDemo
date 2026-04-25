@@ -287,7 +287,11 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
       }
     }
 
-    const validated = zodValidate(candidate, { profile });
+    // Pacing is enforced by clampPacing above (which softens caps when the
+    // strict target is infeasible for Claude's scene count). zodValidate
+    // here does schema-only validation — passing profile would re-apply the
+    // strict cap and reject scenes the clamp deliberately allowed.
+    const validated = zodValidate(candidate);
     if (validated.kind === 'error') {
       feedback = `Zod validation failed:\n${validated.issues.join('\n')}`;
       continue;

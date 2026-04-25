@@ -84,13 +84,36 @@ describe('clampPacing', () => {
     }
   });
 
-  it('bails (returns null) when the math is impossible — all scenes pinned at min still exceed total', () => {
-    // Tutorial min = 120. 10 scenes × 120 = 1200 frames minimum. Target = 900 → impossible.
+  it('softens min cap when strict floor would overshoot the total', () => {
+    // Tutorial min=120 × 10 scenes = 1200 needed but target=900. Soften
+    // min to floor(900/10)=90 so the math fits. Result still hits exactly 900.
     const out = clampPacing({
       profile: 'tutorial',
       scenes: Array.from({ length: 10 }, () => ({ durationInFrames: 50 })),
       totalFrames: 900,
     });
-    expect(out).toBeNull();
+    expect(out).not.toBeNull();
+    const sum = out!.scenes.reduce((a, s) => a + s.durationInFrames, 0);
+    expect(sum).toBe(900);
+  });
+
+  it('softens max cap to keep video at target duration when scene count is too low', () => {
+    // The exact marketing_hype crash from 2026-04-25:
+    // 13 scenes, totalFrames=1800, cap=60 → max possible 780 < 1800.
+    // Soften max to ceil(1800/13)=139. Scene at 240 clamps to ≤139.
+    const scenes = Array.from({ length: 13 }, () => ({ durationInFrames: 100 }));
+    scenes[12]!.durationInFrames = 240; // the offender from the bug report
+    const out = clampPacing({
+      profile: 'marketing_hype',
+      scenes,
+      totalFrames: 1800,
+    });
+    expect(out).not.toBeNull();
+    const sum = out!.scenes.reduce((a, s) => a + s.durationInFrames, 0);
+    expect(sum).toBe(1800);
+    // Every scene now within the softened cap (≤ 139).
+    for (const s of out!.scenes) {
+      expect(s.durationInFrames).toBeLessThanOrEqual(139);
+    }
   });
 });
