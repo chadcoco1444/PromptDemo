@@ -1,4 +1,5 @@
-import { SCENE_CATALOG, V1_IMPLEMENTED_SCENE_TYPES } from './sceneTypeCatalog.js';
+import { AVAILABLE_SCENES_PROMPT, V1_IMPLEMENTED_SCENE_TYPES } from './sceneTypeCatalog.js';
+import { getPacingRules, type PacingProfile } from './pacingProfiles.js';
 
 const HARD_RULES = `
 HARD RULES — violating any of these means your output will be rejected and you will be asked to retry:
@@ -21,20 +22,24 @@ RHYTHM TEMPLATES — guidance for pacing, not hard rules:
 - 60s (1800 frames): 7-10 scenes. HeroRealShot, 3-4 FeatureCallouts, multiple TextPunch breaks, SmoothScroll if available, optional closing TextPunch before CTA.
 `.trim();
 
-const SCHEMA_HINT = Object.entries(SCENE_CATALOG)
-  .filter(([type]) => V1_IMPLEMENTED_SCENE_TYPES.includes(type as (typeof V1_IMPLEMENTED_SCENE_TYPES)[number]))
-  .map(([type, desc]) => `  - ${type}: ${desc}`)
-  .join('\n');
+export interface BuildSystemPromptOpts {
+  profile?: PacingProfile;
+}
 
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(opts: BuildSystemPromptOpts = {}): string {
+  const rules = getPacingRules(opts.profile ?? 'default');
+  const pacingBlock = rules.systemPromptAddition
+    ? `\n\nPACING PROFILE — ${rules.profile.toUpperCase()}\n${rules.systemPromptAddition}`
+    : '';
+
   return `You are a video storyboard editor for a URL-to-demo-video generation system. Given crawler-extracted brand and content data from a website, plus a user's intent, produce a structured JSON storyboard that a Remotion renderer will turn into an MP4.
 
 SCENE TYPES (v1 implemented subset):
-${SCHEMA_HINT}
+${AVAILABLE_SCENES_PROMPT}
 
 ${HARD_RULES}
 
-${RHYTHM_TEMPLATES}
+${RHYTHM_TEMPLATES}${pacingBlock}
 
 YOUR OUTPUT must be a valid Storyboard JSON object matching the structure described above. Nothing else.`;
 }

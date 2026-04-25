@@ -30,3 +30,18 @@ export const V1_IMPLEMENTED_SCENE_TYPES = [
   'SmoothScroll',
   'CTA',
 ] as const;
+
+/**
+ * The exact slice of SCENE_CATALOG that's actually wired through to
+ * Remotion. We hand-assemble the prompt fragment from this so the system
+ * prompt cannot accidentally leak unimplemented scene types — Claude
+ * confidently emits them otherwise (CursorDemo, BentoGrid, UseCaseStory,
+ * StatsBand, HeroStylized).
+ *
+ * This is the ONLY place the catalog is filtered for prompt purposes.
+ * Anyone adding a new V1_IMPLEMENTED scene only updates the array above
+ * and AVAILABLE_SCENES_PROMPT regenerates automatically.
+ */
+export const AVAILABLE_SCENES_PROMPT: string = V1_IMPLEMENTED_SCENE_TYPES.map(
+  (type) => `  - ${type}: ${SCENE_CATALOG[type]}`,
+).join('\n');

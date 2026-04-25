@@ -1,6 +1,7 @@
 import type { CrawlResult, Storyboard } from '@promptdemo/schema';
 import { buildSystemPrompt } from './prompts/systemPrompt.js';
 import { buildUserMessage } from './prompts/userMessage.js';
+import { detectPacingProfile } from './prompts/pacingProfiles.js';
 import { parseJson } from './validation/parseJson.js';
 import { zodValidate } from './validation/zodValidate.js';
 import { extractiveCheck } from './validation/extractiveCheck.js';
@@ -143,7 +144,11 @@ export interface GenerateInput {
 }
 
 export async function generateStoryboard(input: GenerateInput): Promise<GenerateResult> {
-  const systemPrompt = buildSystemPrompt();
+  // Detect once at the top — same profile drives system-prompt injection
+  // AND the post-zod validation cap. Keeps the two in lockstep so a profile
+  // change can never desync the prompt-side instructions from the validator.
+  const profile = detectPacingProfile(input.intent);
+  const systemPrompt = buildSystemPrompt({ profile });
   const userMessage = buildUserMessage({
     intent: input.intent,
     duration: input.duration,
@@ -210,7 +215,7 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
       }
     }
 
-    const validated = zodValidate(candidate);
+    const validated = zodValidate(candidate, { profile });
     if (validated.kind === 'error') {
       feedback = `Zod validation failed:\n${validated.issues.join('\n')}`;
       continue;
