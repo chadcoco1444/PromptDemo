@@ -27,6 +27,7 @@ const VideoConfigSchema = z.object({
   brandColor: HexColorSchema,
   logoUrl: S3UriSchema.optional(),
   bgm: BgmEnum,
+  showWatermark: z.boolean().optional().default(false),
 });
 
 const AssetsSchema = z.object({

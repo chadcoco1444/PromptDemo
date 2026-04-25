@@ -253,6 +253,30 @@ describe('FeatureCalloutSchema variant', () => {
   });
 });
 
+describe('VideoConfigSchema — showWatermark', () => {
+  it('parses a storyboard without showWatermark field and defaults to false', () => {
+    // Existing S3 storyboards have no showWatermark — must parse without error
+    const parsed = StoryboardSchema.parse(minimalValid);
+    expect(parsed.videoConfig.showWatermark).toBe(false);
+  });
+
+  it('parses a storyboard with showWatermark: true', () => {
+    const parsed = StoryboardSchema.parse({
+      ...minimalValid,
+      videoConfig: { ...minimalValid.videoConfig, showWatermark: true },
+    });
+    expect(parsed.videoConfig.showWatermark).toBe(true);
+  });
+
+  it('parses a storyboard with showWatermark: false', () => {
+    const parsed = StoryboardSchema.parse({
+      ...minimalValid,
+      videoConfig: { ...minimalValid.videoConfig, showWatermark: false },
+    });
+    expect(parsed.videoConfig.showWatermark).toBe(false);
+  });
+});
+
 // helper: fabricate a minimal scene of any type that fills duration 900
 function makeScene(type: string) {
   const base = {
