@@ -102,7 +102,7 @@ Hero input → `/create?url=<encoded>` → `CreatePage` reads `url` param → `C
 
 ### Left column — Preview form
 
-- Eyebrow: `PROMPTDEMO` in 11px uppercase, letter-spacing 0.18em, color `brand-400` (`#a78bfa`)
+- Eyebrow: `LUMESPEC` in 11px uppercase, letter-spacing 0.18em, color `brand-400` (`#a78bfa`)
 - **Headline** (gradient text, white → brand-300): `From URL` / `to demo video.` / `Sixty seconds.` (3 lines, font-weight 800, letter-spacing -0.025em)
   - Fluid type: `clamp(40px, 6vw, 72px)` line-height 1.05
 - **Subhead** (`text-gray-400`, font-size 16-18px): `Paste a link, pick an intent, ship a polished MP4. Powered by Claude + Remotion.`

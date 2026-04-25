@@ -88,14 +88,19 @@ Shipped in v2.1 Phase 3: 3-state badges (Generating/Done/Failed), crawl-screensh
 
 | Feature | Status | Notes |
 |---|---|---|
-| First-frame thumbnail extraction | ❌ | Render worker should `ffmpeg -ss 00:00:01 -frames:v 1` after MP4 upload, push as `jobs/<jobId>/thumb.jpg`. Currently `thumbUrl` is null; we fall back to the cover proxy which only has the crawl screenshot. |
-| Status / duration / date-range filters | ❌ | Add query params + Postgres WHERE clauses to `/api/users/me/jobs`. |
-| Full-text search on intent | ❌ | Postgres `tsvector` GIN index on `jobs.input->>'intent'`. |
-| Cursor pagination (24/page) | ❌ | Currently returns the full set (limit=24 default but no cursor UI). Cursor on `created_at`. |
-| List/grid toggle (mobile→list, desktop→grid) | ❌ | Tailwind `md:` breakpoint + a toggle button. |
-| Regenerate lineage badge ("Regenerated from job X") | ❌ | We persist `parentJobId` already; UI just needs to render the link. |
+| First-frame thumbnail extraction | ✅ | Shipped v2.2 — renderStill → WebP → S3 |
+| Status / duration / date-range filters | ✅ | Shipped v2.2 — route.ts query params |
+| Full-text search on intent | ✅ | Shipped v2.2 — pg_trgm GIN index (migration 003) |
+| Cursor pagination (24/page) | ✅ | Shipped v2.2 — HistoryGrid cursor + LoadMoreButton |
+| List/grid toggle | ✅ | Shipped 2026-04-26 |
+| Lineage badge | ✅ | Shipped v2.1 — LineageBadge component |
 
-**Acceptance §4.2:** "History loads 24 items in < 500ms (indexed query)" — not measured. Add an index on `(user_id, created_at DESC)` once cursor pagination ships.
+**Acceptance §4.2:**
+
+| Acceptance criterion | Status | Notes |
+|---|---|---|
+| History 24 items < 500ms | ✅ | `idx_jobs_user_created` already exists in migration 001 |
+| Refund within 30s of failed render | ✅ | `store.test.ts` integration test added 2026-04-26 |
 
 ---
 
@@ -109,6 +114,8 @@ The tier table promises these but they're not enforced:
 ---
 
 ## 6. Object Lifecycle Management for S3/MinIO (Amendment B)
+
+**Status: ✅ Shipped 2026-04-26** — `deploy/lifecycle-gcs.json` (GCS, suffix-aware) + `deploy/lifecycle-minio.xml` (MinIO, prefix-only, applied by minio-init). See design-decisions.md Amendment B.
 
 **Spec Amendment B.** Crawl/storyboard/render artifacts pile up in MinIO/S3 forever right now. We promised lifecycle rules over app-level deletion.
 

@@ -23,12 +23,15 @@ services:
     image: minio/mc:RELEASE.2024-10-02T08-27-28Z
     depends_on:
       - minio
+    volumes:
+      - ./deploy/lifecycle-minio.xml:/lifecycle.xml:ro
     entrypoint: >
       /bin/sh -c "
       sleep 2;
       mc alias set local http://minio:9000 minioadmin minioadmin;
       mc mb --ignore-existing local/lumespec-dev;
       mc anonymous set download local/lumespec-dev;
+      mc ilm import local/lumespec-dev < /lifecycle.xml;
       exit 0;
       "
 

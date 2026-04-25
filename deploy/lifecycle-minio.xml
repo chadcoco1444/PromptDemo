@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LifecycleConfiguration>
+  <!--
+    Local dev only. Expires all objects under jobs/ after 7 days.
+    In production (GCS), the per-suffix rules in lifecycle-gcs.json
+    differentiate artifacts (7d) from videos (365d).
+  -->
+  <Rule>
+    <ID>expire-job-artifacts</ID>
+    <Status>Enabled</Status>
+    <Filter>
+      <Prefix>jobs/</Prefix>
+    </Filter>
+    <Expiration>
+      <Days>7</Days>
+    </Expiration>
+  </Rule>
+</LifecycleConfiguration>

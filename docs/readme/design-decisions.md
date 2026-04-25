@@ -122,8 +122,24 @@ Put dedup first and the pathological case becomes a no-op. The order matters bec
 
 - **SSE live-intel per stage** — the StageRail shows progress bars but no token counts / frame counters / crawl URLs. That needs each worker to call `job.updateProgress({ pct, intel: {...} })`, the orchestrator to forward the richer payload, the web reducer to capture it, and the StageRail to render it. ~1.5 hours; punted because the current progress bar is functional.
 - **Bento variant** — deferred to v2.1 per the original spec's cost/value read. Asymmetric grid + spring animations + icon hint rendering is a multi-day rabbit hole.
-- **Per-tier S3 retention via lifecycle rules** — GCS `Object Lifecycle Management` with prefix-based rules (`tier/<free|pro|max>/...` → delete after 30/90/365 days). Configuration work, not code; done at deploy time.
+- **Per-tier S3 retention via lifecycle rules** — GCS `Object Lifecycle Management` with prefix-based rules (`tier/<free|pro|max>/...` → delete after 30/90/365 days). Configuration work, not code; done at deploy time. _(Superseded by Amendment B — see below.)_
 - **History card thumbnails** — render worker needs to extract the first frame of the MP4 and upload as `<jobId>/thumb.jpg`. Remotion supports this via `renderStill`. Planned for v2.1.
+
+---
+
+---
+
+## Amendment B: artifact-level vs prefix-level S3 lifecycle
+
+The punted note above assumed prefix-based per-tier retention (`tier/free/... → 30d`, `tier/pro/... → 365d`). Shipped design differs in two ways.
+
+**GCS production** (`deploy/lifecycle-gcs.json`): rules are keyed on object suffix, not tier prefix. Every job's intermediate artifacts (`/crawlResult.json`, `/storyboard.json`) expire after **7 days** regardless of tier — they're ephemeral pipeline intermediaries with no user-facing value after the video is rendered. The final deliverables (`/video.mp4`, `/thumb.webp`) survive **365 days**. GCS uses the non-standard `matchesSuffix` extension for this; AWS S3 and MinIO don't support it.
+
+**MinIO dev** (`deploy/lifecycle-minio.xml`): a single prefix rule (`jobs/` → 7d) covers everything. Dev vols are throwaway; the nuance between artifact and video retention adds friction with no benefit locally.
+
+**Why not per-tier prefixes?** The original plan assumed objects would be stored at `jobs/<tier>/<jobId>/...`. The v2 schema stores them at `jobs/<jobId>/...` — tier is in the Postgres `jobs` row, not the S3 key. Encoding tier into the key would require the orchestrator to know the tier before starting the job (it does), but would also mean the key changes if a user upgrades (it can't — the render worker already wrote the key). Suffix-based rules let the policy stay key-agnostic while still distinguishing transient vs durable artifacts.
+
+**Lifecycle is applied at deploy time** via `mc ilm import` (MinIO) or `gcloud storage buckets update --lifecycle-file` (GCS). The `minio-init` service in `docker-compose.dev.yaml` applies it automatically on every `infra:up`.
 
 ---
 

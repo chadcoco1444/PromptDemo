@@ -36,6 +36,7 @@ export function HistoryGrid() {
 
   // Track the cursor we last loaded, used by Load More.
   const [cursor, setCursor] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Identifier for the freshest filter set; throw away stale responses.
   const filterKey = JSON.stringify({ q: query.q, status: query.status, duration: query.duration, time: query.time });
@@ -167,8 +168,48 @@ export function HistoryGrid() {
 
   return (
     <div className="space-y-6">
-      <FilterBar query={query} onChange={onFilterChange} />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <FilterBar query={query} onChange={onFilterChange} />
+        </div>
+        <div className="flex shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            aria-label="Grid view"
+            aria-pressed={viewMode === 'grid'}
+            title="Grid view"
+            className={`p-1.5 rounded text-sm transition-colors ${
+              viewMode === 'grid'
+                ? 'text-white bg-white/10 ring-1 ring-white/20'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            ▦
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            aria-label="List view"
+            aria-pressed={viewMode === 'list'}
+            title="List view"
+            className={`p-1.5 rounded text-sm transition-colors ${
+              viewMode === 'list'
+                ? 'text-white bg-white/10 ring-1 ring-white/20'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+      <div
+        className={
+          viewMode === 'grid'
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+            : 'grid grid-cols-1 gap-3'
+        }
+      >
         <AnimatePresence initial={false}>
           {state.jobs.map((j, idx) => (
             <motion.div

@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
@@ -36,12 +36,32 @@ export function resolveDevCommand(svc) {
   if (tool === 'tsx') {
     // tsx's package.json `exports` restricts subpath access, so resolve the
     // package.json (which is always exported) and derive the CLI path from it.
-    const tsxPkg = dirname(req.resolve('tsx/package.json'));
+    // On Windows+pnpm, local symlinks may not resolve via createRequire — fall
+    // back to the pnpm virtual store at the workspace root.
+    let tsxPkg;
+    try {
+      tsxPkg = dirname(req.resolve('tsx/package.json'));
+    } catch {
+      const pnpmStore = join(process.cwd(), 'node_modules', '.pnpm');
+      const entries = existsSync(pnpmStore) ? readdirSync(pnpmStore) : [];
+      const tsxEntry = entries.filter(e => e.startsWith('tsx@')).sort().at(-1);
+      if (!tsxEntry) throw new Error(`resolveDevCommand(${svc.name}): cannot find tsx in pnpm store`);
+      tsxPkg = join(pnpmStore, tsxEntry, 'node_modules', 'tsx');
+    }
     const cli = join(tsxPkg, 'dist', 'cli.mjs');
     return { node: process.execPath, args: [cli, ...rest], cwd: svc.cwd };
   }
   if (tool === 'next') {
-    const nextPkg = dirname(req.resolve('next/package.json'));
+    let nextPkg;
+    try {
+      nextPkg = dirname(req.resolve('next/package.json'));
+    } catch {
+      const pnpmStore = join(process.cwd(), 'node_modules', '.pnpm');
+      const entries = existsSync(pnpmStore) ? readdirSync(pnpmStore) : [];
+      const nextEntry = entries.filter(e => e.startsWith('next@')).sort().at(-1);
+      if (!nextEntry) throw new Error(`resolveDevCommand(${svc.name}): cannot find next in pnpm store`);
+      nextPkg = join(pnpmStore, nextEntry, 'node_modules', 'next');
+    }
     const bin = join(nextPkg, 'dist', 'bin', 'next');
     return { node: process.execPath, args: [bin, ...rest], cwd: svc.cwd };
   }

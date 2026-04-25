@@ -15,7 +15,8 @@
     "infra:down": "docker compose -f docker-compose.dev.yaml down",
     "infra:check": "node scripts/infra-check.mjs",
     "lume": "node scripts/lume.mjs",
-    "test:scripts": "pnpm --filter @lumespec-internal/scripts test"
+    "test:scripts": "pnpm --filter @lumespec-internal/scripts test",
+    "a11y": "node scripts/check-a11y.mjs"
   },
   "devDependencies": {
     "typescript": "5.5.4",
