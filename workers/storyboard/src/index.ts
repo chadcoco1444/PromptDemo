@@ -58,6 +58,7 @@ const worker = new Worker<JobPayload>(
     if (mockMode) {
       await job.updateProgress(makeIntel('storyboard', 'Loading a canned storyboard (mock mode)'));
       storyboard = await loadMockStoryboard(payload.duration);
+      storyboard.videoConfig.showWatermark = payload.showWatermark;
     } else {
       if (!claude) throw new Error('claude client not initialized');
       await job.updateProgress(makeIntel('storyboard', 'Reading the crawl results'));
