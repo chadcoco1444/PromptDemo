@@ -31,20 +31,22 @@ const TIME_OPTIONS = [
 ] as const;
 
 export function FilterBar({ query, onChange }: FilterBarProps) {
-  const update = (patch: Partial<HistoryQuery>): void => {
+  const update = (patch: { [K in keyof HistoryQuery]?: HistoryQuery[K] | undefined }): void => {
     // We always reset `before` cursor when filters change — paginating into
     // a different result set wouldn't make sense.
-    const next: HistoryQuery = { ...query, ...patch };
+    // Use a loose intermediate type to avoid exactOptionalPropertyTypes conflicts
+    // during the merge; we cast to HistoryQuery after stripping undefined values.
+    const merged: Record<string, unknown> = { ...query, ...patch };
     if (Object.prototype.hasOwnProperty.call(patch, 'before') === false) {
-      delete next.before;
+      delete merged['before'];
     }
-    // Strip explicitly-undefined fields so URL serialization stays clean.
-    for (const k of Object.keys(next) as Array<keyof HistoryQuery>) {
-      if (next[k] === undefined || next[k] === null || next[k] === '') {
-        delete next[k];
+    // Strip explicitly-undefined / empty fields so URL serialization stays clean.
+    for (const k of Object.keys(merged)) {
+      if (merged[k] === undefined || merged[k] === null || merged[k] === '') {
+        delete merged[k];
       }
     }
-    onChange(next);
+    onChange(merged as HistoryQuery);
   };
 
   return (
