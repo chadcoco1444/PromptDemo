@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       ? `AND created_at < $${params.push(new Date(before))}`
       : '';
     const { rows } = await pool.query(
-      `SELECT id, status, stage, input, video_url, thumb_url,
+      `SELECT id, status, stage, input, video_url, thumb_url, crawl_result_uri,
               EXTRACT(EPOCH FROM created_at) * 1000 AS created_at_ms
        FROM jobs
        WHERE user_id = $1 ${beforeClause}
@@ -53,15 +53,28 @@ export async function GET(request: Request) {
       params,
     );
     return NextResponse.json({
-      jobs: rows.map((r) => ({
-        jobId: r.id,
-        status: r.status,
-        stage: r.stage,
-        input: r.input,
-        videoUrl: r.video_url,
-        thumbUrl: r.thumb_url,
-        createdAt: Math.round(Number(r.created_at_ms)),
-      })),
+      jobs: rows.map((r) => {
+        // v2.1 Phase 3.2: surface a cover URL the moment crawl completes,
+        // so history cards have a real preview during the long generating
+        // phase. Falls back to thumbUrl (post-render extracted frame) once
+        // the render worker fills it.
+        const crawlComplete =
+          r.crawl_result_uri !== null ||
+          r.stage === 'storyboard' ||
+          r.stage === 'render' ||
+          r.status === 'done';
+        const coverUrl = r.thumb_url ?? (crawlComplete ? `/api/jobs/${r.id}/cover` : null);
+        return {
+          jobId: r.id,
+          status: r.status,
+          stage: r.stage,
+          input: r.input,
+          videoUrl: r.video_url,
+          thumbUrl: r.thumb_url,
+          coverUrl,
+          createdAt: Math.round(Number(r.created_at_ms)),
+        };
+      }),
     });
   } catch (err) {
     console.error('[api/users/me/jobs] query failed:', err);
