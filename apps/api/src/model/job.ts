@@ -20,6 +20,10 @@ export const JobInputSchema = z.object({
   duration: z.union([z.literal(10), z.literal(30), z.literal(60)]),
   parentJobId: z.string().min(1).optional(),
   hint: z.string().min(1).max(500).optional(),
+  /** When true, forces showWatermark=true regardless of the user's tier. Used
+   *  by the dogfood script (--watermark flag) to generate PLG marketing assets
+   *  from a Pro account without suppressing the Pill Badge. */
+  forceWatermark: z.boolean().optional(),
 });
 export type JobInput = z.infer<typeof JobInputSchema>;
 

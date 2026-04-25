@@ -91,6 +91,9 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
       }
     }
 
+    // forceWatermark set by dogfood/internal scripts overrides tier derivation.
+    if (current.input.forceWatermark) showWatermark = true;
+
     await cfg.queues.storyboard.add(
       'generate',
       {

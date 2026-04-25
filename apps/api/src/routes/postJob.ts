@@ -173,6 +173,10 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
       }
     }
 
+    // forceWatermark: dogfood/internal scripts can opt-in to the Pill Badge
+    // regardless of tier (adds branding, never removes it).
+    if (input.forceWatermark) showWatermark = true;
+
     const newJob: Job & { userId?: string } = {
       jobId,
       ...(input.parentJobId ? { parentJobId: input.parentJobId } : {}),

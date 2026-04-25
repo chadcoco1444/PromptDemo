@@ -7,9 +7,15 @@
  * docs/readme/landing-hero-demo.mp4.
  *
  * Usage:
- *   node scripts/dogfood-landing-demo.mjs [url] [intent] [duration]
+ *   node scripts/dogfood-landing-demo.mjs [url] [intent] [duration] [--watermark]
  *
- * Defaults to vercel.com / 60s with a marketing-flavored intent.
+ * Flags:
+ *   --watermark   Force showWatermark=true regardless of account tier.
+ *                 Use this to generate PLG marketing assets (README GIF, landing
+ *                 page hero) that deliberately show the "Made with PromptDemo"
+ *                 Pill Badge even when the account is on a Pro/Max plan.
+ *
+ * Defaults: stripe.com / 30s / PromptDemo-showcase intent.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, createWriteStream } from 'node:fs';
@@ -34,9 +40,19 @@ function loadDotenv() {
 }
 loadDotenv();
 
-const url = process.argv[2] ?? 'https://vercel.com';
-const intent = process.argv[3] ?? 'A high-energy marketing trailer that showcases the speed, power, and elegance of the platform. Fast cuts, bold visuals, end on the call-to-action.';
-const duration = Number(process.argv[4] ?? '60');
+// --watermark can appear anywhere in argv (flag, not positional).
+const forceWatermark = process.argv.includes('--watermark');
+const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+
+const url = positional[0] ?? 'https://stripe.com';
+const intent = positional[1] ?? (
+  'A fast-paced product showcase that opens on a sleek URL input field, ' +
+  'cuts to an AI Creativity Engine analysing the page, then reveals the ' +
+  'rendered video complete with the "Made with PromptDemo" badge — finishing ' +
+  'on the History Vault where the user downloads the MP4 in one click. ' +
+  'Tone: confident, modern, developer-friendly.'
+);
+const duration = Number(positional[2] ?? '30');
 const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3000';
 const userId = process.env.DOGFOOD_USER_ID ?? '1';
 const secret = process.env.INTERNAL_API_SECRET;
@@ -67,6 +83,7 @@ const token = mintJwt(userId);
 console.log(`[dogfood] minted JWT for user_id=${userId}`);
 console.log(`[dogfood] target: ${url} (${duration}s)`);
 console.log(`[dogfood] intent: ${intent}`);
+if (forceWatermark) console.log('[dogfood] --watermark: forceWatermark=true (Pill Badge will appear regardless of tier)');
 
 // --- POST job ---
 const postRes = await fetch(`${apiBase}/api/jobs`, {
@@ -75,7 +92,7 @@ const postRes = await fetch(`${apiBase}/api/jobs`, {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   },
-  body: JSON.stringify({ url, intent, duration }),
+  body: JSON.stringify({ url, intent, duration, ...(forceWatermark ? { forceWatermark: true } : {}) }),
 });
 if (!postRes.ok) {
   console.error('[dogfood] POST failed:', postRes.status, await postRes.text());

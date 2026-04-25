@@ -1,246 +1,175 @@
-<p align="center">
-  <img src="docs/readme/demo.gif" alt="PromptDemo in action" width="720" />
-</p>
+<div align="center">
 
-<h1 align="center">PromptDemo</h1>
+# 🎬 PromptDemo
 
-<p align="center">
-  Turn any URL into a 10 / 30 / 60-second demo video.<br/>
-  Playwright crawls the page · Claude writes the storyboard · Remotion renders the MP4.
-</p>
+**Your website → an AI-crafted demo video.**
+**Describe your intent. Hit generate. Ship in 60 seconds.**
 
-<p align="center">
-  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-14-black?logo=next.js" />
-  <img alt="Fastify" src="https://img.shields.io/badge/Fastify-5-000?logo=fastify" />
-  <img alt="Remotion" src="https://img.shields.io/badge/Remotion-4-FF6600" />
-  <img alt="Claude" src="https://img.shields.io/badge/Anthropic-Sonnet%204.6-d97706" />
-  <img alt="tests" src="https://img.shields.io/badge/tests-340%2B%20passing-22c55e" />
-  <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
-</p>
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Node 20+](https://img.shields.io/badge/Node-20%2B-6366f1)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-2563eb)](https://www.typescriptlang.org)
+[![Powered by Claude](https://img.shields.io/badge/AI-Claude%203.5%20Sonnet-7c3aed)](https://anthropic.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-0284c7)](CONTRIBUTING.md)
 
----
+<img src="docs/readme/demo.gif" alt="PromptDemo — paste a URL, get a demo video" width="720" />
 
-## What it does
+> Making a demo video used to mean screen recording, cutting footage, and hours of retakes every time your product changed. **PromptDemo flips the model.** Paste a URL, describe your intent — our AI pipeline reads your industry, generates a cinematic storyboard, and Remotion renders a pixel-perfect MP4 before your next coffee. No editing software. No templates. Just your product, presented brilliantly. And yes — every video dogfoods our own stack, including the **"Made with PromptDemo"** badge you see bottom-right.
 
-1. **Paste any product URL** in the web form.
-2. **Describe what to emphasize** — or click one of 5 preset chips (Executive Summary · Tutorial · Marketing Hype · Technical Deep-Dive · Customer Success Story), bilingual EN / 中 toggle.
-3. **Hit Create.** In about a minute, you get a 10/30/60-second MP4 authored from the page's own copy and screenshots.
-
-No human editor in the loop. The storyboard only uses text the crawler actually extracted (an extractive-check layer rejects anything Claude invents).
+</div>
 
 ---
 
-## Features
+## ✨ Why PromptDemo?
 
-| | |
-|---|---|
-| 🎬 **4 FeatureCallout variants** | Real screenshot · Ken Burns pan+zoom on the full-page capture · 3-up collage slice · stylized dashboard fallback. Variant selected deterministically post-LLM. |
-| 💬 **5 intent presets, bilingual** | English / 中 toggle; body AND append marker both follow the chosen language. Bilingual dedup prevents duplicate stuffing on re-clicks. |
-| 🎨 **Glassmorphic dark UI** | Full-app `#0a0a0a` design system — radial violet gradient blooms, `ring-1 ring-white/10 bg-white/5 backdrop-blur-md` cards, framer-motion scroll reveals, floating video with breathe animation, and an IntentShowcase tab switcher on the landing page. Every authenticated route (Create / Jobs / Billing / History) matches the landing page aesthetic. |
-| 📜 **History v2.2 with URL-synced filters** | HistoryGrid with debounced search, status + duration chip filters, lineage badges, staggered fade-in cards, and load-more pagination — all state synced to the URL query string. |
-| 🔐 **Google OAuth + History** | NextAuth v5 + Postgres. Signed-in users see their past renders at `/history`, can regenerate from any job with a hint. |
-| 🔄 **Regenerate with hint** | Parent `jobId` lookup is server-side — skips the crawl stage entirely, reuses the parent's crawlResultUri, saves ~30s. Security-hardened: client-supplied crawlResultUri is ignored. |
-| 🛡️ **7-layer LLM defense** | JSON auto-repair, balanced-brace extractor, list-separator extractive check, Zod integer coercion, smart-quote normalization, 10% duration auto-prorate, sceneId array-index fallback. See [design decisions](docs/readme/design-decisions.md). |
-| 🚀 **One-command local dev** | `pnpm demo start` brings up Docker (Redis + MinIO + Postgres) + 5 Node services on Windows / macOS / Linux. `db:reset` / `db:tables` / `clean-all` / `status` subcommands included. |
-| ♿ **Accessibility baked in** | Focus-visible rings on every button, `role="group"` on chip rows, proper aria-labels, `suppressHydrationWarning` scoped to exactly the nodes that legitimately differ server vs. client. |
+|  | Feature | The benefit you actually care about |
+|---|---|---|
+| 🧠 | **Creativity Engine** | Claude doesn't just read your page — it *understands your industry*. Fintech gets authority and momentum. SaaS gets energy. Dev tools get precision. Zero briefing required. |
+| 🎥 | **Pixel-Perfect Rendering** | Videos are generated from React + Remotion code, not screen recordings. Every easing curve, transition, and font size is mathematically exact. No artifacts, no "sorry the recording froze" moments. |
+| 📁 | **History Vault + Fork** | Every video is stored, searchable, and re-renderable. Updated your landing page? Fork last week's video, tweak the intent, re-render. Your demo library evolves with your product. |
 
 ---
 
-## Architecture
+## ⚡ How It Works
 
-<p align="center">
-  <img src="docs/readme/architecture.svg" alt="PromptDemo system architecture" width="960" />
-</p>
+```
+Paste URL  →  Crawl & Understand  →  AI Storyboard  →  Render MP4  →  Download & Share
+   (1)              (2)                    (3)              (4)              (5)
+```
 
-### The happy path
-
-1. Browser POSTs to `/api/jobs/create` (a same-origin Next.js proxy). If authenticated, the proxy adds `X-User-Id` and forwards to Fastify.
-2. Fastify validates the payload, creates a job record, enqueues to `crawl` queue. Returns `jobId` + `201`.
-3. Browser opens an SSE connection to `/api/jobs/:id/stream`.
-4. **Crawler** pulls the job, runs Playwright → captures viewport + full-page screenshots, extracts features/text/brand color. Uploads `crawlResult.json` to S3. Marks completed.
-5. **Orchestrator** sees crawl completed, enqueues to `storyboard` with the `crawlResultUri`.
-6. **Storyboard worker** calls Claude Sonnet 4.6 with the extracted content + user intent. Runs the 3-pass JSON parser, extractive whitelist check, duration auto-prorate, variant selector. Uploads `storyboard.json` to S3. Marks completed.
-7. **Orchestrator** enqueues to `render` queue (subject to a global cap so we don't DoS our own Remotion bundler).
-8. **Render worker** reads both artifacts, runs Remotion composition, uploads `video.mp4` to S3. Marks completed.
-9. Browser's SSE stream reports `done`, switches to a `<video>` element pointed at the presigned MP4 URL.
-
-Progress updates flow the whole way through as BullMQ `progress` events → orchestrator → SSE broker → browser.
-
-### Why this shape
-
-- **Three distinct workers, one per stage** rather than a monolithic pipeline: each failure mode is isolated (crawl-404 never blocks render; LLM hiccup doesn't retry Playwright). Per-queue concurrency caps are per-stage — we can run 3 crawlers but only 1 render at a time.
-- **Redis as queue + progress pub/sub, Postgres as long-term history.** Progress updates fire ~5×/sec during render — writing those to Postgres would be a WAL storm. Postgres only sees status/stage transitions (~5 writes per job lifecycle). See [Amendment A](docs/readme/design-decisions.md#amendment-a-progress-stays-in-redis).
-- **Same-origin Next.js proxy for API calls** keeps NextAuth session handling on the web side; Fastify just reads the trusted `X-User-Id` header. Production deploy MUST strip client-supplied `X-User-Id` at the ingress — see [security](#security-notes).
+1. **Paste URL** — any live webpage: product page, landing page, changelog, docs
+2. **Crawl & Understand** — Playwright takes full-page screenshots; Claude reads your content and detects your industry
+3. **AI Storyboard** — the Creativity Engine generates a JSON scene script: hero, feature callouts, CTA, pacing — all tuned to your tone
+4. **Render MP4** — Remotion renders frame-perfect 10 / 30 / 60-second video via isolated BullMQ workers
+5. **Download & Share** — MP4 ready for LinkedIn, Product Hunt, your docs site, or your next pitch deck
 
 ---
 
-## Tech stack
-
-| Frontend | Backend | Infra / Ops | Tooling |
-|---|---|---|---|
-| Next.js 14 App Router | Fastify 5 | Docker Compose (dev) | pnpm workspaces |
-| React 18 | BullMQ 5 on Redis 7 | Cloud Run (prod target) | Vitest |
-| Tailwind 3 | Anthropic SDK 0.30 | Postgres 16 + `@auth/pg-adapter` | `@testing-library/react` |
-| Remotion 4 | Playwright 1 | MinIO (dev) / AWS S3 (prod) | TypeScript strict mode |
-| NextAuth v5 | Zod 3 (shared schemas) | GitHub Actions (planned) | Changesets (planned) |
-
----
-
-## Quickstart — local dev
-
-**Prerequisites**: Docker Desktop, Node 22+, pnpm 9+, an Anthropic API key.
+## 🚀 Quick Start
 
 ```bash
+# 1 · Clone and install
 git clone https://github.com/chadcoco1444/PromptDemo.git
 cd PromptDemo
 pnpm install
 
-# Copy env template and add your Anthropic key
+# 2 · Configure (only one key is required)
 cp .env.example .env
-#   edit .env and set ANTHROPIC_API_KEY=sk-ant-...
+# → open .env and add your ANTHROPIC_API_KEY
 
-# One command: docker compose up + spawn 5 services in background
+# 3 · Launch everything
 pnpm demo start
-
-# Open the web UI
-# → http://localhost:3001
+# → Web UI at http://localhost:3001
+# → API at http://localhost:3000/healthz
 ```
 
-That's it. Paste a URL, pick a preset, click Create.
+> **First run is slow** — workers install Chromium, Redis connects, and Next.js builds. Watch `pnpm demo logs` and wait for "worker started". Subsequent starts are fast.
 
-### Enabling auth + history (optional)
+### Prerequisites
+
+- Docker Desktop (for Redis, MinIO, Postgres)
+- Node.js ≥ 20 + pnpm ≥ 9
+- An `ANTHROPIC_API_KEY`
+
+### Optional: Google OAuth + History Vault
 
 ```bash
-# 1. Set up Google OAuth at https://console.cloud.google.com/apis/credentials
-#    Authorized redirect URI: http://localhost:3001/api/auth/callback/google
-
-# 2. Edit .env — add your creds and a random secret
-#    (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-#    GOOGLE_CLIENT_ID=...
-#    GOOGLE_CLIENT_SECRET=...
-#    AUTH_SECRET=<64-char hex>
-#    AUTH_ENABLED=true
-
-# 3. Reset Postgres volume + apply schema
-pnpm demo db:reset
-
-# 4. Restart
-pnpm demo start
+# In .env:
+AUTH_ENABLED=true
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+AUTH_SECRET=<openssl rand -hex 32>
+NEXTAUTH_URL=http://localhost:3001
 ```
 
-Visit `http://localhost:3001`, click Sign In, complete Google OAuth. You'll land back with a History link in the nav.
+Then `pnpm demo db:reset` to apply migrations and `pnpm demo start`.
 
 ---
 
-## `pnpm demo` command reference
+## 🏗️ Built with the Best of the Modern Web
 
-| Command | What it does |
+| Layer | Technology | Why |
+|---|---|---|
+| **Frontend** | Next.js 14 · Tailwind CSS · shadcn/ui · Framer Motion | App Router, dark glassmorphic UI, server components |
+| **AI** | Anthropic Claude 3.5 Sonnet | Storyboard generation, industry tone injection, 7-layer output validation |
+| **Rendering** | Remotion 4 | Code-driven video — frame-perfect output, zero recording artifacts |
+| **Queue** | BullMQ + Redis | Isolated crawl → storyboard → render worker pipeline |
+| **Crawling** | Playwright + ScreenshotOne | Full-page screenshots, JS-rendered content extraction |
+| **Database** | PostgreSQL + `@auth/pg-adapter` | Auth sessions, credit ledger, job history |
+| **Storage** | AWS S3 / MinIO | Video assets, crawl results, storyboard JSON |
+| **Auth** | NextAuth v5 + Google OAuth | Database sessions, per-user credit + history isolation |
+
+---
+
+## 🗂️ Architecture
+
+```
+Browser / CLI
+     │
+     ▼
+apps/web (Next.js 14)          ← Marketing landing, History Vault, auth
+     │  JWT proxy
+     ▼
+apps/api (Fastify)             ← Job lifecycle, credit gate, orchestration
+     │  BullMQ
+     ├──▶ workers/crawler      ← Playwright + Claude content extraction
+     ├──▶ workers/storyboard   ← Creativity Engine (Claude storyboard gen)
+     └──▶ workers/render       ← Remotion → MP4 → S3
+```
+
+Each worker runs in its own Node process with its own Redis connection.
+The web tier talks to the API via a short-lived HS256 JWT — end-user
+browsers never touch the API directly.
+
+---
+
+## 🗺️ Roadmap
+
+What's coming next:
+
+| Status | Feature |
 |---|---|
-| `pnpm demo start` | Docker up + wait for Redis/MinIO/Postgres + spawn 5 services |
-| `pnpm demo stop` | Kill services, Docker down |
-| `pnpm demo restart` | Stop + start |
-| `pnpm demo status` | Infra health (with table + row counts when `AUTH_ENABLED`) + service listening checks |
-| `pnpm demo test` | End-to-end smoke: POST /api/jobs, poll until done, verify MP4 |
-| `pnpm demo logs [svc]` | Tail logs (all services, or one of `crawler`/`storyboard`/`render`/`api`/`web`) |
-| `pnpm demo run` | Foreground mode — mixed output, Ctrl-C stops |
-| `pnpm demo clean` | Remove stale Remotion webpack bundles from OS temp |
-| `pnpm demo clean-all --yes` | Nuclear option: kill every `node`/`pnpm`/`tsx`/`cmd` process whose command line touches this repo |
-| `pnpm demo db:reset` | Wipe Postgres volume + rerun migrations |
-| `pnpm demo db:tables` | List DB tables + row counts |
+| 🔜 Next | **Multi-language voiceover** — auto-generated narration in EN / ZH |
+| 🔜 Next | **Custom brand kit** — upload logo + colors, every video matches your brand |
+| 💡 Planned | **Webhook / CI trigger** — auto-generate a new video on every deploy |
+| 💡 Planned | **Team workspaces** — share History Vault and credits across your org |
+| 💡 Planned | **Scene editor** — tweak the AI storyboard before rendering |
 
-### Running tests
+Want to see something here sooner? Open an issue or vote with a 👍.
+
+---
+
+## 🤝 Contributing
+
+PromptDemo is built in the open and welcomes contributions of all kinds.
+
+- **Found a bug?** [Open an issue](https://github.com/chadcoco1444/PromptDemo/issues)
+- **Have a scene type idea?** Submit a PR — the renderer is modular and each scene is a self-contained React component
+- **Want to add a voiceover engine or new crawling strategy?** Start a Discussion
 
 ```bash
-pnpm -r test
-# → 340+ tests across:
-#   @promptdemo/schema                (50)
-#   @promptdemo/worker-storyboard     (68)
-#   @promptdemo/remotion              (25)
-#   @promptdemo/web                   (159)
-#   @promptdemo/api                   (39)
+# Run all tests
+pnpm test
+
+# Run a specific package
+pnpm --filter @promptdemo/web test
+
+# Type-check the whole monorepo
+pnpm tsc
+
+# Re-generate the landing hero video (with PLG watermark)
+node scripts/dogfood-landing-demo.mjs --watermark
 ```
 
----
-
-## Project structure
-
-```
-apps/
-  api/               Fastify orchestrator + BullMQ producer + SSE broker
-  web/               Next.js 14 frontend + NextAuth + /history + trusted proxy
-workers/
-  crawler/           Playwright + ScreenshotOne (rescue) + Cheerio (Tier-B)
-  storyboard/        Anthropic Claude client + validation stack + prompt templates
-  render/            Remotion renderer + pre-signed URL resolver + BGM handling
-packages/
-  schema/            Shared Zod schemas (Job / Storyboard / CrawlResult)
-  remotion/          Remotion compositions + FeatureCallout variants + tests
-scripts/
-  demo.mjs           850-line lifecycle manager (db:reset, clean-all, status, logs…)
-  lib/               devCommand resolver (used by spawn)
-db/
-  migrations/        Auto-applied on `up -d postgres` via docker-entrypoint-initdb.d
-docs/
-  superpowers/       Design specs + implementation plans + followup guides
-  readme/            Architecture SVG + design-decisions writeup
-```
+See `docs/readme/demo-gif-howto.md` for instructions on recording and compressing the demo GIF.
 
 ---
 
-## Design decisions (the fun stuff)
+<div align="center">
 
-The hard calls are written up in [`docs/readme/design-decisions.md`](docs/readme/design-decisions.md):
+**⭐ If PromptDemo saved you an hour of video editing, give us a star — it helps more developers find the project.**
 
-- **Why progress stays in Redis, not Postgres** (Amendment A — WAL storm math)
-- **Why we chose Option C for bilingual presets** (Chinese intent → Claude, despite the quality tradeoff)
-- **The 7-layer Claude output defense** and how each failure mode was found
-- **Why `JOB_OBJECT_UILIMIT_DESKTOP` is the known-hard followup** for Windows terminal hiding
-- **Why `z.coerce.number()` without `.int().positive()` guards is a NaN trap**
-- **Why direct-node spawn beats pnpm.cmd wrapping for PID tracking**
+[Star on GitHub](https://github.com/chadcoco1444/PromptDemo) · [Open an Issue](https://github.com/chadcoco1444/PromptDemo/issues) · [Start a Discussion](https://github.com/chadcoco1444/PromptDemo/discussions)
 
----
+<sub>Built with ❤️ and dogfooded on itself — the demo GIF above was generated by PromptDemo.</sub>
 
-## Security notes
-
-- **OAuth creds live in `.env` only** (`.env` is gitignored). `.env.example` has the skeleton with blanks.
-- **`X-User-Id` is a trusted same-origin header.** The apps/web Next.js proxy reads the NextAuth session server-side and sets the header. Fastify trusts it. **Production deploy MUST strip any client-supplied `X-User-Id` at the ingress layer** (Cloud Run, API Gateway, or an Nginx block) — otherwise any client could forge identity. See [the followup guide](docs/superpowers/followups/2026-04-25-feature4-auth-history-guide.md).
-- **Parent URI inheritance is server-authoritative.** When regenerating with a `parentJobId`, the API looks up the parent's `crawlResultUri` from its own store; a client-supplied URI in the request payload is ignored (regression test in `apps/api/tests/postJob.test.ts`).
-- **Stripe webhook signature verification happens before idempotency dedupe** (Feature 5, planned).
-
----
-
-## Deployment
-
-Target: Cloud Run. Scripts under `deploy/` provision Artifact Registry, GCS bucket, Memorystore Redis, Secret Manager, and deploy each service as its own Cloud Run service. See the deploy plan in `docs/superpowers/plans/` for details. A dry-run Cloud Run deploy completes in ~3 minutes per service.
-
----
-
-## Roadmap
-
-- ✅ Feature 1 — FeatureCallout variants (image / Ken Burns / collage / dashboard)
-- ✅ Feature 2 — Intent presets with bilingual toggle
-- ✅ Feature 3 — Stage rail, micro-interactions, glassmorphic dark UI system
-- ✅ Feature 4 — Google OAuth, history, regenerate with skip-crawl
-- ✅ Feature 4.1 — HistoryGrid v2.2: URL-synced filters, load-more, staggered cards, lineage badges
-- ✅ Feature 4.2 — Full-app visual redesign: landing page paradigm shift + all authenticated routes
-- 🚧 Feature 5 — Credits + tier enforcement + /billing (Stripe integration pending keys)
-- 📋 SSE live-intel per stage (Playwright track, token count, frame counter)
-- 📋 Windows terminal hiding via Job Objects
-- 📋 Bento variant (deferred to v2.1 per original spec)
-
-Detailed specs + implementation plans live under [`docs/superpowers/`](docs/superpowers/).
-
----
-
-## Contributing
-
-Issues + PRs welcome. Please:
-1. Run `pnpm -r test && pnpm -r typecheck` before opening a PR.
-2. Match the existing Zod schema → Postgres → TS type flow for any new persisted field.
-3. Add a test that captures the failure mode you're fixing (especially for LLM-output edge cases).
-
----
-
-## License
-
-MIT.
+</div>
