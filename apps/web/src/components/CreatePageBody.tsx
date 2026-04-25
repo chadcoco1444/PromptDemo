@@ -10,26 +10,52 @@ import { API_BASE } from '../lib/config';
 import type { Prefill } from '../lib/prefill';
 import type { JobInput } from '../lib/types';
 
+export interface ForkInfo {
+  parentJobId: string;
+  url: string;
+  intent: string;
+  duration: 10 | 30 | 60;
+  hint?: string;
+}
+
 export interface CreatePageBodyProps {
   prefill?: Prefill;
   initialUrl?: string;
+  fork?: ForkInfo;
+  /** Test-only: override the submit function to spy on calls */
+  _testSubmit?: (input: JobInput) => Promise<{ jobId: string }>;
 }
 
-export function CreatePageBody({ prefill, initialUrl }: CreatePageBodyProps) {
+export function CreatePageBody({ prefill, initialUrl, fork, _testSubmit }: CreatePageBodyProps) {
   const router = useRouter();
   const submittedRef = useRef(false);
 
-  const submit = async (input: JobInput) => {
+  const submit = _testSubmit ?? (async (input: JobInput) => {
     const res = await createJob(input, API_BASE);
     router.push(`/jobs/${res.jobId}`);
     return res;
-  };
+  });
 
+  // Auto-submit only for prefill (OAuth return flow), NOT for fork.
   useEffect(() => {
     if (!prefill || submittedRef.current) return;
     submittedRef.current = true;
     void submit({ url: prefill.url, intent: prefill.intent, duration: prefill.duration });
   }, [prefill]);
+
+  const jobFormProps = fork
+    ? {
+        initialUrl: fork.url,
+        initialIntent: fork.intent,
+        initialDuration: fork.duration,
+        initialHint: fork.hint,
+        parentJobId: fork.parentJobId,
+      }
+    : prefill
+      ? { initialUrl: prefill.url, initialIntent: prefill.intent, initialDuration: prefill.duration }
+      : initialUrl
+        ? { initialUrl }
+        : {};
 
   return (
     <LandingBackdrop className="min-h-[calc(100vh-65px)]">
@@ -48,10 +74,12 @@ export function CreatePageBody({ prefill, initialUrl }: CreatePageBodyProps) {
               letterSpacing: '-0.02em',
             }}
           >
-            Turn any URL into a demo video.
+            {fork ? 'Fork & edit this video.' : 'Turn any URL into a demo video.'}
           </h1>
           <p className="mt-3 text-sm text-gray-400 leading-relaxed">
-            Paste a product URL, describe what to emphasize, and get a 10/30/60-second demo rendered with Remotion.
+            {fork
+              ? 'Pre-filled from the original job. Edit the intent or hint, then create.'
+              : 'Paste a product URL, describe what to emphasize, and get a 10/30/60-second demo rendered with Remotion.'}
           </p>
         </motion.header>
 
@@ -62,14 +90,7 @@ export function CreatePageBody({ prefill, initialUrl }: CreatePageBodyProps) {
           className="rounded-2xl p-8 ring-1 ring-white/10 bg-white/5 backdrop-blur-md"
           style={{ boxShadow: '0 0 60px rgba(109,40,217,0.08)' }}
         >
-          <JobForm
-            onSubmit={submit}
-            {...(prefill
-              ? { initialUrl: prefill.url, initialIntent: prefill.intent, initialDuration: prefill.duration }
-              : initialUrl
-                ? { initialUrl }
-                : {})}
-          />
+          <JobForm onSubmit={submit} {...jobFormProps} />
         </motion.div>
       </div>
     </LandingBackdrop>
