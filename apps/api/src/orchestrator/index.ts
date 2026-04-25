@@ -79,8 +79,12 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     if (cfg.creditPool && current.userId) {
       const userIdNum = Number(current.userId);
       if (Number.isFinite(userIdNum)) {
-        const tier = await getUserTier(cfg.creditPool, userIdNum);
-        showWatermark = tier === 'free';
+        try {
+          const tier = await getUserTier(cfg.creditPool, userIdNum);
+          showWatermark = tier === 'free';
+        } catch (err) {
+          console.error('[orchestrator] getUserTier failed; defaulting showWatermark=false', { jobId, err });
+        }
       }
     }
 
