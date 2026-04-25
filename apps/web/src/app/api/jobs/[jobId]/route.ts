@@ -11,7 +11,8 @@ export async function DELETE(_req: Request, ctx: { params: { jobId: string } }) 
   const session = await auth();
   if (!session?.user) return new Response(null, { status: 401 });
   const userId = (session.user as { id?: string }).id;
-  if (!userId) return new Response(null, { status: 404 });
+  const userIdNum = Number(userId);
+  if (!userId || !Number.isFinite(userIdNum)) return new Response(null, { status: 404 });
 
   const { jobId } = ctx.params;
   if (!jobId || jobId.length > 64 || !/^[A-Za-z0-9_-]+$/.test(jobId)) {
@@ -26,7 +27,7 @@ export async function DELETE(_req: Request, ctx: { params: { jobId: string } }) 
     const { rows } = await client.query(
       `SELECT status, (input->>'duration')::int AS duration
        FROM jobs WHERE id = $1 AND user_id = $2`,
-      [jobId, Number(userId)],
+      [jobId, userIdNum],
     );
     if (rows.length === 0) {
       await client.query('ROLLBACK');
@@ -46,7 +47,7 @@ export async function DELETE(_req: Request, ctx: { params: { jobId: string } }) 
       }
       const refund = await client.query(
         `UPDATE credits SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
-        [duration, Number(userId)],
+        [duration, userIdNum],
       );
       if (refund.rows.length === 0) {
         await client.query('ROLLBACK');
@@ -60,7 +61,7 @@ export async function DELETE(_req: Request, ctx: { params: { jobId: string } }) 
       await client.query(
         `INSERT INTO credit_transactions (user_id, job_id, delta, reason, balance_after)
          VALUES ($1, $2, $3, 'refund', $4)`,
-        [Number(userId), jobId, duration, balanceAfter],
+        [userIdNum, jobId, duration, balanceAfter],
       );
     }
 
@@ -70,7 +71,7 @@ export async function DELETE(_req: Request, ctx: { params: { jobId: string } }) 
     );
     await client.query(
       `DELETE FROM jobs WHERE id = $1 AND user_id = $2`,
-      [jobId, Number(userId)],
+      [jobId, userIdNum],
     );
     await client.query('COMMIT');
     return new Response(null, { status: 204 });

@@ -175,6 +175,7 @@ export function HistoryGrid() {
               key={j.jobId}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
               transition={{ duration: 0.18, delay: Math.min(idx * 0.03, 0.45) }}
             >
               <HistoryCard job={j} tier={state.tier} onDelete={handleDelete} />
