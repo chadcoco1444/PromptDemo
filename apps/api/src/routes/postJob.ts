@@ -5,6 +5,7 @@ import { JobInputSchema, type Job } from '../model/job.js';
 import type { JobStore } from '../jobStore.js';
 import { calculateCost, isDurationAllowed, type Tier } from '../credits/ledger.js';
 import { debitForJob } from '../credits/store.js';
+import { verifyInternalToken } from '../auth/internalToken.js';
 
 export interface PostJobRouteOpts {
   store: JobStore;
@@ -48,16 +49,26 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
     }
     const input = parse.data;
 
-    // User attribution. Only consumed when dual-write is active (i.e. AUTH
-    // layer expects Postgres-backed jobs). When requireUserIdHeader=false,
-    // anonymous jobs are still accepted (writes go to Redis-only).
-    const headerUserId = req.headers['x-user-id'];
-    const userId = typeof headerUserId === 'string' && headerUserId.length > 0 ? headerUserId : undefined;
-    if (opts.requireUserIdHeader && !userId) {
-      return reply.code(401).send({
-        error: 'unauthorized',
-        message: 'AUTH_ENABLED=true requires the X-User-Id header (set by the trusted Next.js proxy).',
-      });
+    // User attribution via the trusted-proxy JWT. The Next.js BFF mints a
+    // 60-second HS256 token signed with INTERNAL_API_SECRET; we verify here.
+    // Plaintext X-User-Id is no longer accepted — too easy to forge if
+    // apps/api is ever exposed.
+    let userId: string | undefined;
+    if (opts.requireUserIdHeader) {
+      const authHeader = req.headers['authorization'];
+      const v = await verifyInternalToken(typeof authHeader === 'string' ? authHeader : undefined);
+      if (!v.ok) {
+        return reply.code(401).send({
+          error: 'unauthorized',
+          message:
+            v.reason === 'no_secret'
+              ? 'AUTH_ENABLED=true requires INTERNAL_API_SECRET to be set on apps/api.'
+              : v.reason === 'no_token'
+              ? 'Missing Authorization: Bearer <token>. The trusted Next.js proxy must mint this.'
+              : 'Invalid or expired internal token.',
+        });
+      }
+      userId = v.userId;
     }
 
     const jobId = nano();

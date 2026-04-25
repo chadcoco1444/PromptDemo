@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { JobInputSchema, type JobInput } from '../lib/types';
 import { IntentPresets } from './IntentPresets';
 import { applyPreset, type IntentPreset } from '../lib/intentPresets';
-import { detectLocale, type SupportedLocale } from '../lib/locale';
+import { type SupportedLocale } from '../lib/locale';
 import { trackIntentPresetSelected } from '../lib/telemetry';
 
 export interface JobFormProps {
@@ -24,9 +24,12 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
   const [shakeNonce, setShakeNonce] = useState(0); // re-trigger shake anim on each invalid submit
   const [pending, setPending] = useState(false);
 
-  const [locale, setLocale] = useState<SupportedLocale>(() =>
-    detectLocale(typeof navigator !== 'undefined' ? navigator.language : undefined)
-  );
+  // Locale starts hard-locked to 'en' on every mount. Auto-detection (via
+  // navigator.language) caused a flash-of-English → Chinese swap on hydration
+  // for zh users — we now require an explicit click on the language toggle.
+  // Trade-off: zh users see English on first load, but no SSR/CSR mismatch
+  // and no layout shift.
+  const [locale, setLocale] = useState<SupportedLocale>('en');
 
   function handlePresetSelect(preset: IntentPreset) {
     setIntent((current) => applyPreset(current, preset, locale));
@@ -93,14 +96,13 @@ export function JobForm({ onSubmit, initialHint, parentJobId }: JobFormProps) {
           placeholder="What should the video emphasize?"
           className={`${INPUT_CLASSES} h-24`}
         />
-        <div className="mt-2 flex items-start gap-3" suppressHydrationWarning>
+        <div className="mt-2 flex items-start gap-3">
           <button
             type="button"
             onClick={toggleLocale}
             className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-900 active:scale-95 transition-transform"
             aria-label="Toggle preset language"
             title="Switch preset language"
-            suppressHydrationWarning
           >
             {locale === 'en' ? '中' : 'EN'}
           </button>

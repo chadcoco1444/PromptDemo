@@ -36,7 +36,6 @@ export function IntentPresets({ locale, onSelect }: IntentPresetsProps) {
             title={preset.body[locale]}
             onClick={() => handleClick(preset)}
             className={`text-xs rounded-full border border-brand-500 bg-white dark:bg-gray-800 text-brand-700 dark:text-brand-300 px-3 py-1 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-500 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 ${popClass}`}
-            suppressHydrationWarning
           >
             {preset.labels[locale]}
           </button>

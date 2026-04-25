@@ -1,34 +1,39 @@
 import { NextResponse } from 'next/server';
 import { auth, isAuthEnabled } from '../../../../auth';
+import { signInternalToken } from '../../../../lib/internalToken';
+import { checkRateLimit } from '../../../../lib/rateLimitProxy';
 
 export const dynamic = 'force-dynamic';
+
+const RATE_LIMIT_MAX_PER_MIN = Number(process.env.BFF_RATE_LIMIT_PER_MIN ?? '20');
 
 /**
  * Trusted proxy for POST /api/jobs.
  *
- * Why route through Next.js instead of calling apps/api directly from the
- * browser: Fastify (apps/api) has no knowledge of NextAuth sessions. This
- * route reads the session server-side, extracts the user id, and forwards
- * the body to apps/api with X-User-Id set.
+ * SECURITY MODEL (v2.1):
+ *   1. We read the NextAuth session here (Fastify has no NextAuth state).
+ *   2. We mint a 60-second HS256 JWT with `sub=userId` using
+ *      INTERNAL_API_SECRET, attach as `Authorization: Bearer <jwt>`.
+ *   3. apps/api verifies the JWT — refuses to honor any X-User-Id from a
+ *      direct caller. If apps/api is exposed without a gateway and an
+ *      attacker reaches it, they cannot forge a userId without also
+ *      knowing INTERNAL_API_SECRET.
+ *   4. Rate limit at this hop (per IP + per userId) — basic defense before
+ *      the JWT mint cost so a flood can't burn signing CPU.
  *
- * When AUTH_ENABLED=false we still forward — just without X-User-Id — so
- * the client never has to know whether auth is on or off. Keeps
- * apps/web/src/lib/api.ts clean.
- *
- * SECURITY: apps/api trusts X-User-Id unconditionally. Production deploys
- * MUST NOT expose apps/api directly to the internet; lock it behind a
- * gateway that strips any client-supplied X-User-Id before forwarding.
- * Local dev binds apps/api to 127.0.0.1:3000 so only this same-process
- * proxy can reach it.
+ * AUTH_ENABLED=false: forwarded WITHOUT a token; apps/api accepts anonymous.
  */
 export async function POST(request: Request) {
-  const body = await request.text(); // forward opaque — let apps/api validate
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3000';
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    request.headers.get('x-real-ip') ??
+    'unknown';
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
+  // Resolve userId first so the rate-limit key is per-(ip,user). Anonymous
+  // users share a single ip:anon bucket, which is what we want — we don't
+  // want one signed-in user to share a bucket with anonymous traffic from
+  // the same NAT.
+  let userId: string | null = null;
   if (isAuthEnabled() && auth) {
     const session = await auth();
     if (!session?.user) {
@@ -37,16 +42,50 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
-    const userId = (session.user as { id?: string }).id;
-    if (!userId) {
-      // NextAuth database adapter populates session.user.id from the sessions
-      // table. If it's missing something upstream is misconfigured.
+    const sid = (session.user as { id?: string }).id;
+    if (!sid) {
       return NextResponse.json(
         { error: 'session_missing_id', message: 'Sign-in session is missing user id; try signing in again.' },
         { status: 500 },
       );
     }
-    headers['X-User-Id'] = userId;
+    userId = sid;
+  }
+
+  const rateKey = `${ip}:${userId ?? 'anon'}`;
+  const decision = checkRateLimit(rateKey, RATE_LIMIT_MAX_PER_MIN);
+  if (!decision.ok) {
+    const retryAfter = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
+    return NextResponse.json(
+      {
+        error: 'rate_limited',
+        message: `Too many requests — wait ${retryAfter}s before trying again.`,
+      },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    );
+  }
+
+  const body = await request.text();
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3000';
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (userId) {
+    try {
+      const token = await signInternalToken(userId);
+      headers['Authorization'] = `Bearer ${token}`;
+    } catch (err) {
+      console.error('[bff] signInternalToken failed:', err);
+      return NextResponse.json(
+        {
+          error: 'internal_token_unavailable',
+          message: 'Server is misconfigured (missing INTERNAL_API_SECRET). Contact ops.',
+        },
+        { status: 500 },
+      );
+    }
   }
 
   const upstream = await fetch(`${apiBase}/api/jobs`, {
@@ -55,7 +94,6 @@ export async function POST(request: Request) {
     body,
   });
 
-  // Passthrough body + status. Content-Type is always JSON per the apps/api contract.
   const text = await upstream.text();
   return new NextResponse(text, {
     status: upstream.status,

@@ -1,8 +1,30 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import Fastify from 'fastify';
 import RedisMock from 'ioredis-mock';
+import { SignJWT } from 'jose';
 import { postJobRoute } from '../src/routes/postJob.js';
 import { makeJobStore } from '../src/jobStore.js';
+
+const TEST_SECRET = 'a'.repeat(64);
+const enc = new TextEncoder();
+async function bearerFor(userId: string): Promise<string> {
+  const token = await new SignJWT({})
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setSubject(userId)
+    .setIssuedAt()
+    .setIssuer('promptdemo-web')
+    .setAudience('promptdemo-api')
+    .setExpirationTime('60s')
+    .sign(enc.encode(TEST_SECRET));
+  return `Bearer ${token}`;
+}
+
+beforeAll(() => {
+  process.env.INTERNAL_API_SECRET = TEST_SECRET;
+});
+afterAll(() => {
+  delete process.env.INTERNAL_API_SECRET;
+});
 
 function build(opts: { requireUserIdHeader?: boolean } = {}) {
   const app = Fastify();
@@ -155,7 +177,7 @@ describe('POST /api/jobs', () => {
     );
   });
 
-  it('requires X-User-Id when requireUserIdHeader=true', async () => {
+  it('requires Authorization Bearer JWT when requireUserIdHeader=true', async () => {
     const { app } = build({ requireUserIdHeader: true });
     const res = await app.inject({
       method: 'POST',
@@ -165,16 +187,46 @@ describe('POST /api/jobs', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('accepts X-User-Id when provided and attaches it to the stored job', async () => {
+  it('accepts a valid JWT and attaches the sub claim as userId on the stored job', async () => {
     const { app, store } = build({ requireUserIdHeader: true });
     const res = await app.inject({
       method: 'POST',
       url: '/api/jobs',
       payload: { url: 'https://x.com', intent: 'x', duration: 10 },
-      headers: { 'X-User-Id': 'user-42' },
+      headers: { Authorization: await bearerFor('user-42') },
     });
     expect(res.statusCode).toBe(201);
     const persisted = await store.get('abc123');
     expect((persisted as { userId?: string } | null)?.userId).toBe('user-42');
+  });
+
+  it('rejects a plaintext X-User-Id (legacy spoofing vector)', async () => {
+    const { app } = build({ requireUserIdHeader: true });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'x', duration: 10 },
+      headers: { 'X-User-Id': 'user-attacker' },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('rejects a JWT signed with the wrong secret', async () => {
+    const { app } = build({ requireUserIdHeader: true });
+    const badToken = await new SignJWT({})
+      .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+      .setSubject('user-evil')
+      .setIssuedAt()
+      .setIssuer('promptdemo-web')
+      .setAudience('promptdemo-api')
+      .setExpirationTime('60s')
+      .sign(enc.encode('b'.repeat(64)));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'x', duration: 10 },
+      headers: { Authorization: `Bearer ${badToken}` },
+    });
+    expect(res.statusCode).toBe(401);
   });
 });
