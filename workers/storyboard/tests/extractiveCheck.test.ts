@@ -267,4 +267,58 @@ describe('extractiveCheck (CJK)', () => {
     };
     expect(extractiveCheck(board).kind).toBe('error');
   });
+
+  it('accepts period-separated sentences when every sentence is in the pool', () => {
+    // Real-world pattern: Claude generates BentoGrid/FeatureCallout descriptions
+    // by joining multiple source-page sentences with full stops.
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: {
+        screenshots: {},
+        sourceTexts: [
+          'Scale with confidence',
+          'Choose an integration path',
+          'Connect to existing systems',
+        ],
+      },
+      scenes: [
+        {
+          sceneId: 1,
+          type: 'FeatureCallout',
+          durationInFrames: 300,
+          entryAnimation: 'fade',
+          exitAnimation: 'fade',
+          props: {
+            title: 'Scale with confidence',
+            description: 'Scale with confidence. Choose an integration path. Connect to existing systems.',
+          },
+        },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('ok');
+  });
+
+  it('rejects period-separated sentences when any sentence is not in the pool', () => {
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      assets: {
+        screenshots: {},
+        sourceTexts: ['Scale with confidence', 'Choose an integration path'],
+      },
+      scenes: [
+        {
+          sceneId: 1,
+          type: 'FeatureCallout',
+          durationInFrames: 300,
+          entryAnimation: 'fade',
+          exitAnimation: 'fade',
+          props: {
+            title: 'Scale with confidence',
+            description: 'Scale with confidence. Choose an integration path. Completely invented sentence.',
+          },
+        },
+      ],
+    };
+    expect(extractiveCheck(board).kind).toBe('error');
+  });
 });

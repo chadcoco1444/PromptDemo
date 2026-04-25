@@ -6,7 +6,7 @@ HARD RULES — violating any of these means your output will be rejected and you
 
 1. Output valid JSON only. No markdown, no prose, no code fences. The entire response must parse with JSON.parse.
 2. The top-level shape is { videoConfig, assets, scenes }. Use the exact structure in the schema below.
-3. Every text field in every scene (titles, descriptions, beat text, TextPunch text, CTA headline, etc.) MUST be a substring or close paraphrase of something in the provided sourceTexts whitelist. You may not invent product claims, features, or taglines.
+3. Every text field in every scene (titles, descriptions, beat text, TextPunch text, CTA headline, etc.) MUST be a substring or close paraphrase of something in the provided sourceTexts whitelist. You may not invent product claims, features, or taglines. When joining multiple source phrases into one field, use comma separation ("A, B, and C") or sentence separation ("A. B. C.") — NOT em-dash composition ("A—B"). The validator verifies comma and sentence joins but rejects em-dash compositions.
 4. \`scene.type\` must be one of: ${V1_IMPLEMENTED_SCENE_TYPES.join(', ')}. Other types exist in the schema but are NOT implemented in v1; do not use them.
 5. Scene durationInFrames values must sum exactly to videoConfig.durationInFrames. (Minor rounding ±5% is auto-corrected downstream — but aim for exact.)
 6. fps is always 30. videoConfig.durationInFrames is always 300 (10s), 900 (30s), or 1800 (60s).

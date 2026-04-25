@@ -16,6 +16,10 @@ const CJK_RE = /[぀-ヿ㐀-䶿一-鿿가-힯豈-﫿]/;
 //   sentence, the segment fuse-search will reject it.
 const STRONG_SEPARATORS = /\s*[·•|]\s*|\s+\/\s+|\s+[—\-]\s+/;
 const COMMA_SEPARATOR = /\s*,\s*/;
+// Post-normalizeText everything is lowercase, so lookahead [a-z] is sufficient.
+// Avoids splitting on decimal points ("3.5x"), abbreviations ("e.g."),
+// and URLs — those have no space after the dot or are followed by digits.
+const SENTENCE_SEPARATOR = /\.\s+(?=[a-z])/;
 const MIN_SEGMENT_LEN = 3;
 // Leading conjunctions Claude tacks onto the tail of a comma list
 // ("A, B, and C"). Trim them before fuzzy-match so "and 3gpp protocols"
@@ -139,6 +143,14 @@ export function extractiveCheck(sb: Storyboard): ExtractiveResult {
       // prose — safe because each segment must independently match the pool.
       if (!matched && COMMA_SEPARATOR.test(n)) {
         matched = allSegmentsMatch(n, COMMA_SEPARATOR, pool, cjkPoolJoined, fuse);
+      }
+
+      // Pass 4: sentence-level split (period + whitespace + lowercase letter).
+      // Claude generates BentoGrid/FeatureCallout descriptions by joining
+      // multiple source-page clauses with full stops. Lookahead [a-z] avoids
+      // splitting on decimals ("3.5x"), abbreviations, and URLs.
+      if (!matched && SENTENCE_SEPARATOR.test(n)) {
+        matched = allSegmentsMatch(n, SENTENCE_SEPARATOR, pool, cjkPoolJoined, fuse);
       }
 
       if (!matched) {
