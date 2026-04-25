@@ -89,6 +89,7 @@ const orchestratorOpts: Parameters<typeof startOrchestrator>[0] = {
   store,
   broker,
   renderCap: cfg.RENDER_QUEUE_CAP,
+  creditPool: pricingEnabled ? pgPoolForCredits : null,
 };
 if (pricingEnabled && pgPoolForCredits) {
   const pool = pgPoolForCredits;

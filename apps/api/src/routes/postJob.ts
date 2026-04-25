@@ -73,6 +73,7 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
 
     const jobId = nano();
     const createdAt = now();
+    let showWatermark = false;
 
     // Regenerate-with-hint path: caller supplied a parentJobId so we can
     // reuse that parent's crawlResult and skip the crawl stage entirely.
@@ -152,6 +153,7 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
       //
       // TODO: fold tier-duration check into debitForJob for atomicity.
       const tier = (result.tier ?? 'free') as Tier;
+      showWatermark = tier === 'free';
       if (!isDurationAllowed(tier, input.duration)) {
         // Already debited — refund immediately + reject.
         const { refundForJob } = await import('../credits/store.js');
@@ -192,6 +194,7 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
           crawlResultUri: inheritedCrawlUri,
           intent: input.intent,
           duration: input.duration,
+          showWatermark,
           ...(input.hint ? { hint: input.hint } : {}),
         },
         { jobId },

@@ -6,6 +6,8 @@ import type { S3Uri } from '@promptdemo/schema';
 import { isIntelPayload } from '@promptdemo/schema';
 import { reduceEvent } from './stateMachine.js';
 import { shouldDeferRender, renderQueueDepth, DEFAULT_RENDER_CAP } from './backpressure.js';
+import type { Pool } from 'pg';
+import { getUserTier } from '../credits/ledger.js';
 
 export interface OrchestratorConfig {
   queues: QueueBundle;
@@ -13,6 +15,8 @@ export interface OrchestratorConfig {
   broker: Broker;
   renderCap?: number;
   now?: () => number;
+  /** When set, used to resolve showWatermark from the user's subscription tier. */
+  creditPool?: Pool | null;
   /**
    * Called when a job terminates in 'failed'. Receives the failed stage and
    * error code so the caller can decide on partial refunds per Amendment C.
@@ -70,6 +74,16 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     if (!current) return;
     const parsed = parseReturn<{ crawlResultUri: S3Uri }>(returnvalue);
     await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:completed', crawlResultUri: parsed.crawlResultUri }));
+
+    let showWatermark = false;
+    if (cfg.creditPool && current.userId) {
+      const userIdNum = Number(current.userId);
+      if (Number.isFinite(userIdNum)) {
+        const tier = await getUserTier(cfg.creditPool, userIdNum);
+        showWatermark = tier === 'free';
+      }
+    }
+
     await cfg.queues.storyboard.add(
       'generate',
       {
@@ -77,6 +91,7 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
         crawlResultUri: parsed.crawlResultUri,
         intent: current.input.intent,
         duration: current.input.duration,
+        showWatermark,
         ...(current.input.hint ? { hint: current.input.hint } : {}),
       },
       { jobId } // pin BullMQ jobId = app jobId so downstream QueueEvents hand us the right id
