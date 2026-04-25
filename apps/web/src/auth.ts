@@ -45,6 +45,24 @@ const nextAuth = isAuthEnabled()
       // AUTH_SECRET is verified non-null by assertAuthEnv() above — the
       // non-null assertion keeps TS's exactOptionalPropertyTypes happy.
       secret: process.env.AUTH_SECRET!,
+      events: {
+        // Seed a free-tier credits row the moment a new user is created.
+        // Without this, debitForJob() returns user_not_found for any user
+        // whose credits row is missing, blocking their first job submission.
+        async createUser({ user }) {
+          const uid = Number(user.id);
+          if (!Number.isFinite(uid)) return;
+          await pool()
+            .query(
+              `INSERT INTO credits (user_id, balance) VALUES ($1, 30)
+               ON CONFLICT (user_id) DO NOTHING`,
+              [uid],
+            )
+            .catch((err) =>
+              console.error('[auth] createUser credits seed failed', { uid, err }),
+            );
+        },
+      },
     })
   : null;
 
