@@ -112,8 +112,8 @@ describe('HistoryGrid — delete', () => {
       new Response(null, { status: 204 }),
     ) as typeof fetch;
 
-    fireEvent.click(screen.getByTitle('Delete'));
-    fireEvent.click(screen.getByText('刪除'));
+    fireEvent.click(screen.getByRole('button', { name: /delete this job/i }));
+    fireEvent.click(screen.getByRole('button', { name: /刪除/ }));
 
     await waitFor(() => expect(screen.queryByText('x.com')).toBeNull());
   });
@@ -127,8 +127,8 @@ describe('HistoryGrid — delete', () => {
       new Response(null, { status: 500 }),
     ) as typeof fetch;
 
-    fireEvent.click(screen.getByTitle('Delete'));
-    fireEvent.click(screen.getByText('刪除'));
+    fireEvent.click(screen.getByRole('button', { name: /delete this job/i }));
+    fireEvent.click(screen.getByRole('button', { name: /刪除/ }));
 
     await waitFor(() => expect(screen.getByText(/刪除失敗/i)).toBeInTheDocument());
     expect(screen.getByText('x.com')).toBeInTheDocument();
