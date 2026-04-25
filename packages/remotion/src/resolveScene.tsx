@@ -5,6 +5,8 @@ import { FeatureCallout } from './scenes/FeatureCallout';
 import { TextPunch } from './scenes/TextPunch';
 import { SmoothScroll } from './scenes/SmoothScroll';
 import { CTA } from './scenes/CTA';
+import { BentoGrid } from './scenes/BentoGrid';
+import { CursorDemo } from './scenes/CursorDemo';
 import type { BrandTheme } from './utils/brandTheme';
 
 export interface ResolveSceneInput {
@@ -68,11 +70,24 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
           theme={theme}
         />
       );
+    case 'BentoGrid':
+      return <BentoGrid items={scene.props.items} theme={theme} />;
+    case 'CursorDemo': {
+      const screenshotUrl = resolver(assets.screenshots.viewport);
+      return (
+        <CursorDemo
+          action={scene.props.action}
+          targetHint={scene.props.targetHint}
+          targetDescription={scene.props.targetDescription}
+          {...(screenshotUrl ? { screenshotUrl } : {})}
+          durationInFrames={scene.durationInFrames}
+          theme={theme}
+        />
+      );
+    }
     case 'HeroStylized':
-    case 'CursorDemo':
     case 'UseCaseStory':
     case 'StatsBand':
-    case 'BentoGrid':
       throw new Error(
         `scene type "${scene.type}" is deferred to v1.1 and not implemented in v1.0`
       );

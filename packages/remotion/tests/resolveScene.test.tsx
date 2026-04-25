@@ -27,13 +27,39 @@ describe('resolveScene', () => {
   it('throws for deferred v1.1 scene types', () => {
     const scene = {
       sceneId: 1,
+      type: 'StatsBand',
+      durationInFrames: 90,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: { stats: [{ value: '99%', label: 'uptime' }] },
+    } as unknown as Scene;
+    expect(() => resolveScene({ scene, assets, theme, url: 'https://x.com', resolver })).toThrow(/not implemented/i);
+  });
+
+  it('resolves a BentoGrid scene', () => {
+    const scene: Scene = {
+      sceneId: 4,
       type: 'BentoGrid',
       durationInFrames: 90,
       entryAnimation: 'fade',
       exitAnimation: 'fade',
       props: { items: [{ title: 'a' }, { title: 'b' }, { title: 'c' }] },
-    } as unknown as Scene;
-    expect(() => resolveScene({ scene, assets, theme, url: 'https://x.com', resolver })).toThrow(/not implemented/i);
+    };
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+  });
+
+  it('resolves a CursorDemo scene', () => {
+    const scene: Scene = {
+      sceneId: 5,
+      type: 'CursorDemo',
+      durationInFrames: 90,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: { action: 'Click', targetHint: { region: 'center' }, targetDescription: 'Submit button' },
+    };
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
   });
 
   it('resolves a FeatureCallout with variant=image', () => {
