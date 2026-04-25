@@ -16,7 +16,7 @@
 |---|---|---|
 | 1 | Scope | **A — new marketing landing page** above the existing app surfaces |
 | 2 | Routing | **B — conditional `/`** (signed-out → landing, signed-in → form, no URL change) |
-| 3 | Section composition | **B — Standard:** Hero + Demo + Features + Final CTA + Footer |
+| 3 | Section composition | **B — Standard, revised post-review:** Hero (video lives here) + Features + Final CTA + Footer |
 | 4 | Hero composition | **C — Split:** preview form (left) + looping demo video (right) |
 | 5 | Visual style | **A — remotion.dev-faithful:** dark + violet glow + grid backdrop |
 | 6 | Demo asset | **B — fresh dogfooded MP4** (rendered + saved to `docs/readme/landing-hero-demo.mp4`, 6.1 MB, vercel.com seed) |
@@ -67,6 +67,8 @@
 - **Secondary CTA** (link, no chrome): `Watch the demo` — scrolls to a `#demo` anchor (the right-column video, but expanded inline if mobile)
 - **Submit-when-signed-out interception:** form's onSubmit checks `useSession()`. If signed out, encodes `{ url, intent, duration }` as base64 query and redirects to `/api/auth/signin?callbackUrl=/create?prefill=<base64>`. The new `/create` page reads `prefill`, decodes, hydrates form state, auto-submits.
 
+  **Known limitation:** very long intent text (the textarea max is 500 chars) can produce a base64 URL parameter that pushes total URL length toward common limits — Google OAuth's `state`+`callbackUrl` round-trip starts truncating around 2KB, and some browsers/proxies cap at ~8KB total. Form's URL field has its own URL-validation limit, so the practical worst case stays manageable, but isn't guaranteed safe. **v1 acceptable**; if we hit a 414 in practice, fall back to writing `{ url, intent, duration }` to `localStorage` under a TTL'd key (`promptdemo:pending-prefill`) and just use a stable `callbackUrl=/create?prefill=local`. The `/create` page reads from localStorage on mount and clears the key. Tracked in [followup #pending-prefill-storage].
+
 ### Right column — Demo video
 
 - `<video>` element, attributes: `autoplay loop muted playsinline preload="auto"`, `aspect-ratio: 16/9`, full width of column
@@ -86,13 +88,14 @@
 
 ---
 
-## Demo section
+## ~~Demo section~~ — REMOVED in user review
 
-(Anchor: `#demo`. Same `<video>` ref; on small screens this acts as the full-width version of the hero video.)
+Original draft duplicated the hero video below the fold to "re-emphasize" on
+mobile. The hero already stacks the video under the form on tablet/mobile
+breakpoints, so the duplication wastes bandwidth and vertical space. Cut.
 
-A single section, full bleed, with `<video>` displayed at desktop's natural max width (1280px) inside a `max-w-7xl` container. Caption beneath: `Made with PromptDemo. Source: vercel.com.` (Italic, gray-500.)
-
-This section exists primarily for mobile users who can't see the right-column video; on desktop it's a re-emphasis at full size.
+The `Watch the demo` secondary CTA in the hero now scrolls to the video element
+inside the hero itself rather than to a separate section.
 
 ---
 
@@ -180,9 +183,8 @@ apps/web/src/
     landing-preview/page.tsx    # NEW — dev-only debug route, always renders MarketingLanding
   components/
     landing/
-      MarketingLanding.tsx      # NEW — orchestrates the 5 sections
-      LandingHero.tsx           # NEW — split layout, includes <PreviewForm/>
-      LandingDemo.tsx           # NEW — full-bleed video re-emphasis
+      MarketingLanding.tsx      # NEW — orchestrates the 4 sections
+      LandingHero.tsx           # NEW — split layout, contains the <video> + <PreviewForm/>
       LandingFeatures.tsx       # NEW — 3-column grid
       LandingFinalCTA.tsx       # NEW — bottom CTA section
       LandingFooter.tsx         # NEW — 2-row footer
@@ -222,12 +224,19 @@ public/
 
 ---
 
+## Known limitations / Followups
+
+- **`prefill` base64 URL length** (#pending-prefill-storage) — see Hero §"Submit-when-signed-out interception". v1 ships with the URL-encoded approach; promote to `localStorage` if we hit a 414 from any provider.
+- **No A/B testing on hero copy** — single fixed headline ("From URL to demo video. Sixty seconds.") for v1. Variant infra plumbed once Stripe lands and we can measure conversion per variant.
+
+---
+
 ## Self-review
 
 - **Placeholders:** none.
-- **Internal consistency:** Hero CTA "Try free →" (Q8.A) matches feature grid heading "Ship the demo, not the screenshot." (Q8.B salvaged). Submission interception path (`/api/auth/signin?callbackUrl=/create?prefill=...`) routes to `/create`, which is consistent with §"Page architecture".
+- **Internal consistency:** Hero CTA "Try free →" (Q8.A) matches feature grid heading "Ship the demo, not the screenshot." (Q8.B salvaged). Submission interception path (`/api/auth/signin?callbackUrl=/create?prefill=...`) routes to `/create`, which is consistent with §"Page architecture". Section composition (Q3) updated post-review from 5 sections → 4 (LandingDemo removed); component inventory matches.
 - **Scope check:** single spec, single sprint of implementation work. ~1 week solo. No dependency on Stripe, no schema changes, no new env vars beyond the existing ones.
-- **Ambiguity check:** "Powered by Claude + Remotion" subhead is fixed text, not a clickable badge — could be misread as link. Decision: keep as flat text in v1; add hover-tooltip later if needed.
+- **Ambiguity check:** "Powered by Claude + Remotion" subhead is fixed text, not a clickable badge — could be misread as link. Decision: keep as flat text in v1; add hover-tooltip later if needed. The `Watch the demo` secondary CTA scrolls to the hero's own `<video>` (now no separate `#demo` anchor); IntersectionObserver-based "play when in view" is unnecessary since the video is already above the fold on desktop.
 
 ---
 
