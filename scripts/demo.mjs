@@ -271,9 +271,27 @@ async function waitForInfra() {
 }
 
 // --- Service lifecycle ---
+
+// On Windows, tsx/next/esbuild spawn their own child processes with default
+// options — those grandchildren each pop a brief console window even though
+// our outer Node has windowsHide:true (the flag doesn't propagate). We
+// inject this --require shim into every service's NODE_OPTIONS so any
+// child_process.spawn called downstream defaults to windowsHide:true.
+const HIDE_CHILDREN_SHIM = resolve(REPO_ROOT, 'scripts/lib/windows-hide-children.cjs');
+function nodeOptionsWithHideShim() {
+  if (!IS_WINDOWS) return undefined;
+  // Quote the path to handle spaces in the user profile (e.g. "C:\Users\Foo Bar").
+  const flag = `--require ${JSON.stringify(HIDE_CHILDREN_SHIM)}`;
+  const existing = process.env.NODE_OPTIONS;
+  return existing ? `${existing} ${flag}` : flag;
+}
+
 function serviceEnv(svc) {
   // Each service gets its own PORT (avoids healthz clash between 3 workers).
-  return { ...process.env, PORT: String(svc.port) };
+  const env = { ...process.env, PORT: String(svc.port) };
+  const nodeOpts = nodeOptionsWithHideShim();
+  if (nodeOpts) env.NODE_OPTIONS = nodeOpts;
+  return env;
 }
 
 /**
