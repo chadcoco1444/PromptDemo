@@ -99,7 +99,46 @@ const worker = new Worker<JobPayload>(
       await job.updateProgress(makeIntel('render', 'Uploading the final video'));
       const key = buildKey(payload.jobId, 'video.mp4');
       const videoUrl: S3Uri = await uploadFile(s3, s3Cfg.bucket, key, outputPath, 'video/mp4');
-      return { videoUrl };
+
+      // v2.2 — extract a real first-frame thumbnail at frame 45 (1.5s into
+      // the hero scene, past entry animations). renderStill reuses the same
+      // Remotion bundle the MP4 was rendered from, so what users see on the
+      // history card matches frame-for-frame what the video actually shows.
+      // sharp converts PNG → WebP for ~30-40% smaller payloads and faster
+      // grid loads.
+      let thumbUrl: S3Uri | undefined;
+      try {
+        const { renderStill } = await import('@remotion/renderer');
+        const stillPath = join(dir, `${payload.jobId}.png`);
+        await renderStill({
+          composition: {
+            id: 'MainComposition',
+            width: 1280,
+            height: 720,
+            fps: finalStoryboard.videoConfig.fps,
+            durationInFrames: finalStoryboard.videoConfig.durationInFrames,
+            defaultProps: {
+              ...finalStoryboard,
+              sourceUrl: payload.sourceUrl,
+              resolverEndpoint: s3Endpoint,
+              forcePathStyle,
+            } as any,
+          } as any,
+          serveUrl: REMOTION_ENTRY_POINT,
+          frame: 45,
+          imageFormat: 'png',
+          output: stillPath,
+        });
+        const sharp = (await import('sharp')).default;
+        const webpBuffer = await sharp(stillPath).webp({ quality: 80 }).toBuffer();
+        const thumbKey = buildKey(payload.jobId, 'thumb.webp');
+        thumbUrl = await putObject(s3, s3Cfg.bucket, thumbKey, webpBuffer, 'image/webp');
+      } catch (err) {
+        // Graceful degrade: card falls back to crawl screenshot via cover proxy.
+        console.warn(`[render] thumb extraction failed: ${(err as Error).message}`);
+      }
+
+      return thumbUrl ? { videoUrl, thumbUrl } : { videoUrl };
     });
   },
   {
