@@ -166,8 +166,12 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.renderEvents.on('completed', async ({ jobId, returnvalue }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    const parsed = parseReturn<{ videoUrl: S3Uri }>(returnvalue);
-    await applyPatch(jobId, reduceEvent(current, { kind: 'render:completed', videoUrl: parsed.videoUrl }));
+    const parsed = parseReturn<{ videoUrl: S3Uri; thumbUrl?: S3Uri }>(returnvalue);
+    const patch = reduceEvent(current, { kind: 'render:completed', videoUrl: parsed.videoUrl });
+    if (parsed.thumbUrl) {
+      patch.thumbUrl = parsed.thumbUrl;
+    }
+    await applyPatch(jobId, patch);
   });
 
   cfg.queues.renderEvents.on('failed', async ({ jobId, failedReason }) => {

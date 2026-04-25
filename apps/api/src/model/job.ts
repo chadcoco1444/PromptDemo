@@ -50,6 +50,7 @@ export const JobSchema = z.object({
   crawlResultUri: S3UriSchema.optional(),
   storyboardUri: S3UriSchema.optional(),
   videoUrl: S3UriSchema.optional(),
+  thumbUrl: S3UriSchema.optional(),
   fallbacks: z.array(FallbackSchema),
   error: ErrorSchema.optional(),
   createdAt: z.number().int().positive(),
