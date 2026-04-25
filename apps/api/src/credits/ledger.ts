@@ -1,5 +1,5 @@
 /**
- * Pure functions for Feature 5 credit math.
+ * Credit math utilities and DB accessors for Feature 5.
  *
  * User-visible unit is render-SECONDS (not credits) per v2.0 Amendment C.
  * Internal storage maps 1:1: `credits.balance` column holds an integer

@@ -93,7 +93,7 @@ function mockPool(rows: Array<{ tier: string }>): Pool {
 }
 
 describe('getUserTier', () => {
-  it('returns "free" when no subscription row exists (COALESCE fallback)', async () => {
+  it('returns "free" for a free-plan user (tier resolved to "free" by COALESCE)', async () => {
     // No subscription row → COALESCE(s.tier, 'free') = 'free' in SQL
     const pool = mockPool([{ tier: 'free' }]);
     expect(await getUserTier(pool, 42)).toBe('free');
@@ -113,5 +113,10 @@ describe('getUserTier', () => {
     // Guards against future DB values not yet in the Tier union
     const pool = mockPool([{ tier: 'enterprise' }]);
     expect(await getUserTier(pool, 42)).toBe('free');
+  });
+
+  it('returns "free" when the user row is not found (empty result set)', async () => {
+    const pool = mockPool([]);
+    expect(await getUserTier(pool, 99999)).toBe('free');
   });
 });
