@@ -39,4 +39,10 @@ describe('extractFeatures', () => {
     const f = extractFeatures(html);
     expect(f.every((x) => x.title.length > 0)).toBe(true);
   });
+
+  it('omits iconHint when img alt exceeds 100 characters', () => {
+    const longAlt = 'A ' + 'very descriptive accessibility sentence about what this image shows '.repeat(2);
+    const f = extractFeatures(`<html><body><section><h2>Feature</h2><img alt="${longAlt}"></section></body></html>`);
+    expect(f[0].iconHint).toBeUndefined();
+  });
 });

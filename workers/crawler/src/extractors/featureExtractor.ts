@@ -17,7 +17,8 @@ export function extractFeatures(html: string): ExtractedFeature[] {
     if (!title) return;
 
     const description = normalizeText($(section).find('p').first().text()) || undefined;
-    const iconHint = normalizeText($(section).find('img').first().attr('alt') ?? '') || undefined;
+    const rawIconHint = normalizeText($(section).find('img').first().attr('alt') ?? '');
+    const iconHint = rawIconHint && rawIconHint.length <= 100 ? rawIconHint : undefined;
 
     const entry: ExtractedFeature = { title };
     if (description) entry.description = description;
