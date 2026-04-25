@@ -50,7 +50,7 @@ export function HistoryGrid() {
       .then(async (res) => {
         if (cancelled) return;
         if (!res.ok) {
-          setState({ jobs: [], hasMore: false, loading: false, loadingMore: false, error: `HTTP ${res.status}` });
+          setState((s) => ({ ...s, jobs: [], hasMore: false, loading: false, loadingMore: false, error: `HTTP ${res.status}` }));
           return;
         }
         const body = (await res.json()) as { jobs: HistoryJob[]; hasMore: boolean; tier?: 'free' | 'pro' | 'max' };
@@ -59,7 +59,7 @@ export function HistoryGrid() {
         setCursor(jobs.length > 0 ? new Date(jobs[jobs.length - 1]!.createdAt).toISOString() : null);
       })
       .catch((err) => {
-        if (!cancelled) setState({ jobs: [], hasMore: false, loading: false, loadingMore: false, error: (err as Error).message });
+        if (!cancelled) setState((s) => ({ ...s, jobs: [], hasMore: false, loading: false, loadingMore: false, error: (err as Error).message }));
       });
     return () => {
       cancelled = true;
