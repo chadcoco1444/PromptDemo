@@ -75,7 +75,7 @@ function buildSourceTextPool(crawlResult: CrawlResult): string[] {
 
 function enrichFromCrawlResult(
   candidate: unknown,
-  input: { crawlResult: CrawlResult; duration: 10 | 30 | 60 }
+  input: { crawlResult: CrawlResult; duration: 10 | 30 | 60; showWatermark: boolean },
 ): unknown {
   if (!candidate || typeof candidate !== 'object') return candidate;
   const obj = candidate as Record<string, unknown>;
@@ -139,6 +139,7 @@ function enrichFromCrawlResult(
       fps: 30,
       brandColor: pickBrandColor(brand.primaryColor),
       ...(brand.logoUrl ? { logoUrl: brand.logoUrl } : {}),
+      showWatermark: input.showWatermark,
     },
     assets: enrichedAssets,
     scenes: withVariants,
@@ -164,6 +165,8 @@ export interface GenerateInput {
    * pre-Phase-5.
    */
   spendGuardPool?: Pool | null;
+  /** Baked into videoConfig by enrichFromCrawlResult — never set by Claude. */
+  showWatermark: boolean;
 }
 
 export async function generateStoryboard(input: GenerateInput): Promise<GenerateResult> {
@@ -216,6 +219,7 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
     let candidate: unknown = enrichFromCrawlResult(parsed.value, {
       crawlResult: input.crawlResult,
       duration: input.duration,
+      showWatermark: input.showWatermark,
     });
 
     // Pre-zod duration normalization: StoryboardSchema enforces strict sum

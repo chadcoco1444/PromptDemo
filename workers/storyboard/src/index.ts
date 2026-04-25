@@ -17,6 +17,7 @@ const JobPayload = z.object({
   duration: z.union([z.literal(10), z.literal(30), z.literal(60)]),
   hint: z.string().optional(),
   previousStoryboardUri: z.string().startsWith('s3://').optional(),
+  showWatermark: z.boolean().optional().default(false),
 });
 type JobPayload = z.infer<typeof JobPayload>;
 
@@ -70,6 +71,7 @@ const worker = new Worker<JobPayload>(
         crawlResult,
         intent: payload.intent,
         duration: payload.duration,
+        showWatermark: payload.showWatermark,
         ...(payload.hint ? { hint: payload.hint } : {}),
         ...(previous ? { previousStoryboard: previous } : {}),
         ...(spendGuardPool ? { spendGuardPool } : {}),

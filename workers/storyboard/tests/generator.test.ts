@@ -26,6 +26,7 @@ describe('generateStoryboard', () => {
       crawlResult: crawl,
       intent: 'showcase AI workflows',
       duration: 30,
+      showWatermark: false,
     });
     expect(result.kind).toBe('ok');
   });
@@ -37,6 +38,7 @@ describe('generateStoryboard', () => {
       crawlResult: crawl,
       intent: 'x',
       duration: 30,
+      showWatermark: false,
     });
     expect(result.kind).toBe('ok');
     expect((client.complete as ReturnType<typeof vi.fn>).mock.calls.length).toBe(2);
@@ -49,6 +51,7 @@ describe('generateStoryboard', () => {
       crawlResult: crawl,
       intent: 'x',
       duration: 30,
+      showWatermark: false,
     });
     expect(result.kind).toBe('error');
     if (result.kind === 'error') expect(result.attempts).toBe(3);
@@ -68,6 +71,7 @@ describe('generateStoryboard', () => {
       crawlResult: crawl,
       intent: 'x',
       duration: 30,
+      showWatermark: false,
     });
     expect(result.kind).toBe('ok');
     if (result.kind === 'ok') {
@@ -90,11 +94,62 @@ describe('generateStoryboard', () => {
       crawlResult: crawl,
       intent: 'x',
       duration: 30,
+      showWatermark: false,
     });
     expect(result.kind).toBe('ok');
     if (result.kind === 'ok') {
       const sum = result.storyboard.scenes.reduce((a, s) => a + s.durationInFrames, 0);
       expect(sum).toBe(900);
+    }
+    expect((client.complete as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+  });
+
+  it('sets showWatermark:true in videoConfig when input.showWatermark is true', async () => {
+    const client = mockClient(JSON.stringify(validStoryboard));
+    const result = await generateStoryboard({
+      claude: client,
+      crawlResult: crawl,
+      intent: 'x',
+      duration: 30,
+      showWatermark: true,
+    });
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.storyboard.videoConfig.showWatermark).toBe(true);
+    }
+  });
+
+  it('sets showWatermark:false in videoConfig when input.showWatermark is false', async () => {
+    const client = mockClient(JSON.stringify(validStoryboard));
+    const result = await generateStoryboard({
+      claude: client,
+      crawlResult: crawl,
+      intent: 'x',
+      duration: 30,
+      showWatermark: false,
+    });
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.storyboard.videoConfig.showWatermark).toBe(false);
+    }
+  });
+
+  it('overrides LLM output: showWatermark:false from Claude is ignored when input.showWatermark is true', async () => {
+    // Critical enforcement guarantee: even if LLM emits showWatermark:false,
+    // the enrichFromCrawlResult deterministic override must set it to true.
+    const withLlmFalse = JSON.parse(JSON.stringify(validStoryboard));
+    withLlmFalse.videoConfig.showWatermark = false;
+    const client = mockClient(JSON.stringify(withLlmFalse));
+    const result = await generateStoryboard({
+      claude: client,
+      crawlResult: crawl,
+      intent: 'x',
+      duration: 30,
+      showWatermark: true,
+    });
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.storyboard.videoConfig.showWatermark).toBe(true);
     }
     expect((client.complete as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
   });
