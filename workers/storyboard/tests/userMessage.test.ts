@@ -68,6 +68,7 @@ describe('buildUserMessage — style modifier injection', () => {
       intent: 'show features',
       duration: 30,
       crawlResult: makeCrawl({
+        sourceTexts: ['Team collaboration platform'],
         features: [
           { title: 'Reports', description: 'Analytics' },
           { title: 'Integrations', description: 'Connect tools' },
@@ -97,5 +98,7 @@ describe('buildUserMessage — style modifier injection', () => {
     const crawlerIdx = msg.indexOf('## Crawler tier');
     const guidanceIdx = msg.indexOf('## Product Style Guidance');
     expect(guidanceIdx).toBeGreaterThan(crawlerIdx);
+    const returnIdx = msg.indexOf('Return a valid Storyboard JSON');
+    expect(guidanceIdx).toBeLessThan(returnIdx);
   });
 });
