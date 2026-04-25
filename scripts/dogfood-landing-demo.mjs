@@ -102,17 +102,26 @@ const { jobId } = await postRes.json();
 console.log(`[dogfood] jobId=${jobId}`);
 
 // --- poll until done ---
+// Poll at 8s intervals — well under the API's 10 req/min per-user ceiling.
+// On a transient 429 (e.g. API restart during a run) we back off for the
+// retry window indicated in the response body rather than crashing.
 let job = null;
 const start = Date.now();
 let lastStage = null;
 while (true) {
-  if (Date.now() - start > 5 * 60_000) {
-    console.error('[dogfood] timed out after 5 minutes');
+  if (Date.now() - start > 10 * 60_000) {
+    console.error('[dogfood] timed out after 10 minutes');
     process.exit(1);
   }
   const r = await fetch(`${apiBase}/api/jobs/${jobId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (r.status === 429) {
+    // Rate-limited — wait 65 s and retry instead of crashing.
+    console.warn('[dogfood] 429 rate limit — waiting 65s before retry...');
+    await new Promise((res) => setTimeout(res, 65_000));
+    continue;
+  }
   if (!r.ok) {
     console.error('[dogfood] GET failed:', r.status, await r.text());
     process.exit(1);
@@ -127,7 +136,7 @@ while (true) {
     console.error('[dogfood] job failed:', JSON.stringify(job.error));
     process.exit(1);
   }
-  await new Promise((res) => setTimeout(res, 2000));
+  await new Promise((res) => setTimeout(res, 8_000));
 }
 
 // --- download videoUrl (S3 URI like s3://bucket/key) → write to outPath ---
