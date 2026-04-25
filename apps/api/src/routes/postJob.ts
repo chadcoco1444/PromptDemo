@@ -73,7 +73,10 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
 
     const jobId = nano();
     const createdAt = now();
-    let showWatermark = false;
+    // PLG safe default: show watermark for any authenticated user unless
+    // pricing confirms Pro/Max. Avoids PRICING_ENABLED=false silently
+    // removing the watermark for all free-tier users.
+    let showWatermark = userId != null;
 
     // Regenerate-with-hint path: caller supplied a parentJobId so we can
     // reuse that parent's crawlResult and skip the crawl stage entirely.

@@ -75,7 +75,10 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     const parsed = parseReturn<{ crawlResultUri: S3Uri }>(returnvalue);
     await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:completed', crawlResultUri: parsed.crawlResultUri }));
 
-    let showWatermark = false;
+    // PLG safe default: show watermark for any authenticated user unless we
+    // can confirm Pro/Max. This means PRICING_ENABLED=false or a DB failure
+    // both err toward branding, not toward silently removing it.
+    let showWatermark = current.userId != null;
     if (cfg.creditPool && current.userId) {
       const userIdNum = Number(current.userId);
       if (Number.isFinite(userIdNum)) {
@@ -83,7 +86,7 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
           const tier = await getUserTier(cfg.creditPool, userIdNum);
           showWatermark = tier === 'free';
         } catch (err) {
-          console.error('[orchestrator] getUserTier failed; defaulting showWatermark=false', { jobId, err });
+          console.error('[orchestrator] getUserTier failed; defaulting showWatermark=true', { jobId, err });
         }
       }
     }
