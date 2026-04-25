@@ -14,7 +14,7 @@ export async function AuthButton() {
   if (!session?.user) {
     return (
       <Link
-        href="/api/auth/signin"
+        href="/auth/signin"
         className="text-sm rounded-md border border-brand-500 bg-brand-500 text-white px-3 py-1 font-medium hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 transition-colors"
       >
         Sign in

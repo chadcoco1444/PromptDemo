@@ -25,7 +25,7 @@ export default async function HistoryPage() {
   }
 
   const session = await auth();
-  if (!session?.user) redirect('/api/auth/signin?callbackUrl=/history');
+  if (!session?.user) redirect('/auth/signin?callbackUrl=/history');
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-16 space-y-6">

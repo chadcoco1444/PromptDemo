@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </nav>
-        <Providers>{children}</Providers>
+        <main><Providers>{children}</Providers></main>
       </body>
     </html>
   );

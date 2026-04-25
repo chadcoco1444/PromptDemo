@@ -30,7 +30,7 @@ const LEGAL = [
 function LinkCluster({ heading, links }: { heading: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <h4 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h4>
+      <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold">{heading}</p>
       <ul className="mt-3 space-y-2">
         {links.map((l) => (
           <li key={l.label}>
@@ -90,7 +90,7 @@ export function LandingFooter() {
         <div className="mt-16 pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="font-bold text-white text-sm">LumeSpec</span>
-            <span className="text-xs text-gray-500">© 2026 LumeSpec Inc.</span>
+            <span className="text-xs text-gray-400">© 2026 LumeSpec Inc.</span>
           </div>
           <div className="flex items-center gap-4">
             {SOCIAL.map(({ label, href, Icon }) => (
@@ -99,7 +99,7 @@ export function LandingFooter() {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-gray-400 hover:text-gray-300 transition-colors"
                 aria-label={label}
               >
                 <Icon />

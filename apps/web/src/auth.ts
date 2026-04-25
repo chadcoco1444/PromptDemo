@@ -41,6 +41,7 @@ const nextAuth = isAuthEnabled()
           clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         }),
       ],
+      pages: { signIn: '/auth/signin' },
       session: { strategy: 'database' },
       // AUTH_SECRET is verified non-null by assertAuthEnv() above — the
       // non-null assertion keeps TS's exactOptionalPropertyTypes happy.

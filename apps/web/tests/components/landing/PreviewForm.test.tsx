@@ -37,7 +37,7 @@ describe('PreviewForm', () => {
     await new Promise((res) => setTimeout(res, 0));
 
     expect(onAuthedSubmit).not.toHaveBeenCalled();
-    expect(window.location.href).toMatch(/\/api\/auth\/signin/);
+    expect(window.location.href).toMatch(/\/auth\/signin/);
     const params = new URLSearchParams(window.location.href.split('?')[1] ?? '');
     // Only callbackUrl at the top level — prefill must be nested inside it,
     // never leaked as a top-level param.

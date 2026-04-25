@@ -34,7 +34,7 @@ describe('signInRedirectFor', () => {
       intent: 'show pricing',
       duration: 30,
     });
-    expect(url).toMatch(/^\/api\/auth\/signin\?callbackUrl=/);
+    expect(url).toMatch(/^\/auth\/signin\?callbackUrl=/);
     const params = new URLSearchParams(url.split('?')[1]);
     const callback = params.get('callbackUrl');
     expect(callback).toBeTruthy();

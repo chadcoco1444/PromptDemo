@@ -43,8 +43,11 @@ for (const route of ROUTES) {
     { stdio: 'inherit', shell: process.platform === 'win32' },
   );
 
-  if (r.status !== 0 || !existsSync(outPath)) {
-    console.error(`  ✗ Lighthouse failed to run on ${url}`);
+  // On Windows, chrome-launcher's rmSync cleanup sometimes throws EPERM
+  // (Chrome still holding temp dir handles). The JSON output is written
+  // before cleanup, so we accept exit code 1 if the file exists.
+  if (!existsSync(outPath)) {
+    console.error(`  ✗ Lighthouse failed to run on ${url} (exit ${r.status})`);
     allPassed = false;
     results.push({ route, score: null, passed: false });
     continue;

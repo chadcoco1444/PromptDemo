@@ -10,6 +10,7 @@ import { makeBroker } from './sse/broker.js';
 import { startOrchestrator } from './orchestrator/index.js';
 import { refundForJob } from './credits/store.js';
 import { calculateCost, calculateRefund } from './credits/ledger.js';
+import { startRetentionCron } from './cron/retentionCron.js';
 
 const cfg = loadConfig();
 const redis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
@@ -109,11 +110,19 @@ if (pricingEnabled && pgPoolForCredits) {
 }
 const stopOrchestrator = await startOrchestrator(orchestratorOpts);
 
+// Daily history retention: prune jobs older than tier's window (free=30d, pro=90d, max=365d).
+// Only active when auth + pricing are enabled (we need the subscriptions table).
+let stopRetentionCron: (() => void) | null = null;
+if (pricingEnabled && pgPoolForCredits) {
+  stopRetentionCron = startRetentionCron({ pool: pgPoolForCredits, s3 });
+}
+
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
 const shutdown = async () => {
   await app.close();
   await stopOrchestrator();
+  if (stopRetentionCron) stopRetentionCron();
   await closeQueueBundle(queues);
   if (shutdownPool) await shutdownPool();
   await redis.quit();

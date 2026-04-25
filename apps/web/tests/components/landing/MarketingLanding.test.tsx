@@ -17,7 +17,7 @@ describe('MarketingLanding', () => {
     expect(screen.getByText(/Ship the demo, not the screenshot/i)).toBeInTheDocument();
     // Final CTA: closing headline
     expect(screen.getByText(/Ready to ship it/i)).toBeInTheDocument();
-    // Footer: link cluster heading (exact match avoids collision with "product launches" in descriptions)
-    expect(screen.getByRole('heading', { name: 'Product' })).toBeInTheDocument();
+    // Footer: link cluster label (changed from h4 to p for a11y heading-order compliance)
+    expect(screen.getByText('Product')).toBeInTheDocument();
   });
 });

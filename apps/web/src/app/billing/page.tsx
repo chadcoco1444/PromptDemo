@@ -37,7 +37,7 @@ export default async function BillingPage() {
   }
 
   const session = await auth();
-  if (!session?.user) redirect('/api/auth/signin?callbackUrl=/billing');
+  if (!session?.user) redirect('/auth/signin?callbackUrl=/billing');
 
   const userId = Number((session.user as { id?: string }).id);
   if (!Number.isFinite(userId)) throw new Error('session missing user id');

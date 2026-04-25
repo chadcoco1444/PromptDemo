@@ -56,5 +56,5 @@ export function decodePrefill(s: string): Prefill | null {
 export function signInRedirectFor(p: Prefill): string {
   const prefill = encodePrefill(p);
   const callback = `/create?prefill=${prefill}`;
-  return `/api/auth/signin?callbackUrl=${encodeURIComponent(callback)}`;
+  return `/auth/signin?callbackUrl=${encodeURIComponent(callback)}`;
 }

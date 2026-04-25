@@ -27,7 +27,7 @@ export function LandingHero() {
     if (status === 'authenticated') {
       router.push(dest);
     } else {
-      window.location.href = `/api/auth/signin?callbackUrl=${encodeURIComponent(dest)}`;
+      window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(dest)}`;
     }
   };
 
