@@ -43,11 +43,26 @@ describe('adjustDuration', () => {
     expect(newSum).toBe(1800);
   });
 
-  it('returns retry signal when delta exceeds 10%', () => {
-    const sb = mk(900, [300, 300, 200]); // sum 800, drift 100 (11.1%)
+  it('returns retry signal when delta exceeds 15% tolerance', () => {
+    // Tolerance widened to 15% post-pacing-profiles (Claude balances more
+    // constraints simultaneously, mild over-drift is normal). 16.7% drift
+    // still triggers retry as a sanity guard.
+    const sb = mk(900, [400, 400, 250]); // sum 1050, drift 150 (16.7%)
     const r = adjustDuration(sb);
     expect(r.kind).toBe('retry');
     if (r.kind !== 'retry') return;
-    expect(r.reason).toMatch(/10%/);
+    expect(r.reason).toMatch(/15%/);
+  });
+
+  it('auto-prorates 11% drift (the exact 2000-vs-1800 case from the user bug report)', () => {
+    // Pre-tolerance-widening, this triggered STORYBOARD_GEN_FAILED with
+    // "scenes sum 2000 differs from target 1800 by 11.1%" — now silently
+    // prorated since 11.1% < 15%.
+    const sb = mk(1800, [400, 400, 400, 400, 400]); // sum 2000, drift 11.1%
+    const r = adjustDuration(sb);
+    expect(r.kind).toBe('ok');
+    if (r.kind !== 'ok') return;
+    const newSum = r.storyboard.scenes.reduce((a, s) => a + s.durationInFrames, 0);
+    expect(newSum).toBe(1800);
   });
 });
