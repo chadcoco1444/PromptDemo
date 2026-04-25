@@ -1,4 +1,6 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { hostnameMatches, hostnameOf } from '../../lib/url-utils';
 
 export interface ParentInfo {
@@ -23,18 +25,24 @@ function relativeTime(ts: number): string {
 }
 
 export function LineageBadge({ parent, currentUrl }: LineageBadgeProps) {
+  const router = useRouter();
   if (!parent) return null;
   const sameHost = hostnameMatches(parent.hostname, currentUrl);
   const text = sameHost
     ? `↳ regenerated ${relativeTime(parent.createdAt)}`
     : `↳ from ${hostnameOf(parent.hostname)}`;
   return (
-    <Link
-      href={`/jobs/${parent.jobId}`}
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        router.push(`/jobs/${parent.jobId}`);
+      }}
       aria-label={`Regenerated from job ${parent.jobId} (${hostnameOf(parent.hostname)})`}
-      className="text-[11px] italic text-brand-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded px-1"
+      className="text-[11px] italic text-brand-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded px-1 cursor-pointer"
     >
       {text}
-    </Link>
+    </button>
   );
 }
