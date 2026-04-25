@@ -65,7 +65,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({ items, theme }) => {
               >
                 {item.title}
               </div>
-              {item.description && (
+              {item.description && item.description.trim() !== item.title.trim() && (
                 <div style={{ color: '#9ca3af', fontSize: 16, lineHeight: 1.5 }}>
                   {item.description}
                 </div>

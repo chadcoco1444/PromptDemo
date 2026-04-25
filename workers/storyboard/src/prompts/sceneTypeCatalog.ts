@@ -16,7 +16,7 @@ export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
   StatsBand:
     'Numeric callout band. Props: { stats: [{value, label}] (1-4 items) }. Use only if sourceTexts contain numeric phrases.',
   BentoGrid:
-    "Dense feature grid (3-6 items) — shows multiple features in one scene instead of separate FeatureCallouts. Props: { items: [{title, description?, iconHint?}] }. Ideal for 30s/60s videos when 3+ small features would otherwise create scene bloat.",
+    "Dense feature grid (3-6 items) — shows multiple features in one scene instead of separate FeatureCallouts. Props: { items: [{title, description?, iconHint? (one emoji character, e.g. \"📊\", \"💬\", \"🎨\" — NOT an icon library name like \"database\")}] }. Ideal for 30s/60s videos when 3+ small features would otherwise create scene bloat.",
   TextPunch:
     'Full-screen text beat for pacing. Props: { text, emphasis: "primary"|"secondary"|"neutral" }. Use to break up rhythm between feature scenes.',
   CTA:

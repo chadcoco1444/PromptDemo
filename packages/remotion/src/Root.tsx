@@ -1,6 +1,7 @@
 import React from 'react';
 import { registerRoot, Composition } from 'remotion';
 import { MainComposition, type MainCompositionProps } from './MainComposition';
+import { PromoComposition } from './compositions/PromoComposition';
 import defaultStoryboard from '@promptdemo/schema/fixtures/storyboard.30s.json';
 import type { Storyboard } from '@promptdemo/schema';
 
@@ -23,6 +24,15 @@ export const RemotionRoot: React.FC = () => (
       width={1280}
       height={720}
       defaultProps={defaultProps as unknown as Record<string, unknown>}
+    />
+    <Composition
+      id="PromoComposition"
+      component={PromoComposition}
+      durationInFrames={600}
+      fps={30}
+      width={1280}
+      height={720}
+      defaultProps={{}}
     />
   </>
 );

@@ -503,9 +503,98 @@ function dbTables() {
   }
 }
 
-// Synchronous port check for the one-shot db:tables path (pgExec itself is
-// sync via spawnSync, so keeping the whole command synchronous avoids mixing
-// promise/non-promise style in the dispatcher switch).
+/**
+ * Set a user's subscription tier in the dev DB and reset their credit balance
+ * to the tier's monthly allowance. Single atomic transaction.
+ *
+ * Usage: pnpm demo tier:set <email> <free|pro|max>
+ */
+function tierSet(email, tier) {
+  loadDotenv();
+  applyDefaults();
+
+  const ALLOWANCES = { free: 30, pro: 300, max: 2000 };
+
+  if (!email || !tier) {
+    console.error(`${C.red}[tier:set]${C.reset} Usage: pnpm demo tier:set <email> <free|pro|max>`);
+    process.exit(1);
+  }
+  if (!(tier in ALLOWANCES)) {
+    console.error(`${C.red}[tier:set]${C.reset} tier must be free, pro, or max`);
+    process.exit(1);
+  }
+
+  if (!tcpCheckSync(5432)) {
+    console.error(`${C.red}[tier:set]${C.reset} Postgres is not reachable on :5432. Is the stack running?`);
+    process.exit(1);
+  }
+
+  const userId = pgExec(`SELECT id FROM users WHERE email = '${email}' LIMIT 1`);
+  if (!userId) {
+    console.error(`${C.red}[tier:set]${C.reset} no user found with email '${email}'`);
+    process.exit(1);
+  }
+
+  const allowance = ALLOWANCES[tier];
+  const selectSql =
+    `SELECT u.email, COALESCE(s.tier, 'free') AS tier, COALESCE(c.balance, 0) AS credits ` +
+    `FROM users u ` +
+    `LEFT JOIN subscriptions s ON s.user_id = u.id ` +
+    `LEFT JOIN credits c ON c.user_id = u.id ` +
+    `WHERE u.email = '${email}';`;
+
+  const pgArgs = (sql) => [
+    'exec', '-i', 'promptdemo-postgres-1',
+    'psql', '-U', 'promptdemo', '-d', 'promptdemo', '-c', sql,
+  ];
+
+  console.log('\nBefore:');
+  spawnSync('docker', pgArgs(selectSql), { stdio: 'inherit', shell: false, windowsHide: true });
+
+  const txSql =
+    `BEGIN; ` +
+    `INSERT INTO subscriptions (user_id, tier, status) VALUES (${userId}, '${tier}', 'active') ` +
+    `ON CONFLICT (user_id) DO UPDATE SET tier = '${tier}', status = 'active', updated_at = now(); ` +
+    `INSERT INTO credits (user_id, balance) VALUES (${userId}, ${allowance}) ` +
+    `ON CONFLICT (user_id) DO UPDATE SET balance = ${allowance}, updated_at = now(); ` +
+    `INSERT INTO credit_transactions (user_id, job_id, delta, reason, balance_after) ` +
+    `VALUES (${userId}, NULL, ${allowance}, 'grant', ${allowance}); ` +
+    `COMMIT;`;
+
+  const r = spawnSync('docker', pgArgs(txSql), { encoding: 'utf8', shell: false, windowsHide: true });
+  if (r.status !== 0) {
+    console.error(`${C.red}[tier:set]${C.reset} DB error:\n${r.stderr || r.stdout}`);
+    process.exit(1);
+  }
+
+  console.log(`\nAfter (→ ${tier}):`);
+  spawnSync('docker', pgArgs(selectSql), { stdio: 'inherit', shell: false, windowsHide: true });
+
+  console.log(`\n${C.green}✓${C.reset} ${email} is now on the ${C.bold}${tier}${C.reset} plan with ${allowance}s credits.`);
+}
+
+/**
+ * Render the hardcoded PromoComposition → docs/readme/demo.mp4
+ * (and optionally docs/readme/demo.gif when --gif is passed through).
+ *
+ * Usage: pnpm demo render:promo [--gif]
+ */
+function renderPromo(extraArgs = []) {
+  // Script lives inside packages/remotion/ so Node ESM resolves @remotion/*
+  // from that package's own node_modules.
+  const scriptPath = resolve(REPO_ROOT, 'packages/remotion/render-promo.mjs');
+  console.log(`${C.cyan}[render:promo]${C.reset} node packages/remotion/render-promo.mjs ${extraArgs.join(' ')}`);
+  const r = spawnSync(
+    process.execPath,
+    [scriptPath, ...extraArgs],
+    { stdio: 'inherit', shell: false, windowsHide: true },
+  );
+  if (r.status !== 0) {
+    console.error(`${C.red}[render:promo]${C.reset} render failed (exit ${r.status})`);
+    process.exit(r.status ?? 1);
+  }
+}
+
 function tcpCheckSync(port) {
   const r = spawnSync(
     IS_WINDOWS ? 'powershell.exe' : 'sh',
@@ -891,8 +980,16 @@ ${C.bold}Database (Feature 4 Postgres, AUTH_ENABLED=true):${C.reset}
   ${C.magenta}db:reset${C.reset}   Wipe Postgres volume + rerun migrations. Use after schema changes.
              Destructive: also drops Redis + MinIO volumes in the same sweep.
   ${C.magenta}db:tables${C.reset}  List all tables + row counts in the dev database.
+  ${C.magenta}tier:set${C.reset}   Set a user's subscription tier + reset credits balance.
+             Usage: pnpm demo tier:set <email> <free|pro|max>
+             Tiers: free (30s) | pro (300s) | max (2000s)
 
   help       This message
+
+${C.bold}Brand assets (PromoComposition):${C.reset}
+  ${C.cyan}render:promo${C.reset}       Render the 5-scene promo video → docs/readme/demo.mp4
+                     Pass ${C.bold}--gif${C.reset} to also produce docs/readme/demo.gif (needs ffmpeg).
+                     No API or Docker required — pure Remotion render.
 
 Requires Docker Desktop running + ANTHROPIC_API_KEY in .env at repo root.
 `);
@@ -914,6 +1011,8 @@ const arg = process.argv[3];
     case 'clean':   cleanRemotionBundles(); break;
     case 'db:reset': await dbReset(); break;
     case 'db:tables': dbTables(); break;
+    case 'tier:set': tierSet(arg, process.argv[4]); break;
+    case 'render:promo': renderPromo(process.argv.slice(3)); break;
     case 'help':
     case '--help':
     case '-h':      help(); break;
