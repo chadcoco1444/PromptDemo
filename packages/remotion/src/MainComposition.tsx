@@ -8,6 +8,7 @@ import { resolveScene } from './resolveScene';
 import { BGMTrack } from './primitives/BGMTrack';
 import { toPresentation } from './animations/entryExit';
 import { defaultTransitionTiming } from './animations/timing';
+import { Watermark } from './primitives/Watermark';
 
 const TRANSITION_FRAMES = 15;
 
@@ -70,6 +71,7 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
           );
         })}
       </TransitionSeries>
+      {videoConfig.showWatermark && <Watermark />}
     </AbsoluteFill>
   );
 };
