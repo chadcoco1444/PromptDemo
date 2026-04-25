@@ -99,11 +99,24 @@ function enrichFromCrawlResult(
   const normalizedScenes = rawScenes.map((s, i) => {
     if (!s || typeof s !== 'object') return s;
     const obj = s as Record<string, unknown>;
+    let next: Record<string, unknown> = obj;
+
     const n = Number(obj.sceneId);
     if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
-      return { ...obj, sceneId: i + 1 };
+      next = { ...next, sceneId: i + 1 };
     }
-    return s;
+
+    // CTA scenes: deterministically inject the source URL. Claude often
+    // emits malformed or invented urls (relative paths, missing scheme,
+    // attempted shortened forms) which fail z.string().url() and burn a
+    // retry. Same enrichment pattern as brandColor/screenshots/fps.
+    if (next.type === 'CTA' && typeof next.props === 'object' && next.props !== null) {
+      next = {
+        ...next,
+        props: { ...(next.props as Record<string, unknown>), url: input.crawlResult.url },
+      };
+    }
+    return next;
   });
 
   // Cast is safe: selector only reads `type` + `props`; Zod validation downstream

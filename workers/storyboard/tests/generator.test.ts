@@ -54,6 +54,32 @@ describe('generateStoryboard', () => {
     if (result.kind === 'error') expect(result.attempts).toBe(3);
   });
 
+  it('overwrites CTA scene url with the source URL even if Claude emits garbage', async () => {
+    // Claude regression: occasionally produces a relative path or an invented
+    // shortened url (fails z.string().url()) for the CTA scene. We enrich
+    // it deterministically from crawlResult.url so this never burns a retry.
+    const broken = JSON.parse(JSON.stringify(validStoryboard));
+    const ctaIdx = (broken.scenes as Array<{ type: string }>).findIndex((s) => s.type === 'CTA');
+    expect(ctaIdx).toBeGreaterThanOrEqual(0);
+    broken.scenes[ctaIdx].props.url = 'invented-not-a-url';
+    const client = mockClient(JSON.stringify(broken));
+    const result = await generateStoryboard({
+      claude: client,
+      crawlResult: crawl,
+      intent: 'x',
+      duration: 30,
+    });
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      const cta = result.storyboard.scenes.find((s) => s.type === 'CTA');
+      expect(cta).toBeDefined();
+      // Enriched URL should match crawlResult.url, not Claude's garbage.
+      expect((cta as { props: { url: string } }).props.url).toBe(crawl.url);
+    }
+    // Single Claude call, no retry needed.
+    expect((client.complete as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+  });
+
   it('auto-prorates minor duration drift without retry', async () => {
     // Take valid fixture, perturb one scene by +5 frames (<<5%)
     const perturbed = JSON.parse(JSON.stringify(validStoryboard));
