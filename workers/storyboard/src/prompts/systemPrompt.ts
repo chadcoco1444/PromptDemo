@@ -14,12 +14,39 @@ HARD RULES — violating any of these means your output will be rejected and you
 8. brandColor must be the brand color from the input (or #1a1a1a fallback). Do not substitute other colors.
 `.trim();
 
-const RHYTHM_TEMPLATES = `
-RHYTHM TEMPLATES — guidance for pacing, not hard rules:
+const CREATIVITY_DIRECTIVE = `
+CREATIVITY DIRECTIVE — read this before choosing your scene sequence:
 
-- 10s (300 frames): 3-4 scenes. Always HeroRealShot (or HeroStylized if no screenshot), one FeatureCallout, CTA. Optionally one TextPunch between.
-- 30s (900 frames): 5-7 scenes. HeroRealShot, 2-3 FeatureCallouts, one TextPunch as pacing break, optionally a SmoothScroll if fullPage screenshot is available, CTA.
-- 60s (1800 frames): 7-10 scenes. HeroRealShot, 3-4 FeatureCallouts, multiple TextPunch breaks, SmoothScroll if available, optional closing TextPunch before CTA.
+Do not default to the same scene sequence for every video. The best storyboard matches this specific product's personality — not a generic template.
+
+Before choosing scene order, ask yourself:
+- Does this product deserve a visual HeroRealShot open, or a punchy TextPunch hook that names the problem first?
+- Should 3+ small features be shown individually (FeatureCallout × N) or together in a BentoGrid?
+- Is there a user interaction worth demonstrating with CursorDemo, rather than a static screenshot?
+- Would a SmoothScroll on the full-page capture convey depth better than another FeatureCallout?
+
+Vary your approach intentionally. A storyboard that could fit any product fits none.
+`.trim();
+
+const RHYTHM_TEMPLATES = `
+RHYTHM TEMPLATES — suggested starting points, not rules. Adapt freely to the product's personality.
+
+10s (300 frames) — 3-4 scenes suggested:
+- Suggested: HeroRealShot → FeatureCallout → CTA (optionally add one TextPunch between)
+- Note: BentoGrid and CursorDemo are not recommended for 10s — too little time to be effective.
+
+30s (900 frames) — 5-7 scenes suggested:
+- Default:            HeroRealShot → FeatureCallout × 2-3 → TextPunch → CTA
+- Feature-dense:      HeroRealShot → BentoGrid → TextPunch → CTA
+- Interaction-first:  TextPunch (hook) → CursorDemo → FeatureCallout × 2 → CTA
+- Scroll-heavy:       HeroRealShot → SmoothScroll → FeatureCallout × 2 → CTA
+
+60s (1800 frames) — 7-10 scenes suggested:
+- Default:       HeroRealShot → FeatureCallout × 3-4 → TextPunch × 2 → SmoothScroll → CTA
+- Demo-heavy:    TextPunch → HeroRealShot → CursorDemo × 2 → FeatureCallout × 2 → BentoGrid → CTA
+- Visual-story:  HeroRealShot → SmoothScroll → BentoGrid → TextPunch → FeatureCallout × 2 → CTA
+
+These are starting points. Mix and match. Generic is failure.
 `.trim();
 
 export interface BuildSystemPromptOpts {
@@ -38,6 +65,8 @@ SCENE TYPES (v1 implemented subset):
 ${AVAILABLE_SCENES_PROMPT}
 
 ${HARD_RULES}
+
+${CREATIVITY_DIRECTIVE}
 
 ${RHYTHM_TEMPLATES}${pacingBlock}
 
