@@ -54,6 +54,9 @@ export function calculateRefund(
   errorCode: string | null,
   originalCost: number,
 ): number {
+  // Pre-flight rejections (budget cap, env misconfig, etc.) never spent
+  // money — full refund regardless of stage.
+  if (errorCode === 'STORYBOARD_BUDGET_EXCEEDED') return originalCost;
   if (stage === 'storyboard') return Math.floor(originalCost * 0.5);
   if (stage === 'render') {
     const retryable = errorCode !== null && /retryable|timeout|transient/i.test(errorCode);

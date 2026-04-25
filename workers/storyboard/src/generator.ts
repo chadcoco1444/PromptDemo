@@ -1,3 +1,4 @@
+import type { Pool } from 'pg';
 import type { CrawlResult, Storyboard } from '@promptdemo/schema';
 import { buildSystemPrompt } from './prompts/systemPrompt.js';
 import { buildUserMessage } from './prompts/userMessage.js';
@@ -8,6 +9,7 @@ import { extractiveCheck } from './validation/extractiveCheck.js';
 import { adjustDuration, adjustStoryboardDuration } from './validation/durationAdjust.js';
 import { selectVariants } from './variantSelection.js';
 import type { ClaudeClient } from './claude/claudeClient.js';
+import { assertBudgetAvailable, recordSpend, BudgetExceededError } from './anthropic/spendGuard.js';
 
 const MAX_ATTEMPTS = 3;
 const DURATION_FRAMES: Record<10 | 30 | 60, number> = { 10: 300, 30: 900, 60: 1800 };
@@ -141,6 +143,13 @@ export interface GenerateInput {
   duration: 10 | 30 | 60;
   hint?: string;
   previousStoryboard?: Storyboard;
+  /**
+   * When non-null, the Anthropic daily spend guard runs pre-flight (rejects
+   * with STORYBOARD_BUDGET_EXCEEDED if cap is hit) and post-call (records
+   * the cost from the usage block). Null = guard disabled, behavior matches
+   * pre-Phase-5.
+   */
+  spendGuardPool?: Pool | null;
 }
 
 export async function generateStoryboard(input: GenerateInput): Promise<GenerateResult> {
@@ -160,12 +169,27 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
   let feedback = '';
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    // Pre-flight budget gate. Guard auto-resets at UTC midnight.
+    try {
+      await assertBudgetAvailable({ pool: input.spendGuardPool ?? null });
+    } catch (err) {
+      if (err instanceof BudgetExceededError) {
+        return { kind: 'error', message: `${err.code}: ${err.message}`, attempts: attempt };
+      }
+      throw err;
+    }
+
     const msg = feedback ? `${userMessage}\n\n## Previous attempt errors — fix these:\n${feedback}` : userMessage;
     const resp = await input.claude.complete({ systemPrompt, userMessage: msg });
     if (resp.kind === 'error') {
       feedback = `Claude API error: ${resp.message}`;
       continue;
     }
+    // Record actual spend whether or not validation succeeds — we already
+    // paid for the tokens. Best-effort; failure here doesn't fail the job.
+    await recordSpend({ pool: input.spendGuardPool ?? null }, resp.usage).catch((err) =>
+      console.error('[storyboard] recordSpend failed:', err),
+    );
 
     const parsed = parseJson(resp.text);
     if (parsed.kind === 'error') {

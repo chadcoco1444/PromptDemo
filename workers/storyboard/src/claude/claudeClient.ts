@@ -1,8 +1,9 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import type { Message } from '@anthropic-ai/sdk/resources/messages';
+import type { ClaudeUsage } from '../anthropic/pricing.js';
 
 export type ClaudeCompleteResult =
-  | { kind: 'ok'; text: string }
+  | { kind: 'ok'; text: string; usage: ClaudeUsage }
   | { kind: 'error'; message: string };
 
 export interface ClaudeClient {
@@ -38,7 +39,17 @@ export function createClaudeClient(cfg: CreateClaudeClientInput): ClaudeClient {
         if (!textBlock || textBlock.type !== 'text') {
           return { kind: 'error', message: 'no text block in response' };
         }
-        return { kind: 'ok', text: textBlock.text };
+        const usage: ClaudeUsage = {
+          input_tokens: res.usage.input_tokens,
+          output_tokens: res.usage.output_tokens,
+          ...(typeof (res.usage as { cache_read_input_tokens?: number }).cache_read_input_tokens === 'number'
+            ? { cache_read_input_tokens: (res.usage as { cache_read_input_tokens?: number }).cache_read_input_tokens }
+            : {}),
+          ...(typeof (res.usage as { cache_creation_input_tokens?: number }).cache_creation_input_tokens === 'number'
+            ? { cache_creation_input_tokens: (res.usage as { cache_creation_input_tokens?: number }).cache_creation_input_tokens }
+            : {}),
+        };
+        return { kind: 'ok', text: textBlock.text, usage };
       } catch (err) {
         return { kind: 'error', message: (err as Error).message };
       }

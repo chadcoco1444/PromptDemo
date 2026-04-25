@@ -6,13 +6,18 @@ describe('createClaudeClient', () => {
     const create = vi.fn().mockResolvedValue({
       content: [{ type: 'text', text: '{"hello":1}' }],
       stop_reason: 'end_turn',
+      usage: { input_tokens: 100, output_tokens: 50 },
     });
     const sdk = { messages: { create } } as unknown as Parameters<typeof createClaudeClient>[0]['sdk'];
 
     const client: ClaudeClient = createClaudeClient({ sdk, model: 'claude-sonnet-4-6', maxTokens: 4096 });
     const out = await client.complete({ systemPrompt: 'SYS', userMessage: 'USR' });
 
-    expect(out).toEqual({ kind: 'ok', text: '{"hello":1}' });
+    expect(out).toEqual({
+      kind: 'ok',
+      text: '{"hello":1}',
+      usage: { input_tokens: 100, output_tokens: 50 },
+    });
     expect(create).toHaveBeenCalledTimes(1);
     const args = create.mock.calls[0]![0];
     expect(args.model).toBe('claude-sonnet-4-6');
@@ -28,6 +33,7 @@ describe('createClaudeClient', () => {
     const create = vi.fn().mockResolvedValue({
       content: [{ type: 'text', text: '' }],
       stop_reason: 'max_tokens',
+      usage: { input_tokens: 100, output_tokens: 50 },
     });
     const sdk = { messages: { create } } as unknown as Parameters<typeof createClaudeClient>[0]['sdk'];
     const client = createClaudeClient({ sdk, model: 'claude-sonnet-4-6', maxTokens: 4096 });

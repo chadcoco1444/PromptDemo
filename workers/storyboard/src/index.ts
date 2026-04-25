@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Worker, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
+import type { Pool } from 'pg';
 import { CrawlResultSchema, makeIntel, type Storyboard } from '@promptdemo/schema';
 import { makeS3Client, putObject, buildKey, s3ConfigFromEnv, getObjectJson } from './s3/s3Client.js';
 import { generateStoryboard } from './generator.js';
@@ -37,6 +38,16 @@ const anthropic = mockMode
 
 const claude = anthropic ? createClaudeClient({ sdk: anthropic, model, maxTokens }) : null;
 
+// Phase 5.1 spend guard: opt-in via BUDGET_GUARD_ENABLED=true and DATABASE_URL.
+// Pool is shared across all jobs for the worker's lifetime.
+let spendGuardPool: Pool | null = null;
+const budgetGuardEnabled = env.BUDGET_GUARD_ENABLED === 'true' && !!env.DATABASE_URL;
+if (budgetGuardEnabled) {
+  const { Pool } = await import('pg');
+  spendGuardPool = new Pool({ connectionString: env.DATABASE_URL });
+  console.log(`[storyboard] BUDGET_GUARD_ENABLED=true → Anthropic daily spend guard active`);
+}
+
 const worker = new Worker<JobPayload>(
   'storyboard',
   async (job: Job<JobPayload>) => {
@@ -61,6 +72,7 @@ const worker = new Worker<JobPayload>(
         duration: payload.duration,
         ...(payload.hint ? { hint: payload.hint } : {}),
         ...(previous ? { previousStoryboard: previous } : {}),
+        ...(spendGuardPool ? { spendGuardPool } : {}),
       });
       if (res.kind === 'error') throw new Error(res.message);
       storyboard = res.storyboard;

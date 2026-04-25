@@ -13,7 +13,7 @@ function mockClient(...responses: string[]): ClaudeClient {
     complete: vi.fn().mockImplementation(async () => {
       const next = queue.shift();
       if (next === undefined) throw new Error('no more mock responses');
-      return { kind: 'ok', text: next };
+      return { kind: 'ok', text: next, usage: { input_tokens: 100, output_tokens: 50 } };
     }),
   };
 }

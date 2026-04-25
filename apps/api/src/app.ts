@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
@@ -10,6 +10,7 @@ import { postJobRoute } from './routes/postJob.js';
 import { getJobRoute } from './routes/getJob.js';
 import { getStoryboardRoute } from './routes/getStoryboard.js';
 import { streamRoute } from './routes/stream.js';
+import { verifyInternalToken } from './auth/internalToken.js';
 
 export interface BuildOpts {
   store: JobStore;
@@ -37,13 +38,25 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
   const app = Fastify({ logger: opts.logger === false ? false : { level: 'info' } });
   await app.register(cors, { origin: true });
   await app.register(sensible);
-  // Single global rate-limit registration; the POST route is covered automatically.
-  // (Plan suggested a double-register but notes to simplify if runtime issues arise;
-  //  one global registration avoids double-counting.)
+  // v2.1 Phase 5.2 — defense-in-depth rate limit.
+  //   - Per-user when an internal JWT is present (BFF proxy hop attaches it).
+  //     Verifies the JWT synchronously-ish before bucketing; if verification
+  //     fails we fall back to per-IP so we never accidentally bypass.
+  //   - Per-IP otherwise (anonymous mode + any unsigned request).
+  // The BFF (apps/web's /api/jobs/create) also rate-limits at its own hop
+  // before signing the JWT — this Fastify layer protects every other route
+  // and catches any traffic that bypasses the BFF.
   await app.register(rateLimit, {
     max: opts.rateLimitPerMinute ?? 10,
     timeWindow: '1 minute',
-    keyGenerator: (req) => req.ip,
+    keyGenerator: async (req: FastifyRequest) => {
+      const auth = req.headers['authorization'];
+      if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
+        const v = await verifyInternalToken(auth);
+        if (v.ok && v.userId) return `user:${v.userId}`;
+      }
+      return `ip:${req.ip}`;
+    },
     skipOnError: false,
   });
 
