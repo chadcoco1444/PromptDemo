@@ -1,4 +1,5 @@
 import type { CrawlResult } from '@promptdemo/schema';
+import { detectIndustry, STYLE_MODIFIERS } from './industryDetect.js';
 
 const DURATION_TO_FRAMES = { 10: 300, 30: 900, 60: 1800 } as const;
 
@@ -44,6 +45,11 @@ export function buildUserMessage(input: BuildUserMessageInput): string {
         2
       )}`
     );
+  }
+
+  const modifier = STYLE_MODIFIERS[detectIndustry(input.crawlResult)];
+  if (modifier) {
+    blocks.push(`## Product Style Guidance\n${modifier}`);
   }
 
   blocks.push(`\nReturn a valid Storyboard JSON matching the hard rules in the system prompt.`);

@@ -37,3 +37,65 @@ describe('buildUserMessage', () => {
     expect(buildUserMessage({ intent: 'x', duration: 60, crawlResult: crawl })).toContain('1800');
   });
 });
+
+function makeCrawl(overrides: {
+  sourceTexts?: string[];
+  features?: Array<{ title: string; description?: string }>;
+}): CrawlResult {
+  return {
+    brand: { name: 'Acme', primaryColor: '#7c3aed' },
+    screenshots: { viewport: 's3://bucket/viewport.png' },
+    sourceTexts: overrides.sourceTexts ?? ['Great product for teams'],
+    features: (overrides.features ?? []) as CrawlResult['features'],
+    tier: 'A',
+    trackUsed: false,
+  } as unknown as CrawlResult;
+}
+
+describe('buildUserMessage — style modifier injection', () => {
+  it('appends ## Product Style Guidance block for developer_tool', () => {
+    const msg = buildUserMessage({
+      intent: 'show the api',
+      duration: 30,
+      crawlResult: makeCrawl({ sourceTexts: ['REST API with webhooks and SDK'] }),
+    });
+    expect(msg).toContain('## Product Style Guidance');
+    expect(msg).toContain('CursorDemo');
+  });
+
+  it('appends style guidance for saas_tool (3+ features)', () => {
+    const msg = buildUserMessage({
+      intent: 'show features',
+      duration: 30,
+      crawlResult: makeCrawl({
+        features: [
+          { title: 'Reports', description: 'Analytics' },
+          { title: 'Integrations', description: 'Connect tools' },
+          { title: 'Automations', description: 'Save time' },
+        ],
+      }),
+    });
+    expect(msg).toContain('## Product Style Guidance');
+    expect(msg).toContain('BentoGrid');
+  });
+
+  it('does NOT append style guidance for default (no signals)', () => {
+    const msg = buildUserMessage({
+      intent: 'generic video',
+      duration: 10,
+      crawlResult: makeCrawl({ features: [], sourceTexts: ['Nice product'] }),
+    });
+    expect(msg).not.toContain('## Product Style Guidance');
+  });
+
+  it('style guidance block comes after the existing blocks', () => {
+    const msg = buildUserMessage({
+      intent: 'show api',
+      duration: 30,
+      crawlResult: makeCrawl({ sourceTexts: ['API-first platform with SDK'] }),
+    });
+    const crawlerIdx = msg.indexOf('## Crawler tier');
+    const guidanceIdx = msg.indexOf('## Product Style Guidance');
+    expect(guidanceIdx).toBeGreaterThan(crawlerIdx);
+  });
+});
