@@ -194,6 +194,7 @@ export function HistoryCard({
           <button
             type="button"
             title="Delete"
+            aria-label="Delete this job"
             onClick={() => { setDeleteState('confirming'); setDeleteError(null); }}
             className="text-[11px] text-gray-600 hover:text-red-400 transition-colors"
           >
