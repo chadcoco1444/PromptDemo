@@ -22,7 +22,7 @@ const baseJob: HistoryJob = {
 
 describe('HistoryCard', () => {
   it('renders hostname, intent, duration, and status badge', () => {
-    render(<HistoryCard job={baseJob} />);
+    render(<HistoryCard job={baseJob} tier="pro" />);
     expect(screen.getByText('vercel.com')).toBeInTheDocument();
     expect(screen.getByText(/show pricing/i)).toBeInTheDocument();
     expect(screen.getByText(/30s/i)).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('HistoryCard', () => {
   });
 
   it('renders the cover image when coverUrl is set', () => {
-    const { container } = render(<HistoryCard job={baseJob} />);
+    const { container } = render(<HistoryCard job={baseJob} tier="pro" />);
     expect(container.querySelector(`img[src='/api/jobs/abc/cover']`)).toBeTruthy();
   });
 
@@ -42,20 +42,44 @@ describe('HistoryCard', () => {
           parentJobId: 'parent-1',
           parent: { jobId: 'parent-1', hostname: 'https://stripe.com', createdAt: Date.now() - 86400000 },
         }}
+        tier="pro"
       />,
     );
     expect(screen.getByText(/from stripe\.com/i)).toBeInTheDocument();
   });
 
   it('does not render LineageBadge when parent is null', () => {
-    render(<HistoryCard job={baseJob} />);
+    render(<HistoryCard job={baseJob} tier="pro" />);
     expect(screen.queryByText(/from /i)).toBeNull();
     expect(screen.queryByText(/regenerated/i)).toBeNull();
   });
 
   it('links the whole card to /jobs/<jobId>', () => {
-    render(<HistoryCard job={baseJob} />);
+    render(<HistoryCard job={baseJob} tier="pro" />);
     const link = screen.getAllByRole('link').find((a) => a.getAttribute('href') === '/jobs/abc');
     expect(link).toBeTruthy();
+  });
+
+  it('shows download and fork buttons for done jobs', () => {
+    render(<HistoryCard job={baseJob} tier="pro" />);
+    expect(screen.getByText(/mp4/i)).toBeTruthy();
+    expect(screen.getByText(/json/i)).toBeTruthy();
+    expect(screen.getByText(/fork/i)).toBeTruthy();
+  });
+
+  it('hides action row for generating jobs', () => {
+    const generatingJob = { ...baseJob, status: 'generating', videoUrl: null };
+    render(<HistoryCard job={generatingJob} tier="pro" />);
+    expect(screen.queryByText(/mp4/i)).toBeNull();
+  });
+
+  it('shows watermark upgrade hint for free tier done jobs', () => {
+    render(<HistoryCard job={baseJob} tier="free" />);
+    expect(screen.getByText(/upgrade/i)).toBeTruthy();
+  });
+
+  it('hides watermark hint for pro tier', () => {
+    render(<HistoryCard job={baseJob} tier="pro" />);
+    expect(screen.queryByText(/upgrade/i)).toBeNull();
   });
 });
