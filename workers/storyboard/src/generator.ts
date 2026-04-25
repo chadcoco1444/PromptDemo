@@ -7,6 +7,7 @@ import { parseJson } from './validation/parseJson.js';
 import { zodValidate } from './validation/zodValidate.js';
 import { extractiveCheck } from './validation/extractiveCheck.js';
 import { adjustDuration, adjustStoryboardDuration } from './validation/durationAdjust.js';
+import { clampPacing } from './validation/pacingClamp.js';
 import { selectVariants } from './variantSelection.js';
 import type { ClaudeClient } from './claude/claudeClient.js';
 import { assertBudgetAvailable, recordSpend, BudgetExceededError } from './anthropic/spendGuard.js';
@@ -249,6 +250,40 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
             durationInFrames: adj.storyboard.scenes[i]!.durationInFrames,
           })),
         };
+      }
+    }
+
+    // Pacing auto-clamp: if the profile sets per-scene caps and Claude
+    // ignored them, fix locally rather than burning a retry. Same spirit as
+    // the duration auto-prorate — Claude's pacing intent stays, frame
+    // counts get nudged into compliance.
+    if (
+      candidate &&
+      typeof candidate === 'object' &&
+      'scenes' in candidate &&
+      Array.isArray((candidate as { scenes: unknown }).scenes)
+    ) {
+      const shaped = candidate as {
+        videoConfig: { durationInFrames?: unknown };
+        scenes: Array<{ durationInFrames?: unknown }>;
+      };
+      const targetOk = typeof shaped.videoConfig.durationInFrames === 'number';
+      const scenesOk = shaped.scenes.every((s) => typeof s.durationInFrames === 'number');
+      if (targetOk && scenesOk) {
+        const clamped = clampPacing({
+          profile,
+          scenes: shaped.scenes.map((s) => ({ durationInFrames: s.durationInFrames as number })),
+          totalFrames: shaped.videoConfig.durationInFrames as number,
+        });
+        if (clamped) {
+          candidate = {
+            ...(candidate as object),
+            scenes: shaped.scenes.map((s, i) => ({
+              ...s,
+              durationInFrames: clamped.scenes[i]!.durationInFrames,
+            })),
+          };
+        }
       }
     }
 
