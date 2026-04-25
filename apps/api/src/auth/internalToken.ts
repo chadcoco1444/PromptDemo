@@ -40,8 +40,13 @@ export async function verifyInternalToken(authHeader: string | undefined): Promi
       audience: 'promptdemo-api',
       clockTolerance: 30,
     });
-    if (!payload.sub) return { ok: false, reason: 'malformed' };
-    return { ok: true, userId: payload.sub };
+    if (payload.sub === undefined || payload.sub === null || payload.sub === '') {
+      return { ok: false, reason: 'malformed' };
+    }
+    // Defensive String() — JWT spec says sub is a string, but pre-fix BFF
+    // tokens may carry a numeric sub. Coerce so downstream consumers always
+    // see a string id.
+    return { ok: true, userId: String(payload.sub) };
   } catch (err) {
     if (err instanceof joseErrors.JWTExpired) return { ok: false, reason: 'expired' };
     if (err instanceof joseErrors.JWTClaimValidationFailed) return { ok: false, reason: 'wrong_issuer' };

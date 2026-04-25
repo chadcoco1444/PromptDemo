@@ -42,14 +42,17 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
-    const sid = (session.user as { id?: string }).id;
-    if (!sid) {
+    const sid = (session.user as { id?: string | number }).id;
+    if (sid === undefined || sid === null || sid === '') {
       return NextResponse.json(
         { error: 'session_missing_id', message: 'Sign-in session is missing user id; try signing in again.' },
         { status: 500 },
       );
     }
-    userId = sid;
+    // NextAuth's pg-adapter exposes id as the underlying SERIAL (number) at
+    // runtime, even though TS types claim string. JWT sub MUST be a string —
+    // coerce defensively so the downstream Job.userId stays a string.
+    userId = String(sid);
   }
 
   const rateKey = `${ip}:${userId ?? 'anon'}`;

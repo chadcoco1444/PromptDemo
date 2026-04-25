@@ -38,9 +38,11 @@ const ErrorSchema = z.object({
 export const JobSchema = z.object({
   jobId: z.string().min(1),
   parentJobId: z.string().min(1).optional(),
-  // Only populated when AUTH_ENABLED=true + the trusted apps/web proxy set
-  // X-User-Id. Anonymous jobs (pre-auth mode) omit this.
-  userId: z.string().min(1).optional(),
+  // Only populated when AUTH_ENABLED=true + the trusted apps/web proxy
+  // attaches a signed JWT. Anonymous jobs (pre-auth mode) omit this.
+  // Accepts string or number on parse (older entries pre-coercion stored
+  // the SERIAL id as a JSON number); always normalized to string.
+  userId: z.union([z.string(), z.number()]).transform((v) => String(v)).pipe(z.string().min(1)).optional(),
   status: JobStatusSchema,
   stage: JobStageSchema,
   progress: z.number().int().min(0).max(100),
