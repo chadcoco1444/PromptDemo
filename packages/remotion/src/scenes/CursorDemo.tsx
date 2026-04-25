@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Img, useCurrentFrame, interpolate } from 'remotion';
+import { AbsoluteFill, Img, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
 import type { BrandTheme } from '../utils/brandTheme';
 
 export const REGION_COORDS: Record<string, { x: number; y: number }> = {
@@ -45,6 +45,7 @@ export const CursorDemo: React.FC<CursorDemoProps> = ({
   theme,
 }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const target = REGION_COORDS[targetHint.region] ?? REGION_COORDS['center'];
 
   const moveEnd = Math.floor(durationInFrames * 0.4);
@@ -78,6 +79,7 @@ export const CursorDemo: React.FC<CursorDemoProps> = ({
   const scrollDrift =
     action === 'Scroll'
       ? interpolate(actionFrame, [0, actionDuration], [0, -40], {
+          extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
         })
       : 0;
@@ -85,7 +87,8 @@ export const CursorDemo: React.FC<CursorDemoProps> = ({
   // Type: reveal one character every 3 frames (cursor blinks at 15fps half-cycle)
   const charsVisible = action === 'Type' ? Math.floor(actionFrame / 3) : 0;
   const typedText = targetDescription.slice(0, charsVisible);
-  const cursorBlink = frame % 30 < 15;
+  const blinkCycle = Math.round(fps / 2);
+  const cursorBlink = frame % (blinkCycle * 2) < blinkCycle;
 
   return (
     <AbsoluteFill style={{ background: '#0a0a0a', overflow: 'hidden' }}>
@@ -120,7 +123,7 @@ export const CursorDemo: React.FC<CursorDemoProps> = ({
       </div>
 
       {/* Click ripple */}
-      {action === 'Click' && frame >= actionStart && rippleProgress > 0 && (
+      {action === 'Click' && rippleProgress > 0 && (
         <div
           style={{
             position: 'absolute',
@@ -141,8 +144,8 @@ export const CursorDemo: React.FC<CursorDemoProps> = ({
         <div
           style={{
             position: 'absolute',
-            left: target.x * W + 44,
-            top: target.y * H + 44,
+            left: target.x > 0.75 ? target.x * W - 44 - 400 : target.x * W + 44,
+            top: target.y > 0.80 ? target.y * H - 44 - 60 : target.y * H + 44,
             background: 'rgba(0,0,0,0.85)',
             color: '#ffffff',
             padding: '8px 16px',
