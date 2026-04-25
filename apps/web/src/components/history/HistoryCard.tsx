@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { hostnameOf } from '../../lib/url-utils';
 import { LineageBadge, type ParentInfo } from './LineageBadge';
@@ -48,9 +49,37 @@ function relativeTime(ts: number): string {
   return `${Math.floor(hr / 24)}d ago`;
 }
 
-export function HistoryCard({ job, tier }: { job: HistoryJob; tier: Tier }) {
+const IN_FLIGHT_STATUSES = new Set(['queued', 'crawling', 'generating', 'waiting_render_slot', 'rendering']);
+
+export function HistoryCard({
+  job,
+  tier,
+  onDelete,
+}: {
+  job: HistoryJob;
+  tier: Tier;
+  onDelete?: (jobId: string) => void;
+}) {
   const display = bucketStatus(job.status);
   const isDone = display === 'done';
+  const isInFlight = IN_FLIGHT_STATUSES.has(job.status);
+
+  const [deleteState, setDeleteState] = useState<'idle' | 'confirming' | 'deleting'>('idle');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteConfirm = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteState('deleting');
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/jobs/${job.jobId}`, { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      onDelete?.(job.jobId);
+    } catch {
+      setDeleteState('idle');
+      setDeleteError('刪除失敗，請再試一次。');
+    }
+  };
 
   return (
     <div
@@ -115,7 +144,7 @@ export function HistoryCard({ job, tier }: { job: HistoryJob; tier: Tier }) {
         </div>
       </Link>
 
-      {/* Action row — only for done jobs */}
+      {/* Action row — download + fork for done jobs */}
       {isDone && (
         <div className="px-4 pb-3 flex items-center gap-2 border-t border-white/5 pt-3">
           <a
@@ -158,6 +187,52 @@ export function HistoryCard({ job, tier }: { job: HistoryJob; tier: Tier }) {
           </Link>
         </div>
       )}
+
+      {/* Delete row — always visible */}
+      <div className="px-4 pb-3" onClick={(e) => e.stopPropagation()}>
+        {deleteState === 'idle' && (
+          <button
+            type="button"
+            title="Delete"
+            onClick={() => { setDeleteState('confirming'); setDeleteError(null); }}
+            className="text-[11px] text-gray-600 hover:text-red-400 transition-colors"
+          >
+            ✕ Delete
+          </button>
+        )}
+
+        {deleteState === 'confirming' && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-gray-400">
+              {isInFlight
+                ? `取消並退還 ${job.input.duration}s credits？`
+                : '此操作無法復原。'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setDeleteState('idle')}
+              className="text-[11px] px-2 py-0.5 rounded ring-1 ring-white/10 text-gray-400 hover:text-white transition-colors"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteConfirm}
+              className="text-[11px] px-2 py-0.5 rounded bg-red-500/20 ring-1 ring-red-500/30 text-red-300 hover:bg-red-500/30 transition-colors"
+            >
+              {isInFlight ? '取消任務' : '刪除'}
+            </button>
+          </div>
+        )}
+
+        {deleteState === 'deleting' && (
+          <span className="text-[11px] text-gray-500">刪除中…</span>
+        )}
+
+        {deleteError && (
+          <span className="text-[11px] text-red-400">{deleteError}</span>
+        )}
+      </div>
     </div>
   );
 }
