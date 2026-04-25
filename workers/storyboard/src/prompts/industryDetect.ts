@@ -22,20 +22,20 @@ function containsAny(text: string, keywords: string[]): boolean {
   return keywords.some((kw) => lower.includes(kw));
 }
 
-function hasPrice(texts: string[]): boolean {
+function hasDollarPrice(texts: string[]): boolean {
   return /\$\d/.test(texts.join(' '));
 }
 
 export function detectIndustry(crawlResult: CrawlResult): IndustryCategory {
   const featureTexts = crawlResult.features
-    .map((f) => `${f.title} ${(f as { description?: string }).description ?? ''}`)
+    .map((f) => `${f.title} ${f.description ?? ''}`)
     .join(' ');
   const allText = [...crawlResult.sourceTexts, featureTexts].join(' ');
 
   if (containsAny(allText, DEVELOPER_KEYWORDS)) return 'developer_tool';
 
   const sourceText = crawlResult.sourceTexts.join(' ');
-  if (hasPrice(crawlResult.sourceTexts) || containsAny(sourceText, ECOMMERCE_KEYWORDS)) {
+  if (hasDollarPrice(crawlResult.sourceTexts) || containsAny(sourceText, ECOMMERCE_KEYWORDS)) {
     return 'ecommerce';
   }
 
