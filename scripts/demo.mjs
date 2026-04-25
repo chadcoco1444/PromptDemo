@@ -146,7 +146,7 @@ function tcpCheck(host, port, timeoutMs = 1000) {
 function dockerUp() {
   console.log(`${C.cyan}[infra]${C.reset} docker compose -f docker-compose.dev.yaml up -d`);
   const r = spawnSync('docker', ['compose', '-f', 'docker-compose.dev.yaml', 'up', '-d'], {
-    stdio: 'inherit', shell: IS_WINDOWS,
+    stdio: 'inherit', shell: IS_WINDOWS, windowsHide: true,
   });
   if (r.status !== 0) {
     console.error(`${C.red}[infra]${C.reset} docker compose up failed`);
@@ -157,7 +157,7 @@ function dockerUp() {
 function dockerDown() {
   console.log(`${C.cyan}[infra]${C.reset} docker compose -f docker-compose.dev.yaml down`);
   spawnSync('docker', ['compose', '-f', 'docker-compose.dev.yaml', 'down'], {
-    stdio: 'inherit', shell: IS_WINDOWS,
+    stdio: 'inherit', shell: IS_WINDOWS, windowsHide: true,
   });
 }
 
@@ -169,7 +169,7 @@ function dockerDown() {
 function dockerDownVolumes() {
   console.log(`${C.cyan}[infra]${C.reset} docker compose -f docker-compose.dev.yaml down -v (dropping volumes)`);
   spawnSync('docker', ['compose', '-f', 'docker-compose.dev.yaml', 'down', '-v'], {
-    stdio: 'inherit', shell: IS_WINDOWS,
+    stdio: 'inherit', shell: IS_WINDOWS, windowsHide: true,
   });
 }
 
@@ -178,7 +178,7 @@ function dockerUpPostgres() {
   const r = spawnSync(
     'docker',
     ['compose', '-f', 'docker-compose.dev.yaml', 'up', '-d', 'postgres'],
-    { stdio: 'inherit', shell: IS_WINDOWS },
+    { stdio: 'inherit', shell: IS_WINDOWS, windowsHide: true },
   );
   if (r.status !== 0) {
     console.error(`${C.red}[infra]${C.reset} docker compose up -d postgres failed`);
@@ -194,7 +194,7 @@ function pgExec(sql) {
   const r = spawnSync(
     'docker',
     ['exec', '-i', 'promptdemo-postgres-1', 'psql', '-U', 'promptdemo', '-d', 'promptdemo', '-t', '-A', '-c', sql],
-    { encoding: 'utf8', shell: false },
+    { encoding: 'utf8', shell: false, windowsHide: true },
   );
   if (r.status !== 0) return null;
   return String(r.stdout ?? '').trim();
@@ -380,7 +380,7 @@ async function startAll() {
  */
 function findPidsOnPort(port) {
   if (IS_WINDOWS) {
-    const r = spawnSync('netstat', ['-ano'], { encoding: 'utf8', shell: false });
+    const r = spawnSync('netstat', ['-ano'], { encoding: 'utf8', shell: false, windowsHide: true });
     const out = r.stdout ?? '';
     const pids = new Set();
     for (const line of out.split(/\r?\n/)) {
@@ -402,7 +402,7 @@ function findPidsOnPort(port) {
 function killPid(pid) {
   try {
     if (IS_WINDOWS) {
-      spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore' });
+      spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true });
     } else {
       process.kill(Number(pid), 'SIGKILL');
     }
@@ -591,7 +591,7 @@ async function stopAll() {
           // semantics, so the parent's death does NOT cascade. Without /T,
           // tsx's inner watcher-worker node and next's bundler worker survive
           // as zombies holding ports.
-          spawnSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
+          spawnSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true });
         } else {
           // POSIX: positive pid kill. tsx and next handle SIGTERM gracefully
           // on their own children, so tree-kill is unnecessary. Using -pid
@@ -810,8 +810,13 @@ async function runForeground() {
   console.log(`${C.bold}[dev-demo]${C.reset} starting 5 services in foreground. Ctrl-C to stop.\n`);
 
   const procs = SERVICES.map((svc) => {
+    // shell:IS_WINDOWS makes Node spawn `cmd.exe /d /s /c "pnpm ..."`. Without
+    // windowsHide:true, that cmd.exe briefly flashes a console window every
+    // time we launch a service — five flashes per `pnpm demo run`. Hiding it
+    // costs nothing here because stdio is piped back to the parent terminal.
     const p = spawn('pnpm', ['--filter', svc.filter, 'dev'], {
       env: serviceEnv(svc), shell: IS_WINDOWS, stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
     });
     const prefix = `${svc.color}[${svc.name.padEnd(10)}]${C.reset}`;
     const pipe = (s) => {
