@@ -100,7 +100,7 @@ export function LandingHero() {
                 muted
                 playsInline
                 preload="auto"
-                aria-label="PromptDemo example output — stripe.com rendered as a 30-second demo video"
+                aria-label="PromptDemo — paste a URL, watch the AI pipeline generate your demo video"
               >
                 <source src="/landing-hero-demo.mp4" type="video/mp4" />
               </video>
