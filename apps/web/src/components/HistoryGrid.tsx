@@ -92,6 +92,10 @@ export function HistoryGrid() {
     }
   }, [cursor, query, state.hasMore, state.loadingMore]);
 
+  const handleDelete = useCallback((jobId: string) => {
+    setState((s) => ({ ...s, jobs: s.jobs.filter((j) => j.jobId !== jobId) }));
+  }, []);
+
   // — render —
 
   if (state.loading) {
@@ -173,7 +177,7 @@ export function HistoryGrid() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.18, delay: Math.min(idx * 0.03, 0.45) }}
             >
-              <HistoryCard job={j} tier={state.tier} />
+              <HistoryCard job={j} tier={state.tier} onDelete={handleDelete} />
             </motion.div>
           ))}
         </AnimatePresence>

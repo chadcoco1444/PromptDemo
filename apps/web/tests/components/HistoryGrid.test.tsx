@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -85,5 +85,52 @@ describe('HistoryGrid', () => {
     await waitFor(() => {
       expect(screen.getByText(/upgrade/i)).toBeInTheDocument();
     });
+  });
+});
+
+const jobFixture = {
+  jobId: 'del-1',
+  parentJobId: null,
+  status: 'done',
+  stage: 'render',
+  input: { url: 'https://x.com', intent: 'show pricing', duration: 30 },
+  videoUrl: 's3://b/v.mp4',
+  thumbUrl: null,
+  coverUrl: null,
+  createdAt: Date.now(),
+  parent: null,
+};
+
+describe('HistoryGrid — delete', () => {
+  it('removes card from state when delete succeeds', async () => {
+    mockFetchOnce([jobFixture], false);
+    render(<HistoryGrid />);
+    await waitFor(() => expect(screen.getByText('x.com')).toBeInTheDocument());
+
+    // Mock the DELETE call
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(null, { status: 204 }),
+    ) as typeof fetch;
+
+    fireEvent.click(screen.getByTitle('Delete'));
+    fireEvent.click(screen.getByText('刪除'));
+
+    await waitFor(() => expect(screen.queryByText('x.com')).toBeNull());
+  });
+
+  it('keeps card in state when delete fails', async () => {
+    mockFetchOnce([jobFixture], false);
+    render(<HistoryGrid />);
+    await waitFor(() => expect(screen.getByText('x.com')).toBeInTheDocument());
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(null, { status: 500 }),
+    ) as typeof fetch;
+
+    fireEvent.click(screen.getByTitle('Delete'));
+    fireEvent.click(screen.getByText('刪除'));
+
+    await waitFor(() => expect(screen.getByText(/刪除失敗/i)).toBeInTheDocument());
+    expect(screen.getByText('x.com')).toBeInTheDocument();
   });
 });
