@@ -1,6 +1,12 @@
 import { useEffect, useReducer } from 'react';
 import type { JobStatus } from './types';
 
+export interface IntelFrame {
+  stage: 'crawl' | 'storyboard' | 'render';
+  message: string;
+  ts: number;
+}
+
 export interface JobStreamState {
   status: JobStatus | 'connecting';
   stage: 'crawl' | 'storyboard' | 'render' | null;
@@ -8,6 +14,7 @@ export interface JobStreamState {
   queuedPosition: number | null;
   videoUrl: string | null;
   error: { code: string; message: string; retryable: boolean } | null;
+  intel: IntelFrame | null;
 }
 
 type Action =
@@ -15,7 +22,8 @@ type Action =
   | { type: 'progress'; data: { stage: JobStreamState['stage']; pct: number } }
   | { type: 'queued'; data: { position: number } }
   | { type: 'done'; data: { videoUrl: string } }
-  | { type: 'error'; data: { code: string; message: string; retryable: boolean } };
+  | { type: 'error'; data: { code: string; message: string; retryable: boolean } }
+  | { type: 'intel'; data: IntelFrame };
 
 const initial: JobStreamState = {
   status: 'connecting',
@@ -24,6 +32,7 @@ const initial: JobStreamState = {
   queuedPosition: null,
   videoUrl: null,
   error: null,
+  intel: null,
 };
 
 function reducer(s: JobStreamState, a: Action): JobStreamState {
@@ -38,6 +47,11 @@ function reducer(s: JobStreamState, a: Action): JobStreamState {
       return { ...s, status: 'done', progress: 100, videoUrl: a.data.videoUrl };
     case 'error':
       return { ...s, status: 'failed', error: a.data };
+    case 'intel':
+      // Drop stale frames (ts regression) — common when SSE reconnects and
+      // replays buffered events out of order.
+      if (s.intel && a.data.ts < s.intel.ts) return s;
+      return { ...s, intel: a.data };
   }
 }
 
@@ -85,11 +99,18 @@ export function useJobStream(url: string): JobStreamState {
         });
       }
     };
+    const onIntel = (e: MessageEvent) => {
+      const data = parseEventData(e);
+      if (data && typeof data === 'object' && 'stage' in data && 'message' in data && 'ts' in data) {
+        dispatch({ type: 'intel', data: data as IntelFrame });
+      }
+    };
     es.addEventListener('snapshot', onSnap);
     es.addEventListener('progress', onProg);
     es.addEventListener('queued', onQueued);
     es.addEventListener('done', onDone);
     es.addEventListener('error', onErr);
+    es.addEventListener('intel', onIntel);
     return () => es.close();
   }, [url]);
   return state;

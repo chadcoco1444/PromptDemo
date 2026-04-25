@@ -68,6 +68,27 @@ describe('useJobStream', () => {
     expect(instances[0]!.closed).toBe(true);
   });
 
+  it('captures intel frames and ignores stale (older ts) ones', () => {
+    const { result } = renderHook(() => useJobStream('http://api/stream/j1'));
+    act(() => instances[0]!.fire('intel', { stage: 'crawl', message: 'Opening', ts: 100 }));
+    expect(result.current.intel?.message).toBe('Opening');
+    expect(result.current.intel?.stage).toBe('crawl');
+
+    // newer wins
+    act(() => instances[0]!.fire('intel', { stage: 'crawl', message: 'Cheerio', ts: 200 }));
+    expect(result.current.intel?.message).toBe('Cheerio');
+
+    // stale ts is dropped (e.g. SSE reconnect replay)
+    act(() => instances[0]!.fire('intel', { stage: 'crawl', message: 'OLD', ts: 50 }));
+    expect(result.current.intel?.message).toBe('Cheerio');
+  });
+
+  it('ignores intel frames missing required fields', () => {
+    const { result } = renderHook(() => useJobStream('http://api/stream/j1'));
+    act(() => instances[0]!.fire('intel', { stage: 'crawl' })); // no message/ts
+    expect(result.current.intel).toBeNull();
+  });
+
   it('applies initial snapshot when snapshot event received', () => {
     const { result } = renderHook(() => useJobStream('http://api/stream/j1'));
     act(() =>

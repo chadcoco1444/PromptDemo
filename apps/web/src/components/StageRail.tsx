@@ -125,6 +125,15 @@ export function StageRail({ state, jobId }: StageRailProps) {
                     Queued — position {state.queuedPosition} (renders are serialized)
                   </div>
                 ) : null}
+                {status === 'active' && state.intel && state.intel.stage === s.id ? (
+                  <div
+                    key={state.intel.ts}
+                    className="mt-1.5 text-xs italic text-gray-500 dark:text-gray-400 animate-fade-in"
+                    aria-live="polite"
+                  >
+                    {state.intel.message}
+                  </div>
+                ) : null}
               </div>
             </li>
           );

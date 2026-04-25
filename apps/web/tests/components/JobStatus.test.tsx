@@ -19,6 +19,7 @@ describe('JobStatus', () => {
       queuedPosition: null,
       videoUrl: null,
       error: null,
+      intel: null,
     });
     render(<JobStatus streamUrl="http://api/s" jobId="j1" resolveVideoUrl={resolve} />);
     expect(screen.getByText(/crawling/i)).toBeInTheDocument();
@@ -33,6 +34,7 @@ describe('JobStatus', () => {
       queuedPosition: 3,
       videoUrl: null,
       error: null,
+      intel: null,
     });
     render(<JobStatus streamUrl="http://api/s" jobId="j1" resolveVideoUrl={resolve} />);
     expect(screen.getByText(/position 3/i)).toBeInTheDocument();
@@ -46,6 +48,7 @@ describe('JobStatus', () => {
       queuedPosition: null,
       videoUrl: 's3://b/v.mp4',
       error: null,
+      intel: null,
     });
     const { container } = render(<JobStatus streamUrl="http://api/s" jobId="j1" resolveVideoUrl={resolve} />);
     expect(container.querySelector('video')?.getAttribute('src')).toBe('http://cdn/b/v.mp4');
@@ -59,6 +62,7 @@ describe('JobStatus', () => {
       queuedPosition: null,
       videoUrl: null,
       error: { code: 'CRAWL_FAILED', message: 'nope', retryable: false },
+      intel: null,
     });
     render(<JobStatus streamUrl="http://api/s" jobId="j1" resolveVideoUrl={resolve} />);
     // Friendly ErrorCard renders the stage-aware headline; raw CRAWL_FAILED

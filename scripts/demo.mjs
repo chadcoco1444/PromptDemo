@@ -640,34 +640,37 @@ async function stopAll() {
 }
 
 async function statusAll() {
+  loadDotenv(); // so AUTH_ENABLED / DATABASE_URL in .env inform the hints below
   console.log(`${C.bold}Infra:${C.reset}`);
   const redisOk = await tcpCheck('127.0.0.1', 6379);
   const minioOk = await httpOk('http://127.0.0.1:9000/minio/health/ready', 1000);
+  const pgOk = await tcpCheck('127.0.0.1', 5432);
   console.log(`  Redis     ${redisOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}`);
   console.log(`  MinIO     ${minioOk ? C.green + 'UP' : C.red + 'DOWN'}${C.reset}`);
-  if (authEnabled()) {
-    const pgOk = await tcpCheck('127.0.0.1', 5432);
-    const pgStatus = pgOk ? C.green + 'UP' : C.red + 'DOWN';
-    const pgHint = pgOk ? '' : ` ${C.dim}(run: pnpm demo db:reset)${C.reset}`;
-    console.log(`  Postgres  ${pgStatus}${C.reset}${pgHint}`);
+  const pgStatus = pgOk ? C.green + 'UP' : C.red + 'DOWN';
+  const pgHint = pgOk
+    ? ''
+    : authEnabled()
+    ? ` ${C.dim}(run: pnpm demo db:reset)${C.reset}`
+    : ` ${C.dim}(optional — only needed when AUTH_ENABLED=true)${C.reset}`;
+  console.log(`  Postgres  ${pgStatus}${C.reset}${pgHint}`);
 
-    if (pgOk) {
-      // Quick schema + data sanity check. pgExec uses `docker exec` so it
-      // fails gracefully if the container isn't named promptdemo-postgres-1.
-      const tableCount = pgExec(
-        "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'",
-      );
-      const userCount = pgExec('SELECT count(*) FROM users');
-      const jobCount = pgExec('SELECT count(*) FROM jobs');
-      if (tableCount !== null) {
-        const n = Number(tableCount);
-        const migrated = n >= 8; // users + accounts + sessions + verification_token + subs + credits + tx + jobs
-        const migTag = migrated ? `${C.green}${n} tables${C.reset}` : `${C.yellow}${n} tables — migration not applied?${C.reset}`;
-        console.log(`    schema:   ${migTag}`);
-      }
-      if (userCount !== null && jobCount !== null) {
-        console.log(`    data:     ${userCount} user(s), ${jobCount} job(s)`);
-      }
+  if (pgOk) {
+    // Quick schema + data sanity check. pgExec uses `docker exec` so it
+    // fails gracefully if the container isn't named promptdemo-postgres-1.
+    const tableCount = pgExec(
+      "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'",
+    );
+    const userCount = pgExec('SELECT count(*) FROM users');
+    const jobCount = pgExec('SELECT count(*) FROM jobs');
+    if (tableCount !== null) {
+      const n = Number(tableCount);
+      const migrated = n >= 8; // users + accounts + sessions + verification_token + subs + credits + tx + jobs
+      const migTag = migrated ? `${C.green}${n} tables${C.reset}` : `${C.yellow}${n} tables — migration not applied?${C.reset}`;
+      console.log(`    schema:   ${migTag}`);
+    }
+    if (userCount !== null && jobCount !== null) {
+      console.log(`    data:     ${userCount} user(s), ${jobCount} job(s)`);
     }
   }
 

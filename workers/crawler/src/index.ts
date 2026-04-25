@@ -13,7 +13,7 @@ import { runScreenshotOneTrack } from './tracks/screenshotOneTrack.js';
 import { runCheerioTrack } from './tracks/cheerioTrack.js';
 import { downloadLogo } from './logoDownloader.js';
 import { startHealthServer } from './health.js';
-import type { S3Uri } from '@promptdemo/schema';
+import { makeIntel, type S3Uri } from '@promptdemo/schema';
 
 const JobPayload = z.object({ jobId: z.string().min(1), url: z.string().url() });
 type JobPayload = z.infer<typeof JobPayload>;
@@ -41,20 +41,31 @@ const worker = new Worker<JobPayload>(
       return putObject(s3, s3Cfg.bucket, key, buf, contentType);
     };
 
+    await job.updateProgress(makeIntel('crawl', `Opening ${payload.url}`));
     const result = await runCrawl({
       url: payload.url,
       jobId: payload.jobId,
       rescueEnabled,
-      runPlaywright: (url) => runPlaywrightTrack({ url, timeoutMs: playwrightTimeoutMs }),
-      runScreenshotOne: (url) =>
-        screenshotOneKey
-          ? runScreenshotOneTrack({ url, accessKey: screenshotOneKey })
-          : Promise.resolve({ kind: 'error', message: 'SCREENSHOTONE_ACCESS_KEY unset' } as const),
-      runCheerio: (url) => runCheerioTrack({ url }),
+      runPlaywright: async (url) => {
+        await job.updateProgress(makeIntel('crawl', 'Rendering with Playwright'));
+        return runPlaywrightTrack({ url, timeoutMs: playwrightTimeoutMs });
+      },
+      runScreenshotOne: async (url) => {
+        if (!screenshotOneKey) {
+          return { kind: 'error', message: 'SCREENSHOTONE_ACCESS_KEY unset' } as const;
+        }
+        await job.updateProgress(makeIntel('crawl', 'Falling back to ScreenshotOne'));
+        return runScreenshotOneTrack({ url, accessKey: screenshotOneKey });
+      },
+      runCheerio: async (url) => {
+        await job.updateProgress(makeIntel('crawl', 'Extracting text with Cheerio'));
+        return runCheerioTrack({ url });
+      },
       uploader,
       downloadLogo,
     });
 
+    await job.updateProgress(makeIntel('crawl', 'Packing results'));
     // Publish crawlResult.json next to the other artifacts.
     const resultJsonKey = buildKey(payload.jobId, 'crawlResult.json');
     const resultUri = await putObject(

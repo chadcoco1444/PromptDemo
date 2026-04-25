@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Worker, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
-import { CrawlResultSchema, type Storyboard } from '@promptdemo/schema';
+import { CrawlResultSchema, makeIntel, type Storyboard } from '@promptdemo/schema';
 import { makeS3Client, putObject, buildKey, s3ConfigFromEnv, getObjectJson } from './s3/s3Client.js';
 import { generateStoryboard } from './generator.js';
 import { createClaudeClient } from './claude/claudeClient.js';
@@ -44,13 +44,16 @@ const worker = new Worker<JobPayload>(
 
     let storyboard: Storyboard;
     if (mockMode) {
+      await job.updateProgress(makeIntel('storyboard', 'Loading a canned storyboard (mock mode)'));
       storyboard = await loadMockStoryboard(payload.duration);
     } else {
       if (!claude) throw new Error('claude client not initialized');
+      await job.updateProgress(makeIntel('storyboard', 'Reading the crawl results'));
       const crawlResult = CrawlResultSchema.parse(await getObjectJson(s3, payload.crawlResultUri));
       const previous = payload.previousStoryboardUri
         ? await getObjectJson<Storyboard>(s3, payload.previousStoryboardUri)
         : undefined;
+      await job.updateProgress(makeIntel('storyboard', 'Asking Claude to plan the scenes'));
       const res = await generateStoryboard({
         claude,
         crawlResult,
@@ -61,8 +64,12 @@ const worker = new Worker<JobPayload>(
       });
       if (res.kind === 'error') throw new Error(res.message);
       storyboard = res.storyboard;
+      await job.updateProgress(
+        makeIntel('storyboard', `Got ${storyboard.scenes.length} scenes from Claude`),
+      );
     }
 
+    await job.updateProgress(makeIntel('storyboard', 'Uploading the storyboard'));
     const storyboardKey = buildKey(payload.jobId, 'storyboard.json');
     const storyboardUri = await putObject(
       s3,

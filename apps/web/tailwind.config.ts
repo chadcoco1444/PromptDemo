@@ -31,10 +31,15 @@ export default {
           '50%': { transform: 'scale(1.06)' },
           '100%': { transform: 'scale(1)' },
         },
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(2px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'shake-x': 'shake-x 220ms ease-in-out',
         'chip-pop': 'chip-pop 180ms ease-out',
+        'fade-in': 'fade-in 200ms ease-out',
       },
     },
   },

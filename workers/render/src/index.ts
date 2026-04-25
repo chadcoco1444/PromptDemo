@@ -16,7 +16,7 @@ import { withTempDir } from './tempDir.js';
 import { renderComposition, defaultSdk } from './renderer.js';
 import { startHealthServer } from './health.js';
 import { rewriteStoryboardUrls, defaultSigner } from './presignedRewrite.js';
-import { StoryboardSchema, type Storyboard, type S3Uri } from '@promptdemo/schema';
+import { StoryboardSchema, makeIntel, type Storyboard, type S3Uri } from '@promptdemo/schema';
 
 const JobPayload = z.object({
   jobId: z.string().min(1),
@@ -60,8 +60,10 @@ const worker = new Worker<JobPayload>(
   'render',
   async (job: Job<JobPayload>) => {
     const payload = JobPayload.parse(job.data);
+    await job.updateProgress(makeIntel('render', 'Loading the storyboard'));
     const storyboard: Storyboard = StoryboardSchema.parse(await getObjectJson(s3, payload.storyboardUri));
     const sdk = await sdkPromise;
+    await job.updateProgress(makeIntel('render', 'Signing asset URLs for Remotion'));
     // Rewrite s3:// URIs in the storyboard to short-lived pre-signed HTTPS URLs
     // so Remotion's headless Chromium can fetch them from private buckets.
     // Plan 3's makeS3Resolver no-ops when input is already http(s).
@@ -79,6 +81,7 @@ const worker = new Worker<JobPayload>(
     return withTempDir('promptdemo-render-', async (dir) => {
       const outputPath = join(dir, `${payload.jobId}.mp4`);
 
+      await job.updateProgress(makeIntel('render', 'Rendering frames with Remotion'));
       await renderComposition({
         entryPoint: REMOTION_ENTRY_POINT,
         compositionId: 'MainComposition',
@@ -93,6 +96,7 @@ const worker = new Worker<JobPayload>(
         sdk,
       });
 
+      await job.updateProgress(makeIntel('render', 'Uploading the final video'));
       const key = buildKey(payload.jobId, 'video.mp4');
       const videoUrl: S3Uri = await uploadFile(s3, s3Cfg.bucket, key, outputPath, 'video/mp4');
       return { videoUrl };

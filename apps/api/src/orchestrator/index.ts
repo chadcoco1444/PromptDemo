@@ -3,6 +3,7 @@ import type { JobStore } from '../jobStore.js';
 import type { Broker } from '../sse/broker.js';
 import type { Job } from '../model/job.js';
 import type { S3Uri } from '@promptdemo/schema';
+import { isIntelPayload } from '@promptdemo/schema';
 import { reduceEvent } from './stateMachine.js';
 import { shouldDeferRender, renderQueueDepth, DEFAULT_RENDER_CAP } from './backpressure.js';
 
@@ -44,6 +45,19 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     const brokerEvent = patchToEvent(patch);
     if (brokerEvent) cfg.broker.publish(jobId, brokerEvent);
   };
+
+  // BullMQ emits `progress` whenever a worker calls job.updateProgress(...).
+  // Workers piggy-back intel payloads on that channel — we forward them to the
+  // SSE broker without persisting to the job store (intel is ephemeral).
+  const relayIntel = (ev: QueueBundle['crawlEvents']) => {
+    ev.on('progress', ({ jobId, data }) => {
+      if (!isIntelPayload(data)) return;
+      cfg.broker.publish(jobId, { event: 'intel', data });
+    });
+  };
+  relayIntel(cfg.queues.crawlEvents);
+  relayIntel(cfg.queues.storyboardEvents);
+  relayIntel(cfg.queues.renderEvents);
 
   cfg.queues.crawlEvents.on('active', async ({ jobId }) => {
     const current = await cfg.store.get(jobId);
