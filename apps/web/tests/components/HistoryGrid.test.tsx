@@ -10,9 +10,9 @@ import { HistoryGrid } from '../../src/components/HistoryGrid';
 
 const ORIGINAL_FETCH = globalThis.fetch;
 
-function mockFetchOnce(jobs: unknown[], hasMore = false) {
+function mockFetchOnce(jobs: unknown[], hasMore = false, tier: 'free' | 'pro' | 'max' = 'free') {
   globalThis.fetch = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify({ jobs, hasMore }), {
+    new Response(JSON.stringify({ jobs, hasMore, tier }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     }),
@@ -61,6 +61,29 @@ describe('HistoryGrid', () => {
     render(<HistoryGrid />);
     await waitFor(() => {
       expect(screen.getByText(/No videos yet/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders upgrade hint for free-tier done job', async () => {
+    mockFetchOnce(
+      [{
+        jobId: 'b',
+        parentJobId: null,
+        status: 'done',
+        stage: 'render',
+        input: { url: 'https://stripe.com', intent: 'pricing', duration: 30 },
+        videoUrl: 's3://b/v.mp4',
+        thumbUrl: null,
+        coverUrl: null,
+        createdAt: Date.now(),
+        parent: null,
+      }],
+      false,
+      'free',
+    );
+    render(<HistoryGrid />);
+    await waitFor(() => {
+      expect(screen.getByText(/upgrade/i)).toBeInTheDocument();
     });
   });
 });

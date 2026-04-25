@@ -15,6 +15,7 @@ interface FetchState {
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
+  tier: 'free' | 'pro' | 'max';
 }
 
 const PAGE_SIZE = 24;
@@ -30,6 +31,7 @@ export function HistoryGrid() {
     loading: true,
     loadingMore: false,
     error: null,
+    tier: 'free',
   });
 
   // Track the cursor we last loaded, used by Load More.
@@ -51,9 +53,9 @@ export function HistoryGrid() {
           setState({ jobs: [], hasMore: false, loading: false, loadingMore: false, error: `HTTP ${res.status}` });
           return;
         }
-        const body = (await res.json()) as { jobs: HistoryJob[]; hasMore: boolean };
+        const body = (await res.json()) as { jobs: HistoryJob[]; hasMore: boolean; tier?: 'free' | 'pro' | 'max' };
         const jobs = body.jobs ?? [];
-        setState({ jobs, hasMore: body.hasMore, loading: false, loadingMore: false, error: null });
+        setState({ jobs, hasMore: body.hasMore, loading: false, loadingMore: false, error: null, tier: body.tier ?? 'free' });
         setCursor(jobs.length > 0 ? new Date(jobs[jobs.length - 1]!.createdAt).toISOString() : null);
       })
       .catch((err) => {
@@ -171,7 +173,7 @@ export function HistoryGrid() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.18, delay: Math.min(idx * 0.03, 0.45) }}
             >
-              <HistoryCard job={j} />
+              <HistoryCard job={j} tier={state.tier} />
             </motion.div>
           ))}
         </AnimatePresence>
