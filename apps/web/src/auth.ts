@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
+import GitHub from 'next-auth/providers/github';
 import PostgresAdapter from '@auth/pg-adapter';
 import { Pool } from 'pg';
 import { assertAuthEnv, isAuthEnabled } from './lib/authEnabled';
@@ -40,6 +41,12 @@ const nextAuth = isAuthEnabled()
           clientId: process.env.GOOGLE_CLIENT_ID!,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         }),
+        ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+          ? [GitHub({
+              clientId: process.env.GITHUB_CLIENT_ID,
+              clientSecret: process.env.GITHUB_CLIENT_SECRET,
+            })]
+          : []),
       ],
       pages: { signIn: '/auth/signin' },
       session: { strategy: 'database' },

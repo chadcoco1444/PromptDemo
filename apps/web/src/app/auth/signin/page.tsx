@@ -5,6 +5,9 @@ interface Props {
   searchParams: Promise<{ callbackUrl?: string }>;
 }
 
+const githubEnabled =
+  !!process.env.GITHUB_CLIENT_ID && !!process.env.GITHUB_CLIENT_SECRET;
+
 export default async function SignInPage({ searchParams }: Props) {
   if (!isAuthEnabled()) redirect('/');
 
@@ -25,26 +28,51 @@ export default async function SignInPage({ searchParams }: Props) {
           <p className="text-sm text-gray-400">Create demo videos from any URL</p>
         </div>
 
-        <form
-          action={async () => {
-            'use server';
-            await signIn!('google', { redirectTo });
-          }}
-        >
-          <button
-            type="submit"
-            className="w-full flex items-center justify-center gap-3 rounded-lg bg-white text-gray-900 px-4 py-3 text-sm font-semibold hover:bg-gray-100 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+        <div className="space-y-3">
+          <form
+            action={async () => {
+              'use server';
+              await signIn!('google', { redirectTo });
+            }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://authjs.dev/img/providers/google.svg"
-              alt="Google logo"
-              width={20}
-              height={20}
-            />
-            Continue with Google
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-3 rounded-lg bg-white text-gray-900 px-4 py-3 text-sm font-semibold hover:bg-gray-100 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://authjs.dev/img/providers/google.svg"
+                alt="Google logo"
+                width={20}
+                height={20}
+              />
+              Continue with Google
+            </button>
+          </form>
+
+          {githubEnabled && (
+            <form
+              action={async () => {
+                'use server';
+                await signIn!('github', { redirectTo });
+              }}
+            >
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-3 rounded-lg bg-[#24292e] text-white px-4 py-3 text-sm font-semibold hover:bg-[#1a1f24] active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://authjs.dev/img/providers/github.svg"
+                  alt="GitHub logo"
+                  width={20}
+                  height={20}
+                />
+                Continue with GitHub
+              </button>
+            </form>
+          )}
+        </div>
 
         <p className="text-center text-xs text-gray-400">
           By signing in you agree to our{' '}
