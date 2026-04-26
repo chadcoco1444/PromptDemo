@@ -1,6 +1,8 @@
 import { extractSourceTexts } from '../extractors/textExtractor.js';
 import { extractFeatures, type ExtractedFeature } from '../extractors/featureExtractor.js';
 import { extractReviews, type ExtractedReview } from '../extractors/reviewExtractor.js';
+import { extractLogos, type ExtractedLogoCandidate } from '../extractors/logoExtractor.js';
+import { extractCodeSnippets, type ExtractedCodeSnippet } from '../extractors/codeExtractor.js';
 
 export type ScreenshotOneTrackResult =
   | {
@@ -9,6 +11,8 @@ export type ScreenshotOneTrackResult =
       sourceTexts: string[];
       features: ExtractedFeature[];
       reviews: ExtractedReview[];
+      logoSrcCandidates: ExtractedLogoCandidate[];
+      codeSnippets: ExtractedCodeSnippet[];
       viewportScreenshot: Buffer;
       fullPageScreenshot: Buffer;
     }
@@ -62,6 +66,8 @@ export async function runScreenshotOneTrack(input: {
       sourceTexts: extractSourceTexts(html),
       features: extractFeatures(html),
       reviews: extractReviews(html),
+      logoSrcCandidates: extractLogos(html, input.url),
+      codeSnippets: extractCodeSnippets(html),
       viewportScreenshot: viewport,
       fullPageScreenshot: fullPage,
     };

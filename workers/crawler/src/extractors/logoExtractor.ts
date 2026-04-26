@@ -1,4 +1,4 @@
-import { load, type CheerioAPI, type AnyNode } from 'cheerio';
+import { load, type CheerioAPI } from 'cheerio';
 
 export interface ExtractedLogoCandidate {
   name: string;
@@ -45,9 +45,13 @@ function nameFromSrc(src: string): string {
   }
 }
 
+/** AnyNode extracted from cheerio's load() parameter signature without a direct domhandler import. */
+type CheerioAnyNode = Exclude<Parameters<typeof load>[0], string | Buffer | null | undefined>;
+type CheerioNode = CheerioAnyNode extends (infer E)[] ? E : CheerioAnyNode;
+
 function collectImgs(
   $: CheerioAPI,
-  containerEl: AnyNode,
+  containerEl: CheerioNode,
   baseUrl: string,
   seen: Set<string>,
   out: ExtractedLogoCandidate[]

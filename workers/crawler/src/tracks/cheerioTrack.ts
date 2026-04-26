@@ -3,6 +3,8 @@ import { detectWafBlock } from '../wafDetect.js';
 import { extractSourceTexts } from '../extractors/textExtractor.js';
 import { extractFeatures, type ExtractedFeature } from '../extractors/featureExtractor.js';
 import { extractReviews, type ExtractedReview } from '../extractors/reviewExtractor.js';
+import { extractLogos, type ExtractedLogoCandidate } from '../extractors/logoExtractor.js';
+import { extractCodeSnippets, type ExtractedCodeSnippet } from '../extractors/codeExtractor.js';
 
 export type CheerioTrackResult =
   | {
@@ -11,6 +13,8 @@ export type CheerioTrackResult =
       sourceTexts: string[];
       features: ExtractedFeature[];
       reviews: ExtractedReview[];
+      logoSrcCandidates: ExtractedLogoCandidate[];
+      codeSnippets: ExtractedCodeSnippet[];
       colors: { primary?: string };
       ogImageUrl?: string;
       faviconUrl?: string;
@@ -53,6 +57,8 @@ export async function runCheerioTrack(input: {
       sourceTexts: extractSourceTexts(html),
       features: extractFeatures(html),
       reviews: extractReviews(html),
+      logoSrcCandidates: extractLogos(html, input.url),
+      codeSnippets: extractCodeSnippets(html),
       colors: primary ? { primary } : {},
     };
     const ogImg = $('meta[property="og:image"]').attr('content');

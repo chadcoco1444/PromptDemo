@@ -5,6 +5,8 @@ import { COOKIE_BANNER_SELECTORS } from '../cookieBanner.js';
 import { extractSourceTexts } from '../extractors/textExtractor.js';
 import { extractFeatures, type ExtractedFeature } from '../extractors/featureExtractor.js';
 import { extractReviews, type ExtractedReview } from '../extractors/reviewExtractor.js';
+import { extractLogos, type ExtractedLogoCandidate } from '../extractors/logoExtractor.js';
+import { extractCodeSnippets, type ExtractedCodeSnippet } from '../extractors/codeExtractor.js';
 import { pickPrimaryFontFamily } from '../extractors/fontDetector.js';
 import { pickLogoCandidate, type LogoCandidate } from '../extractors/logoDetector.js';
 import { pickDominantFromFrequencies, toHex, type DominantColors } from '../extractors/colorSampler.js';
@@ -17,6 +19,8 @@ export type PlaywrightTrackResult =
       sourceTexts: string[];
       features: ExtractedFeature[];
       reviews: ExtractedReview[];
+      logoSrcCandidates: ExtractedLogoCandidate[];
+      codeSnippets: ExtractedCodeSnippet[];
       viewportScreenshot: Buffer;
       fullPageScreenshot: Buffer;
       logoCandidate: LogoCandidate | null;
@@ -82,6 +86,8 @@ export async function runPlaywrightTrack(input: {
     const sourceTexts = extractSourceTexts(html);
     const features = extractFeatures(html);
     const reviews = extractReviews(html);
+    const logoSrcCandidates = extractLogos(html, input.url);
+    const codeSnippets = extractCodeSnippets(html);
 
     const viewportScreenshot = await page.screenshot({ type: 'jpeg', quality: 88, fullPage: false });
     const fullPageScreenshot = await page.screenshot({ type: 'jpeg', quality: 80, fullPage: true });
@@ -135,6 +141,8 @@ export async function runPlaywrightTrack(input: {
       sourceTexts,
       features,
       reviews,
+      logoSrcCandidates,
+      codeSnippets,
       viewportScreenshot,
       fullPageScreenshot,
       logoCandidate,
