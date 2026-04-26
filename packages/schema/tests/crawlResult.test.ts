@@ -104,4 +104,46 @@ describe('CrawlResultSchema', () => {
     const many = Array.from({ length: 11 }, (_, i) => ({ text: `Review ${i} is long enough to be valid.` }));
     expect(() => CrawlResultSchema.parse({ ...baseValid, reviews: many })).toThrow();
   });
+
+  it('defaults logos to empty array when omitted', () => {
+    const parsed = CrawlResultSchema.parse(baseValid);
+    expect(parsed.logos).toEqual([]);
+  });
+
+  it('defaults codeSnippets to empty array when omitted', () => {
+    const parsed = CrawlResultSchema.parse(baseValid);
+    expect(parsed.codeSnippets).toEqual([]);
+  });
+
+  it('accepts valid logos with s3 URIs', () => {
+    const parsed = CrawlResultSchema.parse({
+      ...baseValid,
+      logos: [{ name: 'Stripe', s3Uri: 's3://bucket/jobs/j/logo-partner-0.svg' }],
+    });
+    expect(parsed.logos).toHaveLength(1);
+    expect(parsed.logos[0]!.name).toBe('Stripe');
+  });
+
+  it('rejects logos with plain HTTP URL in s3Uri', () => {
+    expect(() =>
+      CrawlResultSchema.parse({
+        ...baseValid,
+        logos: [{ name: 'Stripe', s3Uri: 'https://cdn.stripe.com/logo.svg' }],
+      })
+    ).toThrow();
+  });
+
+  it('accepts valid codeSnippets', () => {
+    const parsed = CrawlResultSchema.parse({
+      ...baseValid,
+      codeSnippets: [{ code: 'console.log("hello world")', language: 'javascript', label: 'Quick Start' }],
+    });
+    expect(parsed.codeSnippets).toHaveLength(1);
+    expect(parsed.codeSnippets[0]!.language).toBe('javascript');
+  });
+
+  it('rejects codeSnippets array exceeding 5 items', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({ code: `console.log("snippet ${i} is long enough");` }));
+    expect(() => CrawlResultSchema.parse({ ...baseValid, codeSnippets: many })).toThrow();
+  });
 });

@@ -37,6 +37,19 @@ export const ReviewSchema = z.object({
 
 export type ExtractedReview = z.infer<typeof ReviewSchema>;
 
+export const PartnerLogoSchema = z.object({
+  name:  z.string().min(1).max(100),
+  s3Uri: S3UriSchema,
+});
+export type PartnerLogo = z.infer<typeof PartnerLogoSchema>;
+
+export const CodeSnippetSchema = z.object({
+  code:     z.string().min(10).max(800),
+  language: z.string().max(50).optional(),
+  label:    z.string().max(100).optional(),
+});
+export type CodeSnippet = z.infer<typeof CodeSnippetSchema>;
+
 export const CrawlResultSchema = z.object({
   url: z.string().url(),
   fetchedAt: z.number().int().positive(),
@@ -45,6 +58,8 @@ export const CrawlResultSchema = z.object({
   sourceTexts: z.array(z.string().min(1).max(200)).min(1),
   features: z.array(FeatureSchema),
   reviews: z.array(ReviewSchema).max(10).default([]),
+  logos:        z.array(PartnerLogoSchema).max(12).default([]),
+  codeSnippets: z.array(CodeSnippetSchema).max(5).default([]),
   fallbacks: z.array(FallbackSchema),
   tier: z.enum(['A', 'B', 'C']),
   trackUsed: z.enum(['playwright', 'screenshot-saas', 'cheerio']),
