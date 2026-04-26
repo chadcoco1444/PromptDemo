@@ -7,7 +7,7 @@
 -- Key format: lume_<32 base64url chars>  (37 chars total)
 -- Hash stored: hex-encoded SHA-256 of the raw key
 
-CREATE TABLE api_keys (
+CREATE TABLE IF NOT EXISTS api_keys (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id      INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   key_hash     TEXT        NOT NULL UNIQUE,
@@ -19,6 +19,6 @@ CREATE TABLE api_keys (
 );
 
 -- Index for hot read path: bearer token → user+tier lookup
-CREATE INDEX idx_api_keys_hash_active   ON api_keys (key_hash)  WHERE revoked_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash_active   ON api_keys (key_hash)  WHERE revoked_at IS NULL;
 -- Index for key-management listing per user
-CREATE INDEX idx_api_keys_user_active   ON api_keys (user_id)   WHERE revoked_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_api_keys_user_active   ON api_keys (user_id)   WHERE revoked_at IS NULL;
