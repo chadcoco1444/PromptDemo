@@ -31,7 +31,9 @@ const DEFAULT_URLS = [
   'https://figma.com',
 ];
 
-const urls = process.argv.slice(2).length > 0 ? process.argv.slice(2) : DEFAULT_URLS;
+const urls = process.argv.slice(2).filter(a => a !== '--').length > 0
+  ? process.argv.slice(2).filter(a => a !== '--')
+  : DEFAULT_URLS;
 
 function dirSlug(url: string): string {
   try {
