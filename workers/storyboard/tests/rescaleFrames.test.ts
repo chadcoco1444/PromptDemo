@@ -7,20 +7,22 @@ describe('rescaleFrames', () => {
     expect(out).toEqual([100, 200, 300]);
   });
 
-  it('absorbs a positive delta into the largest element', () => {
-    // sum=890, target=900, delta=+10 → longest (300) gets +10
+  it('distributes a positive delta proportionally across all scenes', () => {
+    // sum=890, target=900, delta=+10 → proportional, not lumped into longest
+    // Proportional result: [101, 202, 304, 293] (all scenes grow)
     const out = rescaleFrames([100, 200, 300, 290], 900);
     expect(out.reduce((a, b) => a + b, 0)).toBe(900);
-    expect(out[2]).toBe(310);
-    expect(out[0]).toBe(100);
-    expect(out[1]).toBe(200);
-    expect(out[3]).toBe(290);
+    expect(out[0]).toBeGreaterThan(100); // smallest scene grows too
+    expect(out[2]).toBeLessThan(310);    // longest does NOT absorb entire delta
   });
 
-  it('absorbs a negative delta from the largest element', () => {
+  it('distributes a negative delta proportionally across all scenes', () => {
+    // sum=605, target=600, delta=-5 → proportional
+    // Proportional result: [99, 198, 303] (all scenes shrink)
     const out = rescaleFrames([100, 200, 305], 600);
     expect(out.reduce((a, b) => a + b, 0)).toBe(600);
-    expect(out[2]).toBe(300);
+    expect(out[0]).toBeLessThan(100); // smallest scene shrinks too
+    expect(out[2]).toBeGreaterThan(300); // longest does NOT absorb entire delta
   });
 
   it('splits across multiple scenes when delta exceeds the longest scene margin', () => {

@@ -23,7 +23,7 @@ describe('adjustDuration', () => {
     expect(r.storyboard.scenes.map((s) => s.durationInFrames)).toEqual([300, 300, 300]);
   });
 
-  it('auto-prorates within 10% tolerance (small drift)', () => {
+  it('auto-prorates within 15% tolerance (small drift)', () => {
     const sb = mk(900, [300, 300, 290]); // sum 890, delta 10 (1.1%)
     const r = adjustDuration(sb);
     expect(r.kind).toBe('ok');
@@ -43,15 +43,27 @@ describe('adjustDuration', () => {
     expect(newSum).toBe(1800);
   });
 
-  it('returns retry signal when delta exceeds 15% tolerance', () => {
-    // Tolerance widened to 15% post-pacing-profiles (Claude balances more
-    // constraints simultaneously, mild over-drift is normal). 16.7% drift
-    // still triggers retry as a sanity guard.
-    const sb = mk(900, [400, 400, 250]); // sum 1050, drift 150 (16.7%)
+  it('auto-corrects 27.8% drift (vercel.com short-punchy regression)', () => {
+    // Regression: intent "short punchy" caused Claude to produce sum=1300
+    // vs target=1800 (27.8% off). Previously all 3 generator retries failed
+    // with STORYBOARD_GEN_FAILED because the 15% tolerance gate forced a
+    // retry signal instead of proportional rescaling. Fixed by removing the
+    // gate — proportional rescaling is safe at any magnitude.
+    const sb = mk(1800, [200, 180, 200, 190, 180, 200, 150]); // sum 1300, 27.8% off
     const r = adjustDuration(sb);
-    expect(r.kind).toBe('retry');
-    if (r.kind !== 'retry') return;
-    expect(r.reason).toMatch(/15%/);
+    expect(r.kind).toBe('ok');
+    if (r.kind !== 'ok') return;
+    const newSum = r.storyboard.scenes.reduce((a, s) => a + s.durationInFrames, 0);
+    expect(newSum).toBe(1800);
+  });
+
+  it('auto-corrects large overshoot (16.7% drift, previously would retry)', () => {
+    const sb = mk(900, [400, 400, 250]); // sum 1050, drift 16.7%
+    const r = adjustDuration(sb);
+    expect(r.kind).toBe('ok');
+    if (r.kind !== 'ok') return;
+    const newSum = r.storyboard.scenes.reduce((a, s) => a + s.durationInFrames, 0);
+    expect(newSum).toBe(900);
   });
 
   it('auto-prorates 11% drift (the exact 2000-vs-1800 case from the user bug report)', () => {
