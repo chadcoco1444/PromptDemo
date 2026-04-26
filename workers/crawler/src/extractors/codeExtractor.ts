@@ -10,6 +10,7 @@ const MAX_SNIPPETS = 5;
 const MAX_CODE_LENGTH = 800;
 const MIN_MINIFIED_LENGTH = 200;
 
+// Priority: explicit language class → plain pre>code → custom wrappers → alternate patterns
 const SELECTORS = [
   'pre > code[class*="language-"]',
   'pre > code',
