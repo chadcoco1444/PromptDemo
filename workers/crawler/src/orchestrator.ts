@@ -114,7 +114,7 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
     if (logos.length >= 12) break;
     const bytes = await input.downloadLogo(candidate.srcUrl);
     if (!bytes) continue;
-    const ext = candidate.srcUrl.split('.').pop()?.split('?')[0]?.toLowerCase() ?? 'img';
+    const ext = candidate.srcUrl.split('.').pop()?.split('?')[0]?.toLowerCase() ?? 'png';
     const s3Uri = await input.uploader(bytes, `logo-partner-${logos.length}.${ext}`);
     logos.push({ name: candidate.name, s3Uri });
   }
