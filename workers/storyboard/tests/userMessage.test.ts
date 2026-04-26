@@ -149,3 +149,121 @@ describe('buildUserMessage — style modifier injection', () => {
     expect(guidanceIdx).toBeLessThan(returnIdx);
   });
 });
+
+// helper: CrawlResult with logos, codeSnippets, and viewport control
+function makeCrawlWithData(overrides: {
+  logos?: CrawlResult['logos'];
+  codeSnippets?: CrawlResult['codeSnippets'];
+  viewport?: string;
+}): CrawlResult {
+  return {
+    brand: { name: 'Acme', primaryColor: '#7c3aed' },
+    screenshots: overrides.viewport ? { viewport: overrides.viewport } : {},
+    sourceTexts: ['Platform for teams'],
+    features: [] as CrawlResult['features'],
+    tier: 'A',
+    trackUsed: false,
+    logos: overrides.logos ?? [],
+    codeSnippets: overrides.codeSnippets ?? [],
+    reviews: [],
+    fallbacks: [],
+    url: 'https://example.com',
+    fetchedAt: 1_700_000_000_000,
+  } as unknown as CrawlResult;
+}
+
+const twoLogos = [
+  { name: 'Stripe', s3Uri: 's3://bucket/logo-partner-0.svg' },
+  { name: 'Vercel', s3Uri: 's3://bucket/logo-partner-1.png' },
+] as CrawlResult['logos'];
+
+const oneSnippet = [
+  { code: 'const x = new LumeSpec();\nclient.generate({ url });', language: 'javascript', label: 'Quick Start' },
+] as CrawlResult['codeSnippets'];
+
+describe('buildUserMessage — LogoCloud gate', () => {
+  it('injects Available partner logos block when logos.length >= 2', () => {
+    const msg = buildUserMessage({
+      intent: 'show integrations',
+      duration: 30,
+      crawlResult: makeCrawlWithData({ logos: twoLogos }),
+    });
+    expect(msg).toContain('## Available partner logos');
+    expect(msg).toContain('Stripe');
+    expect(msg).not.toContain('LogoCloud — fewer than 2');
+  });
+
+  it('adds LogoCloud restriction when logos.length < 2', () => {
+    const msg = buildUserMessage({
+      intent: 'show integrations',
+      duration: 30,
+      crawlResult: makeCrawlWithData({ logos: [] }),
+    });
+    expect(msg).toContain('LogoCloud');
+    expect(msg).toContain('MUST NOT use this scene');
+    expect(msg).not.toContain('## Available partner logos');
+  });
+
+  it('adds LogoCloud restriction when logos has exactly 1 entry', () => {
+    const msg = buildUserMessage({
+      intent: 'show integrations',
+      duration: 30,
+      crawlResult: makeCrawlWithData({ logos: [twoLogos[0]!] }),
+    });
+    expect(msg).toContain('LogoCloud');
+    expect(msg).toContain('MUST NOT use this scene');
+  });
+});
+
+describe('buildUserMessage — CodeToUI gate', () => {
+  it('injects Available code snippets block when snippets present and viewport exists', () => {
+    const msg = buildUserMessage({
+      intent: 'show dev workflow',
+      duration: 30,
+      crawlResult: makeCrawlWithData({
+        codeSnippets: oneSnippet,
+        viewport: 's3://bucket/viewport.jpg',
+      }),
+    });
+    expect(msg).toContain('## Available code snippets');
+    expect(msg).toContain('LumeSpec');
+    expect(msg).not.toContain('CodeToUI — ');
+  });
+
+  it('adds CodeToUI restriction when snippets are empty', () => {
+    const msg = buildUserMessage({
+      intent: 'show dev workflow',
+      duration: 30,
+      crawlResult: makeCrawlWithData({
+        codeSnippets: [],
+        viewport: 's3://bucket/viewport.jpg',
+      }),
+    });
+    expect(msg).toContain('CodeToUI');
+    expect(msg).toContain('MUST NOT use this scene');
+    expect(msg).toContain('no code snippets');
+  });
+
+  it('adds CodeToUI restriction when viewport screenshot absent', () => {
+    const msg = buildUserMessage({
+      intent: 'show dev workflow',
+      duration: 30,
+      crawlResult: makeCrawlWithData({
+        codeSnippets: oneSnippet,
+      }),
+    });
+    expect(msg).toContain('CodeToUI');
+    expect(msg).toContain('MUST NOT use this scene');
+    expect(msg).toContain('no viewport screenshot');
+  });
+
+  it('names both reasons when both snippets and viewport are missing', () => {
+    const msg = buildUserMessage({
+      intent: 'show dev workflow',
+      duration: 30,
+      crawlResult: makeCrawlWithData({ codeSnippets: [] }),
+    });
+    expect(msg).toContain('no code snippets');
+    expect(msg).toContain('no viewport screenshot');
+  });
+});

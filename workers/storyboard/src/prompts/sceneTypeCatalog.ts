@@ -25,6 +25,10 @@ export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
     'Animated numeric counters that roll from zero to the target value. Props: { stats: [{value, label}] (1-4 items) }. ONLY use if sourceTexts contain at least one numeric phrase (e.g. "10× faster", "99.9% uptime", "1 million users"). Do NOT invent numbers — only use figures already present in sourceTexts. Fails gracefully when no valid numbers are supplied.',
   ReviewMarquee:
     'Horizontally scrolling testimonial ticker with fade-mask edges. Props: { reviews: [{text, author?}] (2-6 items), speed: "slow"|"medium"|"fast" }. ONLY use when crawlResult.reviews contains at least 2 entries. Pull review text verbatim from those entries. Not recommended for 10s videos.',
+  LogoCloud:
+    'Horizontally scrolling partner/integration logo strip. Props: { logos: [{name, s3Uri}] (2-12 items from crawlResult.logos), speed: "slow"|"medium"|"fast", label? (optional section heading, e.g. "Trusted by 1,000+ teams") }. ONLY use when crawlResult.logos contains at least 2 entries. Pull logos verbatim from crawlResult.logos.',
+  CodeToUI:
+    'Split-screen: code typewriter on left, product screenshot reveal on right. Props: { code (verbatim from crawlResult.codeSnippets[n].code), language?, label?, screenshotKey: "viewport"|"fullPage" }. ONLY use when crawlResult.codeSnippets is non-empty AND assets.screenshots.viewport exists. Best for SaaS/dev-tool products.',
 };
 
 export const V1_IMPLEMENTED_SCENE_TYPES = [
@@ -37,6 +41,8 @@ export const V1_IMPLEMENTED_SCENE_TYPES = [
   'CursorDemo',
   'StatsCounter',
   'ReviewMarquee',
+  'LogoCloud',
+  'CodeToUI',
 ] as const;
 
 /**

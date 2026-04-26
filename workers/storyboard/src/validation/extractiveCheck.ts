@@ -53,6 +53,10 @@ export function collectSceneTexts(scene: Scene): string[] {
       return scene.props.stats.flatMap((s) => [s.value, s.label]);
     case 'ReviewMarquee':
       return scene.props.reviews.map((r) => r.text);
+    case 'LogoCloud':
+      return scene.props.label ? [scene.props.label] : [];
+    case 'CodeToUI':
+      return scene.props.label ? [scene.props.label] : [];
   }
 }
 

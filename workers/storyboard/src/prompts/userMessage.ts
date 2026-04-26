@@ -76,6 +76,30 @@ export function buildUserMessage(input: BuildUserMessageInput): string {
     );
   }
 
+  const logos = input.crawlResult.logos ?? [];
+  if (logos.length < 2) {
+    restrictions.push(
+      'LogoCloud — fewer than 2 partner logos available in crawlResult.logos. MUST NOT use this scene.'
+    );
+  } else {
+    blocks.push(
+      `## Available partner logos (use verbatim for LogoCloud)\n${JSON.stringify(logos, null, 2)}`
+    );
+  }
+
+  const snippets = input.crawlResult.codeSnippets ?? [];
+  const hasViewport = !!input.crawlResult.screenshots.viewport;
+  if (snippets.length < 1 || !hasViewport) {
+    const reasons: string[] = [];
+    if (snippets.length < 1) reasons.push('no code snippets in crawlResult.codeSnippets');
+    if (!hasViewport) reasons.push('no viewport screenshot available');
+    restrictions.push(`CodeToUI — ${reasons.join(' and ')}. MUST NOT use this scene.`);
+  } else {
+    blocks.push(
+      `## Available code snippets (use verbatim for CodeToUI)\n${JSON.stringify(snippets, null, 2)}`
+    );
+  }
+
   if (restrictions.length > 0) {
     blocks.push(
       `## SCENE RESTRICTIONS (data-driven — non-negotiable)\nThe following scenes MUST NOT appear in your storyboard because the required data is missing:\n${restrictions.map((r) => `- ${r}`).join('\n')}`
