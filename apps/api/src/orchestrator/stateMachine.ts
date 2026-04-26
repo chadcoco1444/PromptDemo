@@ -1,4 +1,4 @@
-import type { Job } from '../model/job.js';
+import type { Job, JobStatus } from '../model/job.js';
 import type { S3Uri } from '@lumespec/schema';
 
 export type OrchestratorEvent =
@@ -12,7 +12,18 @@ export type OrchestratorEvent =
   | { kind: 'render:completed'; videoUrl: S3Uri }
   | { kind: 'render:failed'; error: { code: string; message: string; retryable: boolean } };
 
-export function reduceEvent(_job: Job, ev: OrchestratorEvent): Partial<Job> {
+const VALID_EVENTS: Partial<Record<JobStatus, ReadonlySet<OrchestratorEvent['kind']>>> = {
+  queued:              new Set(['crawl:active', 'crawl:failed']),
+  crawling:            new Set(['crawl:active', 'crawl:completed', 'crawl:failed']),
+  generating:          new Set(['storyboard:active', 'storyboard:completed', 'storyboard:failed']),
+  waiting_render_slot: new Set(['render:active', 'render:completed', 'render:failed']),
+  rendering:           new Set(['render:active', 'render:completed', 'render:failed']),
+  // done / failed: absent → terminal states, all events return null
+};
+
+export function reduceEvent(job: Job, ev: OrchestratorEvent): Partial<Job> | null {
+  if (!VALID_EVENTS[job.status]?.has(ev.kind)) return null;
+
   switch (ev.kind) {
     case 'crawl:active':
       return { status: 'crawling', stage: 'crawl', progress: ev.progress ?? 0 };
