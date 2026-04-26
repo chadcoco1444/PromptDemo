@@ -115,15 +115,12 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.crawlEvents.on('failed', async ({ jobId, failedReason }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    await applyPatch(
-      jobId,
-      reduceEvent(current, {
-        kind: 'crawl:failed',
-        error: { code: 'CRAWL_FAILED', message: failedReason ?? 'unknown', retryable: false },
-      }),
-      current.status
-    );
-    if (cfg.onJobFailed) {
+    const patch = reduceEvent(current, {
+      kind: 'crawl:failed',
+      error: { code: 'CRAWL_FAILED', message: failedReason ?? 'unknown', retryable: false },
+    });
+    await applyPatch(jobId, patch, current.status);
+    if (patch && cfg.onJobFailed) {
       await cfg.onJobFailed({
         jobId,
         userId: current.userId,
@@ -176,15 +173,12 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.storyboardEvents.on('failed', async ({ jobId, failedReason }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    await applyPatch(
-      jobId,
-      reduceEvent(current, {
-        kind: 'storyboard:failed',
-        error: { code: 'STORYBOARD_GEN_FAILED', message: failedReason ?? 'unknown', retryable: false },
-      }),
-      current.status
-    );
-    if (cfg.onJobFailed) {
+    const patch = reduceEvent(current, {
+      kind: 'storyboard:failed',
+      error: { code: 'STORYBOARD_GEN_FAILED', message: failedReason ?? 'unknown', retryable: false },
+    });
+    await applyPatch(jobId, patch, current.status);
+    if (patch && cfg.onJobFailed) {
       await cfg.onJobFailed({
         jobId,
         userId: current.userId,
@@ -215,15 +209,12 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.renderEvents.on('failed', async ({ jobId, failedReason }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    await applyPatch(
-      jobId,
-      reduceEvent(current, {
-        kind: 'render:failed',
-        error: { code: 'RENDER_FAILED', message: failedReason ?? 'unknown', retryable: false },
-      }),
-      current.status
-    );
-    if (cfg.onJobFailed) {
+    const patch = reduceEvent(current, {
+      kind: 'render:failed',
+      error: { code: 'RENDER_FAILED', message: failedReason ?? 'unknown', retryable: false },
+    });
+    await applyPatch(jobId, patch, current.status);
+    if (patch && cfg.onJobFailed) {
       await cfg.onJobFailed({
         jobId,
         userId: current.userId,
