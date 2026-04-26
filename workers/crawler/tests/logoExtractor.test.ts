@@ -78,4 +78,16 @@ describe('extractLogos', () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.name).toBe('Stripe');
   });
+
+  it('derives name from src filename when alt is absent', () => {
+    const html = `<html><body>
+      <div class="partner-logos">
+        <img src="/logos/acme-corp.svg">
+      </div>
+    </body></html>`;
+    const result = extractLogos(html, BASE);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.name).toBe('acme corp');
+    expect(result[0]!.srcUrl).toBe('https://example.com/logos/acme-corp.svg');
+  });
 });

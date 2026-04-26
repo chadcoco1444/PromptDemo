@@ -1,4 +1,4 @@
-import { load, type CheerioAPI } from 'cheerio';
+import { load, type CheerioAPI, type AnyNode } from 'cheerio';
 
 export interface ExtractedLogoCandidate {
   name: string;
@@ -47,7 +47,7 @@ function nameFromSrc(src: string): string {
 
 function collectImgs(
   $: CheerioAPI,
-  containerEl: any,
+  containerEl: AnyNode,
   baseUrl: string,
   seen: Set<string>,
   out: ExtractedLogoCandidate[]
@@ -60,9 +60,10 @@ function collectImgs(
     if (!srcUrl) return;
     const alt = $(img).attr('alt')?.trim() ?? '';
     const name = alt || nameFromSrc(srcUrl);
-    const key = name.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
+    const nameKey = name.toLowerCase();
+    if (seen.has(srcUrl) || seen.has(nameKey)) return;
+    seen.add(srcUrl);
+    seen.add(nameKey);
     out.push({ name, srcUrl });
   });
 }
