@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import { JobSchema, type Job } from './model/job.js';
+import { JobSchema, type Job, type JobStatus } from './model/job.js';
 import type { JobStore } from './jobStore.js';
 
 /**
@@ -92,7 +92,7 @@ export function makePostgresJobStore(opts: PostgresJobStoreOptions): JobStore {
       return parsed.success ? parsed.data : null;
     },
 
-    async patch(jobId, patch, updatedAt) {
+    async patch(jobId, patch, updatedAt, expectedStatus?: JobStatus) {
       // Only write the subset of fields Postgres stores. Progress + any
       // transient state stays in Redis.
       const sets: string[] = [];
@@ -111,10 +111,19 @@ export function makePostgresJobStore(opts: PostgresJobStoreOptions): JobStore {
       sets.push(`updated_at = to_timestamp($${sets.length + 2} / 1000.0)`);
       vals.push(updatedAt);
       if (sets.length === 1) return; // only updated_at → skip (no real change)
-      await pool.query(
-        `UPDATE jobs SET ${sets.join(', ')} WHERE id = $1`,
-        [jobId, ...vals],
+
+      const whereClause = expectedStatus
+        ? `WHERE id = $1 AND status = $${vals.length + 2}`
+        : `WHERE id = $1`;
+      const params = expectedStatus ? [jobId, ...vals, expectedStatus] : [jobId, ...vals];
+
+      const result = await pool.query(
+        `UPDATE jobs SET ${sets.join(', ')} ${whereClause}`,
+        params,
       );
+      if (expectedStatus && result.rowCount === 0) {
+        console.warn('[jobStore:pg] OCC blocked stale patch', { jobId, expectedStatus });
+      }
     },
   };
 }
