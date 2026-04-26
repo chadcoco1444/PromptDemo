@@ -6,6 +6,7 @@ import type { JobStore } from '../jobStore.js';
 import { calculateCost, isDurationAllowed, type Tier } from '../credits/ledger.js';
 import { debitForJob } from '../credits/store.js';
 import { verifyInternalToken } from '../auth/internalToken.js';
+import { verifyApiKey } from '../auth/apiKeyAuth.js';
 
 export interface PostJobRouteOpts {
   store: JobStore;
@@ -33,6 +34,12 @@ export interface PostJobRouteOpts {
    * identically to v1.
    */
   creditPool?: Pool | null;
+  /**
+   * When non-null, POST /api/jobs accepts direct API key authentication
+   * (Bearer lume_xxx) in addition to the internal JWT. Only Max-tier keys
+   * are accepted; others get a 403.
+   */
+  apiKeyPool?: Pool | null;
   now?: () => number;
   nanoid?: () => string;
 }
@@ -49,26 +56,53 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
     }
     const input = parse.data;
 
-    // User attribution via the trusted-proxy JWT. The Next.js BFF mints a
-    // 60-second HS256 token signed with INTERNAL_API_SECRET; we verify here.
-    // Plaintext X-User-Id is no longer accepted — too easy to forge if
-    // apps/api is ever exposed.
+    // User attribution: try API key first (lume_ prefix), fall back to the
+    // trusted-proxy JWT minted by the Next.js BFF. Plaintext X-User-Id is
+    // never accepted — too easy to forge if apps/api is ever exposed.
     let userId: string | undefined;
     if (opts.requireUserIdHeader) {
       const authHeader = req.headers['authorization'];
-      const v = await verifyInternalToken(typeof authHeader === 'string' ? authHeader : undefined);
-      if (!v.ok) {
-        return reply.code(401).send({
-          error: 'unauthorized',
-          message:
-            v.reason === 'no_secret'
-              ? 'AUTH_ENABLED=true requires INTERNAL_API_SECRET to be set on apps/api.'
-              : v.reason === 'no_token'
-              ? 'Missing Authorization: Bearer <token>. The trusted Next.js proxy must mint this.'
-              : 'Invalid or expired internal token.',
-        });
+      const authStr = typeof authHeader === 'string' ? authHeader : undefined;
+      const isApiKey = typeof authStr === 'string' && /Bearer\s+lume_/i.test(authStr);
+
+      if (isApiKey && opts.apiKeyPool) {
+        const v = await verifyApiKey(opts.apiKeyPool, authStr);
+        if (!v.ok) {
+          return reply.code(401).send({
+            error: 'unauthorized',
+            message:
+              v.reason === 'revoked'
+                ? 'This API key has been revoked.'
+                : v.reason === 'not_found'
+                ? 'API key not found. Generate one at /billing.'
+                : 'Malformed API key.',
+          });
+        }
+        if (v.tier !== 'max') {
+          return reply.code(403).send({
+            error: 'api_key_requires_max_tier',
+            message:
+              'Direct API access requires a Max tier subscription. Upgrade at /billing.',
+            tier: v.tier,
+          });
+        }
+        userId = String(v.userId);
+      } else {
+        // Internal JWT path: the Next.js BFF mints a 60-second HS256 token.
+        const v = await verifyInternalToken(authStr);
+        if (!v.ok) {
+          return reply.code(401).send({
+            error: 'unauthorized',
+            message:
+              v.reason === 'no_secret'
+                ? 'AUTH_ENABLED=true requires INTERNAL_API_SECRET to be set on apps/api.'
+                : v.reason === 'no_token'
+                ? 'Missing Authorization: Bearer <token>. The trusted Next.js proxy must mint this.'
+                : 'Invalid or expired internal token.',
+          });
+        }
+        userId = v.userId;
       }
-      userId = v.userId;
     }
 
     const jobId = nano();

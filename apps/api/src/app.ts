@@ -31,6 +31,12 @@ export interface BuildOpts {
    * transaction. Omit to disable pricing (behaves identically to v1).
    */
   creditPool?: Pool | null;
+  /**
+   * When set, POST /api/jobs also accepts direct API key authentication
+   * (Bearer lume_xxx) for Max-tier users. Typically the same pool as
+   * creditPool. Omit to disable API key auth.
+   */
+  apiKeyPool?: Pool | null;
   logger?: boolean;
 }
 
@@ -66,6 +72,7 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
     storyboardQueue: opts.storyboardQueue,
     requireUserIdHeader: opts.requireUserIdHeader ?? false,
     creditPool: opts.creditPool ?? null,
+    apiKeyPool: opts.apiKeyPool ?? null,
   });
   await app.register(getJobRoute, { store: opts.store });
   await app.register(getStoryboardRoute, { store: opts.store, fetchJson: opts.fetchJson });

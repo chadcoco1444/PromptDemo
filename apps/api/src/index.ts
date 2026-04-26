@@ -83,6 +83,7 @@ const app = await build({
   rateLimitPerMinute: cfg.RATE_LIMIT_PER_MINUTE,
   requireUserIdHeader: authEnabled,
   creditPool: pricingEnabled ? pgPoolForCredits : null,
+  apiKeyPool: pricingEnabled ? pgPoolForCredits : null,
 });
 
 const orchestratorOpts: Parameters<typeof startOrchestrator>[0] = {

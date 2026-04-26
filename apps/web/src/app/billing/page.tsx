@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth, isAuthEnabled } from '../../auth';
 import { getPool } from '../../lib/pg';
+import { ApiKeyManager } from '../../components/ApiKeyManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,7 @@ export default async function BillingPage() {
   const pool = getPool();
   type SnapshotRow = { balance: number; tier: string; active_jobs: number };
   type TxnRow = { id: string; job_id: string | null; delta: number; reason: string; balance_after: number; created_at: Date };
+  type ApiKeyRow = { id: string; name: string; key_prefix: string; last_used_at: Date | null; created_at: Date };
 
   const [snapRes, txnRes] = await Promise.all([
     pool.query<SnapshotRow>(
@@ -71,6 +73,25 @@ export default async function BillingPage() {
 
   const snap = snapRes.rows[0] ?? { balance: 0, tier: 'free', active_jobs: 0 };
   const tier = (snap.tier ?? 'free') as 'free' | 'pro' | 'max';
+
+  // Load API keys only for Max-tier users (cheap guarded query)
+  let apiKeys: Array<{ id: string; name: string; keyPrefix: string; lastUsedAt: string | null; createdAt: string }> = [];
+  if (tier === 'max') {
+    const apiKeyRes = await pool.query<ApiKeyRow>(
+      `SELECT id, name, key_prefix, last_used_at, created_at
+         FROM api_keys
+        WHERE user_id = $1 AND revoked_at IS NULL
+        ORDER BY created_at DESC`,
+      [userId],
+    );
+    apiKeys = apiKeyRes.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      keyPrefix: r.key_prefix,
+      lastUsedAt: r.last_used_at?.toISOString() ?? null,
+      createdAt: r.created_at.toISOString(),
+    }));
+  }
   const allowance = TIER_ALLOWANCE[tier] ?? 30;
   const pctUsed = allowance > 0 ? Math.min(1, Math.max(0, 1 - snap.balance / allowance)) : 0;
 
@@ -156,6 +177,19 @@ export default async function BillingPage() {
           />
         </div>
       </section>
+
+      {/* API Access — Max tier only */}
+      {tier === 'max' && (
+        <section className="rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur-md p-6">
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">API Access</h2>
+          <p className="text-sm text-gray-400 mt-1 mb-4">
+            Use API keys to generate videos programmatically. Send{' '}
+            <code className="font-mono text-violet-300 text-xs">Authorization: Bearer lume_…</code>{' '}
+            to <code className="font-mono text-violet-300 text-xs">POST /api/jobs</code>.
+          </p>
+          <ApiKeyManager initialKeys={apiKeys} />
+        </section>
+      )}
 
       {/* Recent activity */}
       <section className="rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur-md p-6">
