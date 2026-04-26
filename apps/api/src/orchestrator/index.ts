@@ -1,7 +1,7 @@
 import type { QueueBundle } from '../queues.js';
 import type { JobStore } from '../jobStore.js';
 import type { Broker } from '../sse/broker.js';
-import type { Job } from '../model/job.js';
+import type { Job, JobStatus } from '../model/job.js';
 import type { S3Uri } from '@lumespec/schema';
 import { isIntelPayload } from '@lumespec/schema';
 import { reduceEvent } from './stateMachine.js';
@@ -44,8 +44,12 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   const cap = cfg.renderCap ?? DEFAULT_RENDER_CAP;
   const now = cfg.now ?? Date.now;
 
-  const applyPatch = async (jobId: string, patch: Partial<Job>) => {
-    await cfg.store.patch(jobId, patch, now());
+  const applyPatch = async (jobId: string, patch: Partial<Job> | null, expectedStatus: JobStatus) => {
+    if (patch === null) {
+      console.warn('[orchestrator] stale event skipped', { jobId });
+      return;
+    }
+    await cfg.store.patch(jobId, patch, now(), expectedStatus);
     const brokerEvent = patchToEvent(patch);
     if (brokerEvent) cfg.broker.publish(jobId, brokerEvent);
   };
@@ -66,14 +70,14 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.crawlEvents.on('active', async ({ jobId }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:active' }));
+    await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:active' }), current.status);
   });
 
   cfg.queues.crawlEvents.on('completed', async ({ jobId, returnvalue }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
     const parsed = parseReturn<{ crawlResultUri: S3Uri }>(returnvalue);
-    await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:completed', crawlResultUri: parsed.crawlResultUri }));
+    await applyPatch(jobId, reduceEvent(current, { kind: 'crawl:completed', crawlResultUri: parsed.crawlResultUri }), current.status);
 
     // PLG safe default: show watermark for any authenticated user unless we
     // can confirm Pro/Max. This means PRICING_ENABLED=false or a DB failure
@@ -116,7 +120,8 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
       reduceEvent(current, {
         kind: 'crawl:failed',
         error: { code: 'CRAWL_FAILED', message: failedReason ?? 'unknown', retryable: false },
-      })
+      }),
+      current.status
     );
     if (cfg.onJobFailed) {
       await cfg.onJobFailed({
@@ -141,7 +146,8 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
         kind: 'storyboard:completed',
         storyboardUri: parsed.storyboardUri,
         canRender: !defer,
-      })
+      }),
+      current.status
     );
     await cfg.queues.render.add(
       'render',
@@ -169,7 +175,8 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
       reduceEvent(current, {
         kind: 'storyboard:failed',
         error: { code: 'STORYBOARD_GEN_FAILED', message: failedReason ?? 'unknown', retryable: false },
-      })
+      }),
+      current.status
     );
     if (cfg.onJobFailed) {
       await cfg.onJobFailed({
@@ -185,7 +192,7 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.renderEvents.on('active', async ({ jobId }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    await applyPatch(jobId, reduceEvent(current, { kind: 'render:active' }));
+    await applyPatch(jobId, reduceEvent(current, { kind: 'render:active' }), current.status);
   });
 
   cfg.queues.renderEvents.on('completed', async ({ jobId, returnvalue }) => {
@@ -193,10 +200,10 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     if (!current) return;
     const parsed = parseReturn<{ videoUrl: S3Uri; thumbUrl?: S3Uri }>(returnvalue);
     const patch = reduceEvent(current, { kind: 'render:completed', videoUrl: parsed.videoUrl });
-    if (parsed.thumbUrl) {
+    if (parsed.thumbUrl && patch) {
       patch.thumbUrl = parsed.thumbUrl;
     }
-    await applyPatch(jobId, patch);
+    await applyPatch(jobId, patch, current.status);
   });
 
   cfg.queues.renderEvents.on('failed', async ({ jobId, failedReason }) => {
@@ -207,7 +214,8 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
       reduceEvent(current, {
         kind: 'render:failed',
         error: { code: 'RENDER_FAILED', message: failedReason ?? 'unknown', retryable: false },
-      })
+      }),
+      current.status
     );
     if (cfg.onJobFailed) {
       await cfg.onJobFailed({
