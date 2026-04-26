@@ -10,15 +10,25 @@ export interface QueueBundle {
   renderEvents: QueueEvents;
 }
 
+export const JOB_DEFAULTS = {
+  attempts: 3,
+  backoff: {
+    type: 'exponential' as const,
+    delay: 5_000, // 5s → 10s → 20s
+  },
+  removeOnComplete: { count: 100 },
+  removeOnFail: { count: 50 },
+} as const;
+
 export function makeQueueBundle(connection: Redis): QueueBundle {
-  const opts = { connection: connection as any };
+  const opts = { connection: connection as any, defaultJobOptions: JOB_DEFAULTS };
   return {
     crawl: new Queue('crawl', opts),
     storyboard: new Queue('storyboard', opts),
     render: new Queue('render', opts),
-    crawlEvents: new QueueEvents('crawl', opts),
-    storyboardEvents: new QueueEvents('storyboard', opts),
-    renderEvents: new QueueEvents('render', opts),
+    crawlEvents: new QueueEvents('crawl', { connection: connection as any }),
+    storyboardEvents: new QueueEvents('storyboard', { connection: connection as any }),
+    renderEvents: new QueueEvents('render', { connection: connection as any }),
   };
 }
 
