@@ -12,6 +12,9 @@ export const OVERLAY_BLOCKER_CSS = `
 #termly-code-snippet-support,
 .cc-window,
 
+/* Custom Brand Cookie Banners */
+[data-testid="cookie-settings-notification"],
+
 /* Live Chat & Support Widgets */
 #intercom-container,
 .intercom-lightweight-app,

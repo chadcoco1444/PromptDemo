@@ -10,6 +10,8 @@ describe('OVERLAY_BLOCKER_CSS', () => {
   it('covers CookieYes', () => expect(OVERLAY_BLOCKER_CSS).toContain('.cky-consent-container'));
   it('covers Termly', () => expect(OVERLAY_BLOCKER_CSS).toContain('#termly-code-snippet-support'));
   it('covers Cookie Consent cc-window', () => expect(OVERLAY_BLOCKER_CSS).toContain('.cc-window'));
+  // Custom brand cookie banners
+  it('covers Stripe consent notification', () => expect(OVERLAY_BLOCKER_CSS).toContain('[data-testid="cookie-settings-notification"]'));
   // Live Chat & Support
   it('covers Intercom container', () => expect(OVERLAY_BLOCKER_CSS).toContain('#intercom-container'));
   it('covers Intercom lightweight', () => expect(OVERLAY_BLOCKER_CSS).toContain('.intercom-lightweight-app'));
