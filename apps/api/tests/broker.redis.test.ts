@@ -106,3 +106,34 @@ describe('makeRedisBroker', () => {
     expect(w).not.toHaveBeenCalled();
   });
 });
+
+describe('makeRedisBroker — cross-instance integration', () => {
+  it.skipIf(!process.env.REDIS_URL)('event published on brokerA reaches writer on brokerB', async () => {
+    const { Redis: IoRedis } = await import('ioredis');
+    const url = process.env.REDIS_URL!;
+
+    const pubA = new IoRedis(url, { maxRetriesPerRequest: null });
+    const subA = new IoRedis(url, { maxRetriesPerRequest: null });
+    const subB = new IoRedis(url, { maxRetriesPerRequest: null });
+
+    const { broker: brokerA, close: closeA } = makeRedisBroker({ publisher: pubA, subscriber: subA });
+    const { broker: brokerB, close: closeB } = makeRedisBroker({ publisher: pubA, subscriber: subB });
+
+    const received = vi.fn();
+    brokerB.subscribe('job-x', received);
+
+    // Give subB time to complete the SUBSCRIBE handshake with Redis
+    await new Promise(r => setTimeout(r, 100));
+
+    brokerA.publish('job-x', { event: 'done', data: { videoUrl: 'x' } });
+
+    await new Promise(r => setTimeout(r, 100));
+
+    expect(received).toHaveBeenCalledTimes(1);
+    expect(received.mock.calls[0]?.[0]).toMatch(/^event: done\ndata:/);
+
+    await closeA();
+    await closeB();
+    await pubA.quit();
+  });
+});
