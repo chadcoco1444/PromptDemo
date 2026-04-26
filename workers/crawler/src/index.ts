@@ -14,6 +14,7 @@ import { runCheerioTrack } from './tracks/cheerioTrack.js';
 import { downloadLogo } from './logoDownloader.js';
 import { startHealthServer } from './health.js';
 import { makeIntel, type S3Uri } from '@lumespec/schema';
+import { checkCircuit, recordFailure, recordSuccess } from './domainCircuit.js';
 
 const JobPayload = z.object({ jobId: z.string().min(1), url: z.string().url() });
 type JobPayload = z.infer<typeof JobPayload>;
@@ -35,6 +36,17 @@ const worker = new Worker<JobPayload>(
   async (job: Job<JobPayload>) => {
     const payload = JobPayload.parse(job.data);
 
+    const hostname = new URL(payload.url).hostname;
+    const circuitState = await checkCircuit(connection, hostname);
+    const wasProbe = circuitState === 'half-open-probe-claimed';
+
+    if (circuitState === 'open') {
+      throw new Error(`CIRCUIT_OPEN domain=${hostname}`);
+    }
+    if (circuitState === 'half-open-probe-in-flight') {
+      throw new Error(`CIRCUIT_HALF_OPEN domain=${hostname}`);
+    }
+
     const uploader = async (buf: Buffer, filename: string): Promise<S3Uri> => {
       const key = buildKey(payload.jobId, filename);
       const lower = filename.toLowerCase();
@@ -53,7 +65,13 @@ const worker = new Worker<JobPayload>(
       rescueEnabled,
       runPlaywright: async (url) => {
         await job.updateProgress(makeIntel('crawl', 'Rendering with Playwright'));
-        return runPlaywrightTrack({ url, timeoutMs: playwrightTimeoutMs });
+        const pw = await runPlaywrightTrack({ url, timeoutMs: playwrightTimeoutMs });
+        if (pw.kind === 'ok') {
+          await recordSuccess(connection, hostname);
+        } else {
+          await recordFailure(connection, hostname, wasProbe);
+        }
+        return pw;
       },
       runScreenshotOne: async (url) => {
         if (!screenshotOneKey) {
