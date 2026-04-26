@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { reduceEvent } from '../src/orchestrator/stateMachine.js';
 import type { Job } from '../src/model/job.js';
+import type { S3Uri } from '@lumespec/schema';
+
+const testUri = 's3://b/k/v.mp4' as S3Uri;
+const testCrawlUri = 's3://b/k/crawl.json' as S3Uri;
+const testSbUri = 's3://b/k/sb.json' as S3Uri;
 
 const base: Job = {
   jobId: 'j1',
@@ -27,7 +32,7 @@ describe('reduceEvent', () => {
     const job = { ...base, status: 'crawling' as const };
     const patch = reduceEvent(job, {
       kind: 'crawl:completed',
-      crawlResultUri: 's3://b/k/crawl.json' as any,
+      crawlResultUri: testCrawlUri,
     });
     expect(patch).not.toBeNull();
     expect(patch!.status).toBe('generating');
@@ -39,7 +44,7 @@ describe('reduceEvent', () => {
     const job = { ...base, status: 'generating' as const };
     const patch = reduceEvent(job, {
       kind: 'storyboard:completed',
-      storyboardUri: 's3://b/k/sb.json' as any,
+      storyboardUri: testSbUri,
       canRender: true,
     });
     expect(patch).not.toBeNull();
@@ -52,7 +57,7 @@ describe('reduceEvent', () => {
     const job = { ...base, status: 'generating' as const };
     const patch = reduceEvent(job, {
       kind: 'storyboard:completed',
-      storyboardUri: 's3://b/k/sb.json' as any,
+      storyboardUri: testSbUri,
       canRender: false,
     });
     expect(patch).not.toBeNull();
@@ -62,7 +67,7 @@ describe('reduceEvent', () => {
 
   it('render done → done with videoUrl', () => {
     const job = { ...base, status: 'rendering' as const };
-    const patch = reduceEvent(job, { kind: 'render:completed', videoUrl: 's3://b/k/v.mp4' as any });
+    const patch = reduceEvent(job, { kind: 'render:completed', videoUrl: testUri });
     expect(patch).not.toBeNull();
     expect(patch!.status).toBe('done');
     expect(patch!.videoUrl).toBe('s3://b/k/v.mp4');
@@ -84,20 +89,20 @@ describe('reduceEvent', () => {
 describe('reduceEvent — transition guard (new)', () => {
   it('returns null for any event when status is done (terminal)', () => {
     const job = { ...base, status: 'done' as const };
-    expect(reduceEvent(job, { kind: 'render:completed', videoUrl: 's3://b/k/v.mp4' as any })).toBeNull();
+    expect(reduceEvent(job, { kind: 'render:completed', videoUrl: testUri })).toBeNull();
     expect(reduceEvent(job, { kind: 'render:failed', error: { code: 'E', message: 'm', retryable: false } })).toBeNull();
     expect(reduceEvent(job, { kind: 'crawl:active' })).toBeNull();
   });
 
   it('returns null for any event when status is failed (terminal)', () => {
     const job = { ...base, status: 'failed' as const };
-    expect(reduceEvent(job, { kind: 'render:completed', videoUrl: 's3://b/k/v.mp4' as any })).toBeNull();
+    expect(reduceEvent(job, { kind: 'render:completed', videoUrl: testUri })).toBeNull();
     expect(reduceEvent(job, { kind: 'crawl:active' })).toBeNull();
   });
 
   it('returns null for wrong-stage event (render:completed while generating)', () => {
     const job = { ...base, status: 'generating' as const };
-    expect(reduceEvent(job, { kind: 'render:completed', videoUrl: 's3://b/k/v.mp4' as any })).toBeNull();
+    expect(reduceEvent(job, { kind: 'render:completed', videoUrl: testUri })).toBeNull();
   });
 
   it('returns null for wrong-stage event (crawl:active while rendering)', () => {
@@ -114,7 +119,7 @@ describe('reduceEvent — transition guard (new)', () => {
 
   it('returns patch for valid transition: rendering → render:completed', () => {
     const job = { ...base, status: 'rendering' as const };
-    const patch = reduceEvent(job, { kind: 'render:completed', videoUrl: 's3://b/k/v.mp4' as any });
+    const patch = reduceEvent(job, { kind: 'render:completed', videoUrl: testUri });
     expect(patch).not.toBeNull();
     expect(patch!.status).toBe('done');
   });

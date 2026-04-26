@@ -13,7 +13,7 @@ export type OrchestratorEvent =
   | { kind: 'render:failed'; error: { code: string; message: string; retryable: boolean } };
 
 const VALID_EVENTS: Partial<Record<JobStatus, ReadonlySet<OrchestratorEvent['kind']>>> = {
-  queued:              new Set(['crawl:active', 'crawl:failed']),
+  queued:              new Set(['crawl:active', 'crawl:failed']), // crawl:failed allowed: defensive — handles fast-fail races before active fires
   crawling:            new Set(['crawl:active', 'crawl:completed', 'crawl:failed']),
   generating:          new Set(['storyboard:active', 'storyboard:completed', 'storyboard:failed']),
   waiting_render_slot: new Set(['render:active', 'render:completed', 'render:failed']),
@@ -53,5 +53,9 @@ export function reduceEvent(job: Job, ev: OrchestratorEvent): Partial<Job> | nul
       return { status: 'done', progress: 100, videoUrl: ev.videoUrl };
     case 'render:failed':
       return { status: 'failed', error: ev.error };
+    default: {
+      const _exhaustive: never = ev;
+      return null;
+    }
   }
 }
