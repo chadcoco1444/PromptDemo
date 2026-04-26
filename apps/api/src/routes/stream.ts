@@ -33,7 +33,12 @@ export const streamRoute: FastifyPluginAsync<StreamRouteOpts> = async (app, opts
 
     const dispose = opts.broker.subscribe(req.params.id, write);
 
+    const heartbeat = setInterval(() => {
+      reply.raw.write(': keepalive\n\n');
+    }, 25_000);
+
     req.raw.on('close', () => {
+      clearInterval(heartbeat);
       dispose();
       reply.raw.end();
     });
