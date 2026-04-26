@@ -76,7 +76,11 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
   });
   await app.register(getJobRoute, { store: opts.store });
   await app.register(getStoryboardRoute, { store: opts.store, fetchJson: opts.fetchJson });
-  await app.register(streamRoute, { store: opts.store, broker: opts.broker });
+  await app.register(streamRoute, {
+    store: opts.store,
+    broker: opts.broker,
+    requireUserIdHeader: opts.requireUserIdHeader ?? false,
+  });
 
   app.get('/healthz', async () => ({ ok: true }));
   return app;
