@@ -9,6 +9,8 @@ import { BentoGrid } from './scenes/BentoGrid';
 import { CursorDemo } from './scenes/CursorDemo';
 import { StatsCounter } from './scenes/StatsCounter';
 import { ReviewMarquee } from './scenes/ReviewMarquee';
+import { LogoCloud } from './scenes/LogoCloud';
+import { CodeToUI } from './scenes/CodeToUI';
 import type { BrandTheme } from './utils/brandTheme';
 
 export interface ResolveSceneInput {
@@ -104,6 +106,34 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
           durationInFrames={scene.durationInFrames}
         />
       );
+    case 'LogoCloud': {
+      const logos = scene.props.logos
+        .map(({ name, s3Uri }) => ({ name, resolvedUrl: resolver(s3Uri) }))
+        .filter((l): l is { name: string; resolvedUrl: string } => !!l.resolvedUrl);
+      return (
+        <LogoCloud
+          logos={logos}
+          speed={scene.props.speed}
+          {...(scene.props.label ? { label: scene.props.label } : {})}
+          theme={theme}
+          durationInFrames={scene.durationInFrames}
+        />
+      );
+    }
+    case 'CodeToUI': {
+      const screenshotUri = assets.screenshots[scene.props.screenshotKey];
+      const screenshotUrl = resolver(screenshotUri);
+      return (
+        <CodeToUI
+          code={scene.props.code}
+          {...(scene.props.language ? { language: scene.props.language } : {})}
+          {...(scene.props.label ? { label: scene.props.label } : {})}
+          {...(screenshotUrl ? { screenshotUrl } : {})}
+          theme={theme}
+          durationInFrames={scene.durationInFrames}
+        />
+      );
+    }
     case 'HeroStylized':
     case 'UseCaseStory':
     case 'StatsBand': {

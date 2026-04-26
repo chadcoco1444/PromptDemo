@@ -112,6 +112,61 @@ describe('resolveScene', () => {
     const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
     expect(el).toBeTruthy();
   });
+
+  it('resolves a LogoCloud scene', () => {
+    const scene = {
+      sceneId: 6,
+      type: 'LogoCloud',
+      durationInFrames: 300,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: {
+        logos: [
+          { name: 'Stripe', s3Uri: 's3://fake/stripe.svg' },
+          { name: 'Vercel', s3Uri: 's3://fake/vercel.png' },
+        ],
+        speed: 'medium',
+      },
+    } as unknown as Scene;
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+  });
+
+  it('resolves a CodeToUI scene with viewport screenshot', () => {
+    const scene: Scene = {
+      sceneId: 7,
+      type: 'CodeToUI',
+      durationInFrames: 300,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: {
+        code: 'const x = new LumeSpec();\nx.generate({ url });',
+        language: 'javascript',
+        screenshotKey: 'viewport',
+      },
+    };
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+  });
+
+  it('resolves a CodeToUI scene gracefully when screenshot asset is missing', () => {
+    const emptyAssets = {
+      screenshots: {},
+    } as unknown as Storyboard['assets'];
+    const scene: Scene = {
+      sceneId: 8,
+      type: 'CodeToUI',
+      durationInFrames: 300,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: {
+        code: 'const x = new LumeSpec();\nx.generate({ url });',
+        screenshotKey: 'viewport',
+      },
+    };
+    const el = resolveScene({ scene, assets: emptyAssets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+  });
 });
 
 // Minimal type import so tests are self-contained
