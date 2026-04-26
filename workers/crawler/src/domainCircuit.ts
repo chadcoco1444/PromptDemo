@@ -20,39 +20,54 @@ function key(hostname: string, suffix: 'strikes' | 'open' | 'probe' | 'healthy')
  * Check circuit state before launching Playwright.
  * 'closed' and 'half-open-probe-claimed' both mean: proceed with Playwright.
  * 'open' and 'half-open-probe-in-flight' mean: skip Playwright.
+ *
+ * Fails-open (returns 'closed') if Redis is unavailable, so crawl proceeds
+ * rather than hanging.
  */
 export async function checkCircuit(redis: Redis, hostname: string): Promise<CircuitState> {
-  // Fast path: recent success marks the circuit as definitively closed
-  const healthyVal = await redis.get(key(hostname, 'healthy'));
-  if (healthyVal !== null) return 'closed';
+  try {
+    // Fast path: recent success marks the circuit as definitively closed
+    const healthyVal = await redis.get(key(hostname, 'healthy'));
+    if (healthyVal !== null) return 'closed';
 
-  // Circuit open flag
-  const openVal = await redis.get(key(hostname, 'open'));
-  if (openVal !== null) return 'open';
+    // Circuit open flag
+    const openVal = await redis.get(key(hostname, 'open'));
+    if (openVal !== null) return 'open';
 
-  // Try to claim the probe slot (half-open recovery or new domain)
-  const claimed = await redis.set(key(hostname, 'probe'), '1', 'EX', PROBE_TTL_S, 'NX');
-  if (claimed === 'OK') return 'half-open-probe-claimed';
+    // Try to claim the probe slot (half-open recovery or new domain)
+    const claimed = await redis.set(key(hostname, 'probe'), '1', 'EX', PROBE_TTL_S, 'NX');
+    if (claimed === 'OK') return 'half-open-probe-claimed';
 
-  // Another job is already probing
-  return 'half-open-probe-in-flight';
+    // Another job is already probing
+    return 'half-open-probe-in-flight';
+  } catch {
+    // Redis infra failure — fail-open so crawl proceeds rather than hanging
+    return 'closed';
+  }
 }
 
 /**
  * Record a Playwright failure. Accumulates strikes; opens circuit at threshold.
  * Probe failures immediately re-open without needing 3 strikes.
+ *
+ * @param wasProbe - Pass true when this worker held the probe (half-open-probe-claimed).
+ *                   Avoids re-reading the probe key from Redis (TOCTOU fix).
  */
-export async function recordFailure(redis: Redis, hostname: string): Promise<void> {
-  const probeVal = await redis.get(key(hostname, 'probe'));
-  if (probeVal !== null) {
+export async function recordFailure(redis: Redis, hostname: string, wasProbe: boolean): Promise<void> {
+  if (wasProbe) {
     // Probe failure — re-open immediately, no threshold needed
     await redis.del(key(hostname, 'probe'));
     await redis.set(key(hostname, 'open'), '1', 'EX', OPEN_TTL_S);
     return;
   }
 
-  const strikes = await redis.incr(key(hostname, 'strikes'));
-  await redis.expire(key(hostname, 'strikes'), STRIKES_TTL_S);
+  // Use a pipeline so INCR + EXPIRE are issued atomically; avoids a zombie
+  // strikes key with no TTL if the process crashes between the two commands.
+  const pipeline = redis.pipeline();
+  pipeline.incr(key(hostname, 'strikes'));
+  pipeline.expire(key(hostname, 'strikes'), STRIKES_TTL_S);
+  const results = await pipeline.exec();
+  const strikes = (results?.[0]?.[1] as number) ?? 0;
 
   if (strikes >= STRIKE_THRESHOLD) {
     await redis.set(key(hostname, 'open'), '1', 'EX', OPEN_TTL_S);
