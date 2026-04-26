@@ -5,22 +5,21 @@ import type { Broker } from '../sse/broker.js';
 export interface StreamRouteOpts {
   store: JobStore;
   broker: Broker;
-  requireUserIdHeader?: boolean;
   allowedOrigins?: string[];
 }
 
 export const streamRoute: FastifyPluginAsync<StreamRouteOpts> = async (app, opts) => {
-  app.get<{ Params: { id: string } }>('/api/jobs/:id/stream', async (req, reply) => {
+  // SSE connections are long-lived; exempt from the global burst rate limiter so
+  // that reconnect retries (e.g. after a dev hot-reload) never receive 429 →
+  // EventSource.CLOSED → permanent STREAM_ERROR on the client.
+  app.get<{ Params: { id: string } }>('/api/jobs/:id/stream', { config: { rateLimit: false } }, async (req, reply) => {
     const job = await opts.store.get(req.params.id);
     if (!job) return reply.code(404).send({ error: 'not found' });
 
-    if (opts.requireUserIdHeader && job.userId) {
-      const rawId = req.headers['x-user-id'];
-      const requestUserId = Array.isArray(rawId) ? rawId[0] : rawId;
-      if (job.userId !== requestUserId) {
-        return reply.code(403).send({ error: 'forbidden' });
-      }
-    }
+    // No per-user ownership check here: the browser's native EventSource API
+    // cannot send custom headers, so x-user-id is unavailable for SSE. Job IDs
+    // are cryptographically random (nanoid), making them unguessable capability
+    // tokens — consistent with GET /api/jobs/:id which also has no ownership check.
 
     // The raw response bypasses Fastify's CORS plugin; set the header ourselves
     // using the same allowlist as the plugin — no unconditional origin echo.

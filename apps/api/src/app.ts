@@ -96,7 +96,6 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
   await app.register(streamRoute, {
     store: opts.store,
     broker: opts.broker,
-    requireUserIdHeader: opts.requireUserIdHeader ?? false,
     allowedOrigins,
   });
 

@@ -19,7 +19,14 @@ export function JobStatus({ streamUrl, jobId, resolveVideoUrl }: JobStatusProps)
   }
 
   if (state.status === 'failed' && state.error) {
-    return <ErrorCard code={state.error.code} message={state.error.message} retryable={state.error.retryable} />;
+    return (
+      <ErrorCard
+        code={state.error.code}
+        message={state.error.message}
+        retryable={state.error.retryable}
+        onRetry={() => window.location.reload()}
+      />
+    );
   }
 
   return (

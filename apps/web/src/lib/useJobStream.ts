@@ -91,13 +91,15 @@ export function useJobStream(url: string): JobStreamState {
       const data = parseEventData(e);
       if (data) {
         dispatch({ type: 'error', data: data as { code: string; message: string; retryable: boolean } });
-      } else {
-        // Native EventSource connection error (no data payload)
+      } else if (es.readyState === EventSource.CLOSED) {
+        // Permanent failure (non-2xx response, CORS block, etc.) — EventSource will not retry.
         dispatch({
           type: 'error',
           data: { code: 'STREAM_ERROR', message: 'connection to server failed', retryable: true },
         });
       }
+      // readyState CONNECTING: EventSource is auto-reconnecting after a transient drop.
+      // Stay silent — the next successful snapshot will clear any stale state.
     };
     const onIntel = (e: MessageEvent) => {
       const data = parseEventData(e);
