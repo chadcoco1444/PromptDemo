@@ -170,7 +170,7 @@ NEXTAUTH_URL=http://localhost:3001
 pnpm lume status          # check which services are running
 pnpm lume stop            # clean shutdown — no zombie processes
 pnpm lume render:promo    # re-render the PromoComposition marketing video
-pnpm test                 # full test suite (354 tests across 61 files)
+pnpm test                 # full test suite (678 tests across 108 files)
 pnpm typecheck            # type-check the whole monorepo
 ```
 
@@ -201,6 +201,8 @@ We're building the fastest path from "product exists" to "demo is live." The roa
 | ✅ **Shipped** | **Bento grid scenes** — asymmetric card layout with spring microanimations | A richer visual language for feature callouts |
 | ✅ **Shipped** | **StatsCounter scene** — animated numeric rollup from crawled copy | Show "10×", "99.9%", "1,200+" without hallucinating numbers |
 | ✅ **Shipped** | **ReviewMarquee scene** — horizontal scrolling testimonials strip | Real reviews crawled from your page, gated to avoid fabrication |
+| ✅ **Shipped** | **LogoCloud scene** — infinite-scroll partner logo marquee from crawled logos | Social proof without lifting a finger |
+| ✅ **Shipped** | **CodeToUI scene** — typewriter code reveal with live screenshot transition | Built for devtools and API products |
 | 🔜 **Up next** | **History thumbnails** — first-frame preview for every job | Browse your vault visually, not just by title |
 | 💡 **Planned** | **Scheduled re-renders** — cron-triggered re-crawl when your site updates | Your demo stays fresh automatically |
 | 💡 **Planned** | **Custom brand kit** — save your palette and fonts once, apply everywhere | Zero-config brand consistency across every video |
