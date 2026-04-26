@@ -69,7 +69,8 @@ describe('jobStorePostgres — OCC patch', () => {
   });
 
   it('blocks patch and emits warn when expectedStatus does not match (OCC)', async () => {
-    // Row is now 'done' (terminal) — simulate stale render:failed arriving late
+    // Ensure row is in terminal 'done' state regardless of prior test
+    await pool.query('UPDATE jobs SET status = $1 WHERE id = $2', ['done', sample.jobId]);
     const store = makePostgresJobStore({ pool, resolveUserId: async () => null });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 

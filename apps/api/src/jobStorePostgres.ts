@@ -121,8 +121,8 @@ export function makePostgresJobStore(opts: PostgresJobStoreOptions): JobStore {
         `UPDATE jobs SET ${sets.join(', ')} ${whereClause}`,
         params,
       );
-      if (expectedStatus && result.rowCount === 0) {
-        console.warn('[jobStore:pg] OCC blocked stale patch', { jobId, expectedStatus });
+      if (expectedStatus && (result.rowCount ?? 0) === 0) {
+        console.warn('[jobStore:pg] OCC blocked or row not found', { jobId, expectedStatus });
       }
     },
   };
