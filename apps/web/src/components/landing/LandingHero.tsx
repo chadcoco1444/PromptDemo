@@ -102,7 +102,7 @@ export function LandingHero() {
                 preload="auto"
                 aria-label="LumeSpec — paste a URL, watch the AI pipeline generate your demo video"
               >
-                <source src="/landing-hero-demo.mp4" type="video/mp4" />
+                <source src="/demo.mp4" type="video/mp4" />
               </video>
             </div>
           </motion.div>
