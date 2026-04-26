@@ -11,6 +11,7 @@ import { pickPrimaryFontFamily } from '../extractors/fontDetector.js';
 import { pickLogoCandidate, type LogoCandidate } from '../extractors/logoDetector.js';
 import { pickDominantFromFrequencies, toHex, type DominantColors } from '../extractors/colorSampler.js';
 import { normalizeText } from '@lumespec/schema';
+import { OVERLAY_BLOCKER_CSS } from '../overlayBlocker.js';
 
 export type PlaywrightTrackResult =
   | {
@@ -88,6 +89,9 @@ export async function runPlaywrightTrack(input: {
     const reviews = extractReviews(html);
     const logoSrcCandidates = extractLogos(html, input.url);
     const codeSnippets = extractCodeSnippets(html);
+
+    // Suppress overlays (cookie banners, chat widgets) before screenshots
+    await page.addStyleTag({ content: OVERLAY_BLOCKER_CSS });
 
     const viewportScreenshot = await page.screenshot({ type: 'jpeg', quality: 88, fullPage: false });
     const fullPageScreenshot = await page.screenshot({ type: 'jpeg', quality: 80, fullPage: true });
