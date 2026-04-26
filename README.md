@@ -105,23 +105,50 @@ Each stage runs in an **isolated BullMQ worker** — the crawl worker never touc
 <details>
 <summary>Full architecture diagram</summary>
 
-```
-Browser / CLI
-     │
-     ▼
-apps/web (Next.js 15)          ← Landing page, History Vault, auth UI
-     │  X-User-Id proxy header
-     ▼
-apps/api (Fastify)             ← Job lifecycle, credit gate, SSE stream
-     │  BullMQ queues
-     ├──▶ workers/crawler      ← Playwright + brand-color extraction
-     ├──▶ workers/storyboard   ← Creativity Engine (Claude storyboard gen)
-     └──▶ workers/render       ← Remotion → MP4 → S3 upload
+```mermaid
+graph TD
+    Browser(["`**Browser**`"])
+    Web["**apps/web**\nNext.js 15\nLanding · History Vault · Auth"]
+    API["**apps/api**\nFastify\nOrchestrator · Credit Gate · SSE"]
+    Crawler["**workers/crawler**\nPlaywright · OverlayBlocker\nCircuit Breaker"]
+    Storyboard["**workers/storyboard**\nClaude 3.5 Sonnet\n7-Layer Defense"]
+    Render["**workers/render**\nRemotion · FFMPEG\nMP4 Encode"]
+    Schema["**packages/schema**\nZod — Single Source of Truth"]
+    Remotion["**packages/remotion**\nReact Video Engine\n7 Scene Types"]
+    DB[("`**PostgreSQL**\njobs · credits\nsubscriptions`")]
+    Redis[("`**Redis**\nBullMQ queues\nSSE pub/sub\nCircuit state`")]
+    S3[("`**S3 / MinIO**\nscreenshots\nstoryboard.json\ndemo.mp4`")]
+    Claude(["`**Anthropic API**\nClaude 3.5 Sonnet`"])
+
+    Browser -- "HTTPS / SSE" --> Web
+    Web -- "X-User-Id proxy" --> API
+    API -- "crawl queue" --> Crawler
+    Crawler -- "storyboard queue" --> API
+    API -- "storyboard queue" --> Storyboard
+    Storyboard -- "render queue" --> API
+    API -- "render queue" --> Render
+    Storyboard --> Claude
+    Crawler --> S3
+    Storyboard --> S3
+    Render --> S3
+    API --> DB
+    Web --> DB
+    API --> Redis
+    Crawler --> Redis
+    Render --> Remotion
+    Schema -. "types" .-> API
+    Schema -. "types" .-> Crawler
+    Schema -. "types" .-> Storyboard
+    Schema -. "types" .-> Render
+    Schema -. "types" .-> Remotion
 ```
 
 Each worker runs in its own Node process with its own Redis connection. The web tier talks to the API via a trusted same-origin proxy header — end-user browsers never reach the API directly.
 
 See [docs/readme/design-decisions.md](docs/readme/design-decisions.md) for the full rundown: why progress lives in Redis (not Postgres), the 7-layer Claude output defense, the Windows PID-tracking fix, and every other non-obvious call we made.
+
+For module-level architecture, responsibilities, and anti-patterns, see the `DESIGN.md` file in each module directory:
+[apps/api/DESIGN.md](apps/api/DESIGN.md) · [apps/web/DESIGN.md](apps/web/DESIGN.md) · [workers/crawler/DESIGN.md](workers/crawler/DESIGN.md) · [workers/storyboard/DESIGN.md](workers/storyboard/DESIGN.md) · [workers/render/DESIGN.md](workers/render/DESIGN.md) · [packages/schema/DESIGN.md](packages/schema/DESIGN.md) · [packages/remotion/DESIGN.md](packages/remotion/DESIGN.md) · [db/DESIGN.md](db/DESIGN.md)
 
 </details>
 

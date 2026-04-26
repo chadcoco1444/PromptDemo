@@ -1,0 +1,118 @@
+# apps/api — Design Document
+
+> **[AI 開發人員強制指令 / AI Dev Directive]**
+> 當你在這個模組下新增任何檔案或修改任何程式邏輯前，你 **必須 (MUST)** 先重新檢視本 `DESIGN.md`。若你的實作方案與本文件的架構規範、職責邊界或設計模式產生衝突，你必須修正你的實作方案以符合設計規範；若你認為必須打破規範，你必須在輸出程式碼前，明確向 User 提出警告並說明原因。
+
+---
+
+## 系統定位 (System Position)
+
+`apps/api` 是整個 LumeSpec 的**神經中樞**。所有任務的生命週期（建立、排隊、協調、計費、失敗補償）都在此發生。它是唯一可以寫入 PostgreSQL 業務資料的服務，也是唯一持有 BullMQ Queue 控制權的服務。
+
+```mermaid
+graph LR
+    Browser([Browser])
+    Web["apps/web\n(Next.js 15)"]
+    API["apps/api\n(Fastify)"]
+    Crawler["workers/crawler"]
+    Storyboard["workers/storyboard"]
+    Render["workers/render"]
+    DB[(PostgreSQL)]
+    Redis[(Redis\nBullMQ + SSE)]
+    S3[(S3 / MinIO)]
+
+    Browser -- "HTTPS" --> Web
+    Web -- "X-User-Id\nproxy header" --> API
+    API -- "crawl queue" --> Crawler
+    Crawler -- "completed event" --> API
+    API -- "storyboard queue" --> Storyboard
+    Storyboard -- "completed event" --> API
+    API -- "render queue" --> Render
+    Render -- "completed event" --> API
+    API -- "read job artifacts" --> S3
+    API --- DB
+    API -- "SSE pubsub\n(redisBroker)" --> Redis
+    Redis -- "intel events" --> Browser
+
+    style API fill:#7c3aed,color:#fff,stroke:#5b21b6
+```
+
+**此模組是唯一允許：**
+- 將任務加入 BullMQ Queue 的服務
+- 寫入 `jobs`、`credits`、`credit_transactions`、`subscriptions` 資料表的服務
+
+---
+
+## 模組職責 (Responsibilities)
+
+- **REST API** — 接收來自 `apps/web` BFF 的請求，提供任務建立（`POST /api/jobs`）、狀態查詢（`GET /api/jobs/:id`）、用戶歷史（`GET /api/users/me/jobs`）
+- **SSE 進度串流** — 透過 Redis Pub/Sub (`redisBroker`) 將 Worker 的即時進度轉發給瀏覽器（`GET /api/jobs/:id/stream`）
+- **Orchestrator** — 監聽 BullMQ QueueEvents，依 `crawl → storyboard → render` 的流水線順序串接佇列
+- **信用點數閘門** — 任務建立時扣款（`debitForJob`），任務失敗時退款（`refundForJob`）；使用 `SELECT … FOR UPDATE` 防止競爭條件
+- **退款補償** — Orchestrator 監聽 `storyboard.failed` / `render.failed` 事件，自動觸發 `refundForJob`
+- **歷史保留 Cron** — `retentionCron.ts` 每日刪除超過保留期限的任務記錄（Free=30天，Pro=90天，Max=365天）
+
+---
+
+## 關鍵介面與資料流 (Key Interfaces & Data Flow)
+
+### 任務建立流程
+
+```
+POST /api/jobs
+  → 身份驗證 (X-User-Id header，由 apps/web 注入)
+  → 信用點數扣款 (debitForJob, SELECT FOR UPDATE)
+  → crawlQueue.add({ jobId, url, userId, showWatermark })
+  → 回傳 { jobId }
+```
+
+### 協調器事件鏈
+
+```
+crawlEvents.completed
+  → 從 S3 下載 crawlResult.json
+  → storyboardQueue.add({ jobId, crawlResultUri, showWatermark })
+
+storyboardEvents.completed
+  → 反壓機制檢查 (backpressure.ts, renderQueueDepth)
+  → renderQueue.add({ jobId, storyboardUri })
+
+storyboardEvents.failed | renderEvents.failed
+  → refundForJob(jobId)
+```
+
+### SSE 進度廣播
+
+Worker 呼叫 `job.updateProgress(intelPayload)` → BullMQ QueueEvents `progress` 事件 → `redisBroker.publish(jobId, intel)` → 瀏覽器 EventSource 接收
+
+### QueueBundle 介面
+
+```typescript
+interface QueueBundle {
+  crawl: Queue;
+  storyboard: Queue;
+  render: Queue;
+  crawlEvents: QueueEvents;
+  storyboardEvents: QueueEvents;
+  renderEvents: QueueEvents;
+}
+```
+
+---
+
+## 🚫 反模式 (Anti-Patterns)
+
+### 1. 將即時進度寫入 PostgreSQL
+進度是高頻瞬態資料（每秒多次更新）。寫入 DB 會引發嚴重的 WAL Storm，打爆連線池。**進度只能存活在 Redis，透過 SSE 廣播後即消失。** DB 只記錄最終狀態（`pending → processing → done / failed`）。
+
+### 2. Fat Controller — 在 Route Handler 中直接操作資料庫
+Route Handler 只做三件事：解析輸入、呼叫 Service 層、回傳結果。業務邏輯（扣款、協調、退款）必須在 `orchestrator/`、`credits/`、`cron/` 等 Service 模組中。直接在 Route 裡寫 SQL 是職責邊界崩潰的開始。
+
+### 3. 忽略非循序事件（Out-of-Order Events）
+BullMQ 在高並發下事件順序無法保證。在 `stateMachine.ts` 中應用狀態前，**必須先檢查當前狀態是否允許轉換**。若任務已是 `failed`，任何 `completed` 事件都應被靜默丟棄，而非覆寫狀態讓任務「死灰復燃」。
+
+### 4. Worker 直連資料庫
+三個 Worker 服務（crawler、storyboard、render）**絕對不允許**持有 PostgreSQL 連線。所有業務狀態的寫入必須透過 Orchestrator 的事件回調進行，保持 API 的中樞管理地位。
+
+### 5. 未使用 UnrecoverableError 的刻意跳過任務
+當 Circuit Breaker 觸發 `CIRCUIT_OPEN` 或點數不足時，必須拋出 `UnrecoverableError`（來自 BullMQ）而非普通 `Error`，以防 BullMQ 浪費重試配額在注定失敗的任務上。
