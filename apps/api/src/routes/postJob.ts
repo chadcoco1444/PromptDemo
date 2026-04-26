@@ -4,7 +4,7 @@ import type { Pool } from 'pg';
 import { JobInputSchema, type Job } from '../model/job.js';
 import type { JobStore } from '../jobStore.js';
 import { calculateCost, isDurationAllowed, type Tier } from '../credits/ledger.js';
-import { debitForJob } from '../credits/store.js';
+import { debitForJob, refundForJob } from '../credits/store.js';
 import { verifyInternalToken } from '../auth/internalToken.js';
 import { verifyApiKey } from '../auth/apiKeyAuth.js';
 
@@ -207,29 +207,69 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
       createdAt,
       updatedAt: createdAt,
     };
-    await opts.store.create(newJob);
 
-    // Skip-crawl fast path when regenerating.
+    // Saga compensation: if any Redis write below fails after the Postgres debit
+    // has committed, call refundForJob so credits are not permanently lost.
+    // No-op when pricing is disabled (creditPool null) or user is anonymous.
+    const compensatingRefund = pricingEnabled && userId && opts.creditPool
+      ? async () => {
+          await refundForJob(opts.creditPool!, {
+            userId: Number(userId!),
+            jobId,
+            refundSeconds: calculateCost(input.duration),
+          }).catch((e) => req.log.error({ jobId, err: e }, 'refundForJob failed during saga compensation'));
+        }
+      : () => Promise.resolve();
+
+    try {
+      await opts.store.create(newJob);
+    } catch (err) {
+      req.log.error({ jobId, err }, 'store.create failed — job not persisted, refunding credits');
+      await compensatingRefund();
+      return reply.code(500).send({ error: 'store_create_failed', jobId });
+    }
+
+    // Skip-crawl fast path when regenerating from a parent's crawl result.
     if (inheritedCrawlUri) {
-      await opts.storyboardQueue.add(
-        'generate',
-        {
+      try {
+        await opts.storyboardQueue.add(
+          'generate',
+          {
+            jobId,
+            crawlResultUri: inheritedCrawlUri,
+            intent: input.intent,
+            duration: input.duration,
+            showWatermark,
+            ...(input.hint ? { hint: input.hint } : {}),
+          },
+          { jobId },
+        );
+      } catch (err) {
+        req.log.error({ jobId, err }, 'storyboardQueue.add failed — patching job to failed, refunding credits');
+        await opts.store.patch(
           jobId,
-          crawlResultUri: inheritedCrawlUri,
-          intent: input.intent,
-          duration: input.duration,
-          showWatermark,
-          ...(input.hint ? { hint: input.hint } : {}),
-        },
-        { jobId },
-      );
+          { status: 'failed', error: { code: 'QUEUE_ERROR', message: 'Failed to enqueue storyboard job. Credits will be refunded.', retryable: true } },
+          now(),
+        ).catch(() => {});
+        await compensatingRefund();
+        return reply.code(500).send({ error: 'queue_enqueue_failed', jobId });
+      }
       return reply.code(201).send({ jobId, skippedCrawl: true });
     }
 
     // Fresh job — normal crawl-first flow.
-    // Pass our app jobId as the BullMQ jobId so QueueEvents.on('completed', ({ jobId }))
-    // hands us back the id we use to look up the job record in Redis.
-    await opts.crawlQueue.add('crawl', { jobId, url: input.url }, { jobId });
+    try {
+      await opts.crawlQueue.add('crawl', { jobId, url: input.url }, { jobId });
+    } catch (err) {
+      req.log.error({ jobId, err }, 'crawlQueue.add failed — patching job to failed, refunding credits');
+      await opts.store.patch(
+        jobId,
+        { status: 'failed', error: { code: 'QUEUE_ERROR', message: 'Failed to enqueue crawl job. Credits will be refunded.', retryable: true } },
+        now(),
+      ).catch(() => {});
+      await compensatingRefund();
+      return reply.code(500).send({ error: 'queue_enqueue_failed', jobId });
+    }
     return reply.code(201).send({ jobId });
   });
 };

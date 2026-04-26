@@ -291,3 +291,111 @@ describe('POST /api/jobs — credit gate', () => {
     );
   });
 });
+
+describe('POST /api/jobs — saga compensation on Redis failure', () => {
+  function buildWithSaga({
+    storeCreateFails = false,
+    crawlAddFails = false,
+  }: {
+    storeCreateFails?: boolean;
+    crawlAddFails?: boolean;
+  } = {}) {
+    const app = Fastify();
+    const redis = new RedisMock();
+    const baseStore = makeJobStore(redis as any);
+    const store = {
+      create: storeCreateFails
+        ? vi.fn().mockRejectedValue(new Error('Redis connection refused'))
+        : vi.fn().mockImplementation(baseStore.create.bind(baseStore)),
+      get: vi.fn().mockImplementation(baseStore.get.bind(baseStore)),
+      patch: vi.fn().mockResolvedValue(undefined),
+    };
+    const crawl = {
+      add: crawlAddFails
+        ? vi.fn().mockRejectedValue(new Error('BullMQ Redis write timeout'))
+        : vi.fn().mockResolvedValue({ id: 'q1' }),
+    };
+    const storyboard = { add: vi.fn().mockResolvedValue({ id: 'q2' }) };
+    app.register(postJobRoute, {
+      store: store as any,
+      crawlQueue: crawl as any,
+      storyboardQueue: storyboard as any,
+      requireUserIdHeader: true,
+      creditPool: {} as any, // non-null enables pricing gate; debitForJob is vi.mocked
+      now: () => 1000,
+      nanoid: () => 'saga01',
+    });
+    return { app, store, crawl };
+  }
+
+  beforeEach(() => {
+    vi.mocked(debitForJob).mockReset();
+    vi.mocked(refundForJob).mockReset();
+    vi.mocked(debitForJob).mockResolvedValue({ ok: true, tier: 'pro', balanceAfter: 270 });
+    vi.mocked(refundForJob).mockResolvedValue({ ok: true, balanceAfter: 300 });
+  });
+
+  it('refunds and returns 500 when store.create throws', async () => {
+    const { app } = buildWithSaga({ storeCreateFails: true });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'test', duration: 30 },
+      headers: { Authorization: await bearerFor('7') },
+    });
+    expect(res.statusCode).toBe(500);
+    // debit ran first, so refund must compensate for the full job cost
+    expect(vi.mocked(refundForJob)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ jobId: 'saga01', refundSeconds: 30 }),
+    );
+  });
+
+  it('patches job to failed and refunds when crawlQueue.add throws', async () => {
+    const { app, store } = buildWithSaga({ crawlAddFails: true });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'test', duration: 30 },
+      headers: { Authorization: await bearerFor('7') },
+    });
+    expect(res.statusCode).toBe(500);
+    // store.create succeeded (job written to Redis), so patch it to failed
+    expect(store.patch).toHaveBeenCalledWith(
+      'saga01',
+      expect.objectContaining({ status: 'failed', error: expect.objectContaining({ code: 'QUEUE_ERROR' }) }),
+      expect.any(Number),
+    );
+    // credits must be returned
+    expect(vi.mocked(refundForJob)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ jobId: 'saga01', refundSeconds: 30 }),
+    );
+  });
+
+  it('does NOT call refundForJob when pricing is disabled and store.create throws', async () => {
+    // Regression guard: compensation must be no-op when creditPool=null
+    const app = Fastify();
+    const store = {
+      create: vi.fn().mockRejectedValue(new Error('Redis down')),
+      get: vi.fn(),
+      patch: vi.fn(),
+    };
+    app.register(postJobRoute, {
+      store: store as any,
+      crawlQueue: { add: vi.fn() } as any,
+      storyboardQueue: { add: vi.fn() } as any,
+      requireUserIdHeader: false,
+      creditPool: null, // pricing off
+      now: () => 1000,
+      nanoid: () => 'noprice01',
+    });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'test', duration: 10 },
+    });
+    expect(res.statusCode).toBe(500);
+    expect(vi.mocked(refundForJob)).not.toHaveBeenCalled();
+  });
+});
