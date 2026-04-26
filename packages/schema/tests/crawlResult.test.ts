@@ -72,4 +72,36 @@ describe('CrawlResultSchema', () => {
     const long = 'x'.repeat(201);
     expect(() => CrawlResultSchema.parse({ ...baseValid, sourceTexts: [long] })).toThrow();
   });
+
+  it('defaults reviews to empty array when omitted', () => {
+    const parsed = CrawlResultSchema.parse(baseValid);
+    expect(parsed.reviews).toEqual([]);
+  });
+
+  it('accepts valid reviews array', () => {
+    const parsed = CrawlResultSchema.parse({
+      ...baseValid,
+      reviews: [
+        { text: 'This product is amazing and saves us hours every week.', author: 'Jane Doe', role: 'CTO' },
+        { text: 'Best tool we have ever used in the company workflow.' },
+      ],
+    });
+    expect(parsed.reviews).toHaveLength(2);
+    expect(parsed.reviews[0]!.author).toBe('Jane Doe');
+    expect(parsed.reviews[1]!.author).toBeUndefined();
+  });
+
+  it('rejects reviews with text shorter than 10 chars', () => {
+    expect(() =>
+      CrawlResultSchema.parse({
+        ...baseValid,
+        reviews: [{ text: 'Short' }],
+      })
+    ).toThrow();
+  });
+
+  it('rejects reviews array exceeding 10 items', () => {
+    const many = Array.from({ length: 11 }, (_, i) => ({ text: `Review ${i} is long enough to be valid.` }));
+    expect(() => CrawlResultSchema.parse({ ...baseValid, reviews: many })).toThrow();
+  });
 });

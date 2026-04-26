@@ -4,6 +4,7 @@ import { detectWafBlock } from '../wafDetect.js';
 import { COOKIE_BANNER_SELECTORS } from '../cookieBanner.js';
 import { extractSourceTexts } from '../extractors/textExtractor.js';
 import { extractFeatures, type ExtractedFeature } from '../extractors/featureExtractor.js';
+import { extractReviews, type ExtractedReview } from '../extractors/reviewExtractor.js';
 import { pickPrimaryFontFamily } from '../extractors/fontDetector.js';
 import { pickLogoCandidate, type LogoCandidate } from '../extractors/logoDetector.js';
 import { pickDominantFromFrequencies, toHex, type DominantColors } from '../extractors/colorSampler.js';
@@ -15,6 +16,7 @@ export type PlaywrightTrackResult =
       html: string;
       sourceTexts: string[];
       features: ExtractedFeature[];
+      reviews: ExtractedReview[];
       viewportScreenshot: Buffer;
       fullPageScreenshot: Buffer;
       logoCandidate: LogoCandidate | null;
@@ -79,6 +81,7 @@ export async function runPlaywrightTrack(input: {
 
     const sourceTexts = extractSourceTexts(html);
     const features = extractFeatures(html);
+    const reviews = extractReviews(html);
 
     const viewportScreenshot = await page.screenshot({ type: 'jpeg', quality: 88, fullPage: false });
     const fullPageScreenshot = await page.screenshot({ type: 'jpeg', quality: 80, fullPage: true });
@@ -131,6 +134,7 @@ export async function runPlaywrightTrack(input: {
       html,
       sourceTexts,
       features,
+      reviews,
       viewportScreenshot,
       fullPageScreenshot,
       logoCandidate,

@@ -29,6 +29,14 @@ const FallbackSchema = z.object({
   replacedWith: z.string(),
 });
 
+export const ReviewSchema = z.object({
+  text:   z.string().min(10).max(500),
+  author: z.string().max(100).optional(),
+  role:   z.string().max(100).optional(),
+});
+
+export type ExtractedReview = z.infer<typeof ReviewSchema>;
+
 export const CrawlResultSchema = z.object({
   url: z.string().url(),
   fetchedAt: z.number().int().positive(),
@@ -36,6 +44,7 @@ export const CrawlResultSchema = z.object({
   brand: BrandSchema,
   sourceTexts: z.array(z.string().min(1).max(200)).min(1),
   features: z.array(FeatureSchema),
+  reviews: z.array(ReviewSchema).max(10).default([]),
   fallbacks: z.array(FallbackSchema),
   tier: z.enum(['A', 'B', 'C']),
   trackUsed: z.enum(['playwright', 'screenshot-saas', 'cheerio']),

@@ -7,6 +7,8 @@ import { SmoothScroll } from './scenes/SmoothScroll';
 import { CTA } from './scenes/CTA';
 import { BentoGrid } from './scenes/BentoGrid';
 import { CursorDemo } from './scenes/CursorDemo';
+import { StatsCounter } from './scenes/StatsCounter';
+import { ReviewMarquee } from './scenes/ReviewMarquee';
 import type { BrandTheme } from './utils/brandTheme';
 
 export interface ResolveSceneInput {
@@ -85,6 +87,17 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
         />
       );
     }
+    case 'StatsCounter':
+      return <StatsCounter stats={scene.props.stats} theme={theme} />;
+    case 'ReviewMarquee':
+      return (
+        <ReviewMarquee
+          reviews={scene.props.reviews}
+          speed={scene.props.speed}
+          theme={theme}
+          durationInFrames={scene.durationInFrames}
+        />
+      );
     case 'HeroStylized':
     case 'UseCaseStory':
     case 'StatsBand':

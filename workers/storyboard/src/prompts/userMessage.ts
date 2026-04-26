@@ -52,6 +52,36 @@ export function buildUserMessage(input: BuildUserMessageInput): string {
     blocks.push(`## Product Style Guidance\n${modifier}`);
   }
 
+  // Data-driven scene gate: suppress data-hungry scenes when the required source
+  // data is absent. Placed after style guidance so it reads as the final word.
+  const restrictions: string[] = [];
+
+  const hasNumericStat = /\b\d+\s*[%×xKkMmBb+]|\b\d{2,}\b/.test(
+    input.crawlResult.sourceTexts.join(' ')
+  );
+  if (!hasNumericStat) {
+    restrictions.push(
+      'StatsCounter — no numeric phrases found in sourceTexts. MUST NOT use this scene.'
+    );
+  }
+
+  const reviews = input.crawlResult.reviews ?? [];
+  if (reviews.length < 2) {
+    restrictions.push(
+      'ReviewMarquee — fewer than 2 reviews available in crawlResult.reviews. MUST NOT use this scene.'
+    );
+  } else {
+    blocks.push(
+      `## Available reviews (use verbatim for ReviewMarquee)\n${JSON.stringify(reviews, null, 2)}`
+    );
+  }
+
+  if (restrictions.length > 0) {
+    blocks.push(
+      `## SCENE RESTRICTIONS (data-driven — non-negotiable)\nThe following scenes MUST NOT appear in your storyboard because the required data is missing:\n${restrictions.map((r) => `- ${r}`).join('\n')}`
+    );
+  }
+
   blocks.push(`\nReturn a valid Storyboard JSON matching the hard rules in the system prompt.`);
   return blocks.join('\n\n');
 }

@@ -89,6 +89,53 @@ describe('buildUserMessage — style modifier injection', () => {
     expect(msg).not.toContain('## Product Style Guidance');
   });
 
+  it('suppresses StatsCounter when no numeric phrases in sourceTexts', () => {
+    const msg = buildUserMessage({
+      intent: 'show features',
+      duration: 30,
+      crawlResult: makeCrawl({ sourceTexts: ['Great product for teams', 'Easy to use'] }),
+    });
+    expect(msg).toContain('StatsCounter');
+    expect(msg).toContain('MUST NOT');
+    expect(msg).toContain('SCENE RESTRICTIONS');
+  });
+
+  it('allows StatsCounter when sourceTexts contain numeric phrases', () => {
+    const msg = buildUserMessage({
+      intent: 'show metrics',
+      duration: 30,
+      crawlResult: makeCrawl({ sourceTexts: ['10× faster than competitors', '99.9% uptime guaranteed'] }),
+    });
+    expect(msg).not.toMatch(/StatsCounter.*MUST NOT/);
+  });
+
+  it('suppresses ReviewMarquee when fewer than 2 reviews available', () => {
+    const msg = buildUserMessage({
+      intent: 'show social proof',
+      duration: 30,
+      crawlResult: { ...makeCrawl({}), reviews: [] } as unknown as CrawlResult,
+    });
+    expect(msg).toContain('ReviewMarquee');
+    expect(msg).toContain('MUST NOT');
+  });
+
+  it('allows ReviewMarquee and shows review data when 2+ reviews available', () => {
+    const msg = buildUserMessage({
+      intent: 'show social proof',
+      duration: 30,
+      crawlResult: {
+        ...makeCrawl({}),
+        reviews: [
+          { text: 'This product changed everything about our daily workflow.', author: 'Alice' },
+          { text: 'Absolutely essential tool for modern software engineering teams.' },
+        ],
+      } as unknown as CrawlResult,
+    });
+    expect(msg).toContain('## Available reviews');
+    expect(msg).toContain('Alice');
+    expect(msg).not.toMatch(/ReviewMarquee.*MUST NOT/);
+  });
+
   it('style guidance block comes after the existing blocks', () => {
     const msg = buildUserMessage({
       intent: 'show api',

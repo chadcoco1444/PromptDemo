@@ -1,4 +1,4 @@
-import { CrawlResultSchema, type CrawlResult, type S3Uri } from '@lumespec/schema';
+import { CrawlResultSchema, type CrawlResult, type S3Uri, type ExtractedReview } from '@lumespec/schema';
 import type { PlaywrightTrackResult } from './tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from './tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from './tracks/cheerioTrack.js';
@@ -21,6 +21,7 @@ interface IntermediateState {
   html: string;
   sourceTexts: string[];
   features: Array<{ title: string; description?: string; iconHint?: string }>;
+  reviews: ExtractedReview[];
   viewportBuf?: Buffer;
   fullPageBuf?: Buffer;
   colors: { primary?: string; secondary?: string };
@@ -113,6 +114,7 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
     brand,
     sourceTexts: intermediate.sourceTexts,
     features: intermediate.features,
+    reviews: intermediate.reviews,
     fallbacks,
     tier,
     trackUsed: intermediate.trackUsed,
@@ -131,6 +133,7 @@ async function pickTrack(
       html: pw.html,
       sourceTexts: pw.sourceTexts,
       features: pw.features,
+      reviews: pw.reviews,
       viewportBuf: pw.viewportScreenshot,
       fullPageBuf: pw.fullPageScreenshot,
       colors: pw.colors,
@@ -149,6 +152,7 @@ async function pickTrack(
         html: so.html,
         sourceTexts: so.sourceTexts,
         features: so.features,
+        reviews: so.reviews,
         viewportBuf: so.viewportScreenshot,
         fullPageBuf: so.fullPageScreenshot,
         colors: {},
@@ -174,6 +178,7 @@ async function pickTrack(
       html: ch.html,
       sourceTexts: ch.sourceTexts,
       features: ch.features,
+      reviews: ch.reviews,
       colors: ch.colors,
       trackUsed: 'cheerio',
     };

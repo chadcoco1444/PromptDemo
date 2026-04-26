@@ -154,6 +154,29 @@ const CTASchema = z.object({
   }),
 });
 
+const StatsCounterSchema = z.object({
+  ...sceneBase,
+  type: z.literal('StatsCounter'),
+  props: z.object({
+    stats: z
+      .array(z.object({ value: z.string().min(1).max(20), label: z.string().min(1).max(80) }))
+      .min(1)
+      .max(4),
+  }),
+});
+
+const ReviewMarqueeSchema = z.object({
+  ...sceneBase,
+  type: z.literal('ReviewMarquee'),
+  props: z.object({
+    reviews: z
+      .array(z.object({ text: z.string().min(10).max(300), author: z.string().max(100).optional() }))
+      .min(2)
+      .max(6),
+    speed: z.enum(['slow', 'medium', 'fast']).default('medium'),
+  }),
+});
+
 export const SceneSchema = z.discriminatedUnion('type', [
   HeroRealShotSchema,
   HeroStylizedSchema,
@@ -165,6 +188,8 @@ export const SceneSchema = z.discriminatedUnion('type', [
   BentoGridSchema,
   TextPunchSchema,
   CTASchema,
+  StatsCounterSchema,
+  ReviewMarqueeSchema,
 ]);
 
 export const SCENE_TYPES = [
@@ -178,6 +203,8 @@ export const SCENE_TYPES = [
   'BentoGrid',
   'TextPunch',
   'CTA',
+  'StatsCounter',
+  'ReviewMarquee',
 ] as const;
 
 export const V1_MVP_SCENE_TYPES = ['HeroRealShot', 'FeatureCallout', 'TextPunch', 'SmoothScroll', 'CTA'] as const;
