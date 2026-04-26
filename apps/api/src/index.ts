@@ -6,7 +6,7 @@ import { makeJobStore, type JobStore } from './jobStore.js';
 import { makePostgresJobStore } from './jobStorePostgres.js';
 import { makeDualWriteJobStore } from './jobStoreDual.js';
 import { makeQueueBundle, closeQueueBundle } from './queues.js';
-import { makeBroker } from './sse/broker.js';
+import { makeRedisBroker } from './sse/redisBroker.js';
 import { startOrchestrator } from './orchestrator/index.js';
 import { refundForJob } from './credits/store.js';
 import { calculateCost, calculateRefund } from './credits/ledger.js';
@@ -50,7 +50,8 @@ if (authEnabled) {
 }
 
 const queues = makeQueueBundle(redis);
-const broker = makeBroker();
+const subRedis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
+const { broker, close: closeBroker } = makeRedisBroker({ publisher: redis, subscriber: subRedis });
 
 // Build S3 options conditionally to satisfy exactOptionalPropertyTypes.
 const s3Opts: ConstructorParameters<typeof S3Client>[0] = {
@@ -124,9 +125,10 @@ const shutdown = async () => {
   await app.close();
   await stopOrchestrator();
   if (stopRetentionCron) stopRetentionCron();
+  await closeBroker();           // ① quit subRedis before shared connections close
   await closeQueueBundle(queues);
   if (shutdownPool) await shutdownPool();
-  await redis.quit();
+  await redis.quit();            // ③ shared publisher last
   process.exit(0);
 };
 process.on('SIGTERM', shutdown);
