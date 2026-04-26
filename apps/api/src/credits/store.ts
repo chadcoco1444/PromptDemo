@@ -10,7 +10,7 @@ import { CONCURRENCY_LIMIT, type Tier } from './ledger.js';
 
 export interface DebitResult {
   ok: boolean;
-  code?: 'insufficient_credits' | 'concurrency_limit' | 'user_not_found';
+  code?: 'insufficient_credits' | 'concurrency_limit' | 'user_not_found' | 'duration_not_allowed_in_tier';
   balanceAfter?: number;
   tier?: Tier;
   activeCount?: number;
@@ -69,7 +69,7 @@ function tierAllowance(tier: Tier): number {
  */
 export async function debitForJob(
   pool: Pool,
-  params: { userId: number; jobId: string; costSeconds: number },
+  params: { userId: number; jobId: string; costSeconds: number; maxDurationForTier?: (tier: Tier) => boolean },
 ): Promise<DebitResult> {
   const client: PoolClient = await pool.connect();
   try {
@@ -95,6 +95,12 @@ export async function debitForJob(
       [params.userId],
     );
     const tier = (tierRes.rows[0]?.tier ?? 'free') as Tier;
+
+    if (params.maxDurationForTier !== undefined && !params.maxDurationForTier(tier)) {
+      await client.query('ROLLBACK');
+      return { ok: false, code: 'duration_not_allowed_in_tier', tier };
+    }
+
     const limit = CONCURRENCY_LIMIT[tier];
 
     const activeRes = await client.query(

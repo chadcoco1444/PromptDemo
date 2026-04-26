@@ -55,6 +55,31 @@ describe('debitForJob', () => {
     expect(result.ok).toBe(false);
     expect(result.code).toBe('insufficient_credits');
   });
+
+  it('does not debit when maxDurationForTier rejects', async () => {
+    const { rows } = await pool.query<{ balance: number }>(
+      `SELECT balance FROM credits WHERE user_id = $1`,
+      [testUserId],
+    );
+    const balanceBefore = rows[0]!.balance;
+
+    const result = await debitForJob(pool, {
+      userId: testUserId,
+      jobId: `duration-reject-${Date.now()}`,
+      costSeconds: 10,
+      maxDurationForTier: () => false,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('duration_not_allowed_in_tier');
+    expect(result.tier).toBeDefined();
+
+    const { rows: rows2 } = await pool.query<{ balance: number }>(
+      `SELECT balance FROM credits WHERE user_id = $1`,
+      [testUserId],
+    );
+    expect(rows2[0]!.balance).toBe(balanceBefore);
+  });
 });
 
 describe('refundForJob', () => {
