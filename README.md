@@ -170,9 +170,15 @@ NEXTAUTH_URL=http://localhost:3001
 pnpm lume status          # check which services are running
 pnpm lume stop            # clean shutdown — no zombie processes
 pnpm lume render:promo    # re-render the PromoComposition marketing video
-pnpm test                 # full test suite (678 tests across 108 files)
+pnpm test                 # full test suite (120 tests across 17 files)
 pnpm typecheck            # type-check the whole monorepo
 ```
+
+> **Before running `pnpm test`:** `apps/api` includes integration tests that hit a real PostgreSQL database. Make sure the DB container is up first:
+> ```bash
+> docker compose -f docker-compose.dev.yaml up -d postgres
+> ```
+> If you've already run `pnpm infra:up`, the container is already running — no extra step needed.
 
 ---
 
