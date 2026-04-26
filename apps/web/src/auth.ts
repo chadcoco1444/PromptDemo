@@ -45,6 +45,9 @@ const nextAuth = isAuthEnabled()
           ? [GitHub({
               clientId: process.env.GITHUB_CLIENT_ID,
               clientSecret: process.env.GITHUB_CLIENT_SECRET,
+              // GitHub verifies email ownership, so linking the same email
+              // across Google + GitHub is safe.
+              allowDangerousEmailAccountLinking: true,
             })]
           : []),
       ],

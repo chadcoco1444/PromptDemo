@@ -62,13 +62,17 @@
     },
     {
       "sceneId": 4,
-      "type": "TextPunch",
+      "type": "BentoGrid",
       "durationInFrames": 120,
-      "entryAnimation": "zoomIn",
+      "entryAnimation": "fade",
       "exitAnimation": "fade",
       "props": {
-        "text": "trusted by teams at acme, globex, and initech",
-        "emphasis": "primary"
+        "items": [
+          { "title": "one-click data sync",   "description": "connect 40+ sources",     "iconHint": "🔌" },
+          { "title": "managed agents",         "description": "serverless, autoscaling", "iconHint": "🤖" },
+          { "title": "audit trail",            "description": "every action logged",     "iconHint": "🛡️" },
+          { "title": "soc 2 type ii certified",                                          "iconHint": "✅" }
+        ]
       }
     },
     {
