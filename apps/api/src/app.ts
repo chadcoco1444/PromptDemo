@@ -37,12 +37,29 @@ export interface BuildOpts {
    * creditPool. Omit to disable API key auth.
    */
   apiKeyPool?: Pool | null;
+  /**
+   * Explicit list of origins allowed by the CORS plugin. Defaults to parsing
+   * ALLOWED_ORIGINS env var (comma-separated), then 'http://localhost:3001'.
+   * Always pass this in tests to avoid depending on process.env.
+   */
+  allowedOrigins?: string[];
   logger?: boolean;
 }
 
 export async function build(opts: BuildOpts): Promise<FastifyInstance> {
   const app = Fastify({ logger: opts.logger === false ? false : { level: 'info' } });
-  await app.register(cors, { origin: true });
+  const allowedOrigins = opts.allowedOrigins ??
+    (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3001').split(',').map(o => o.trim());
+
+  await app.register(cors, {
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error('CORS: origin not allowed'), false);
+      }
+    },
+  });
   await app.register(sensible);
   // v2.1 Phase 5.2 — defense-in-depth rate limit.
   //   - Per-user when an internal JWT is present (BFF proxy hop attaches it).
@@ -80,6 +97,7 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
     store: opts.store,
     broker: opts.broker,
     requireUserIdHeader: opts.requireUserIdHeader ?? false,
+    allowedOrigins,
   });
 
   app.get('/healthz', async () => ({ ok: true }));

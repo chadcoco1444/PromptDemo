@@ -22,16 +22,19 @@ export const streamRoute: FastifyPluginAsync<StreamRouteOpts> = async (app, opts
       }
     }
 
-    // The raw response bypasses Fastify's CORS plugin; set the headers ourselves.
-    // Echo the request's Origin so the browser's EventSource accepts the stream.
-    // (EventSource doesn't send credentials by default, so we don't need Allow-Credentials.)
-    const origin = (req.headers.origin as string | undefined) ?? '*';
+    // The raw response bypasses Fastify's CORS plugin; set the header ourselves
+    // using the same allowlist as the plugin — no unconditional origin echo.
+    const allowedOrigins = opts.allowedOrigins ?? ['http://localhost:3001'];
+    const requestOrigin = req.headers.origin as string | undefined;
+    const corsOrigin = (requestOrigin !== undefined && allowedOrigins.includes(requestOrigin))
+      ? requestOrigin
+      : (allowedOrigins[0] ?? '*');
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Origin': corsOrigin,
       Vary: 'Origin',
     });
 

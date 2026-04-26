@@ -149,3 +149,52 @@ describe('api app', () => {
     await app.close();
   });
 });
+
+describe('CORS allowlist', () => {
+  async function buildCorsApp(allowedOrigins: string[]) {
+    const store = makeJobStore(new RedisMock() as any);
+    const broker = makeBroker();
+    return build({
+      store,
+      crawlQueue: { add: vi.fn().mockResolvedValue({ id: 'q' }) } as any,
+      storyboardQueue: { add: vi.fn().mockResolvedValue({ id: 'q2' }) } as any,
+      broker,
+      fetchJson: async () => null,
+      creditPool: null,
+      logger: false,
+      allowedOrigins,
+    });
+  }
+
+  it('sets Access-Control-Allow-Origin for a known origin', async () => {
+    const app = await buildCorsApp(['http://localhost:3001']);
+    const res = await app.inject({
+      method: 'GET',
+      url: '/healthz',
+      headers: { origin: 'http://localhost:3001' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3001');
+    await app.close();
+  });
+
+  it('rejects requests from an unknown origin with 500', async () => {
+    const app = await buildCorsApp(['http://localhost:3001']);
+    const res = await app.inject({
+      method: 'GET',
+      url: '/healthz',
+      headers: { origin: 'http://evil.com' },
+    });
+    expect(res.statusCode).toBe(500); // @fastify/cors sends 500 when callback passes an Error
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    await app.close();
+  });
+
+  it('allows server-to-server requests with no Origin header', async () => {
+    const app = await buildCorsApp(['http://localhost:3001']);
+    const res = await app.inject({ method: 'GET', url: '/healthz' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    await app.close();
+  });
+});
