@@ -19,7 +19,7 @@ describe('LandingHero', () => {
     expect(screen.getByText(/Claude \+ Remotion/i)).toBeInTheDocument();
   });
 
-  it('renders an autoplay/loop/muted/playsinline video pointing at /landing-hero-demo.mp4', () => {
+  it('renders an autoplay/loop/muted/playsinline video pointing at /demo.mp4', () => {
     const { container } = render(<LandingHero />);
     const video = container.querySelector('video');
     expect(video).toBeTruthy();
@@ -27,7 +27,7 @@ describe('LandingHero', () => {
     expect(video?.hasAttribute('loop')).toBe(true);
     expect(video?.hasAttribute('muted')).toBe(true);
     const src = video?.querySelector('source')?.getAttribute('src') ?? video?.getAttribute('src');
-    expect(src).toBe('/landing-hero-demo.mp4');
+    expect(src).toBe('/demo.mp4');
   });
 
   it('renders the URL input with placeholder and Start button', () => {
