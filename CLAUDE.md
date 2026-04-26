@@ -87,7 +87,7 @@ docker compose -f docker-compose.dev.yaml up -d postgres   # 只啟動 PostgreSQ
 # 或，若尚未啟動基礎設施：
 pnpm infra:up                                               # 啟動 Postgres + Redis + MinIO
 
-pnpm test          # 全套測試（120 tests across 17 files）
+pnpm test          # 全套測試（449 tests across 69 files）
 pnpm typecheck     # 全 monorepo TypeScript 檢查
 pnpm a11y          # Lighthouse a11y 分數驗證（需 dev server 運行中）
 ```

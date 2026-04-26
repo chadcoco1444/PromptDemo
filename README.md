@@ -197,7 +197,7 @@ NEXTAUTH_URL=http://localhost:3001
 pnpm lume status          # check which services are running
 pnpm lume stop            # clean shutdown — no zombie processes
 pnpm lume render:promo    # re-render the PromoComposition marketing video
-pnpm test                 # full test suite (120 tests across 17 files)
+pnpm test                 # full test suite (449 tests across 69 files)
 pnpm typecheck            # type-check the whole monorepo
 ```
 
