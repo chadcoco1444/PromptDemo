@@ -134,6 +134,12 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     }
   });
 
+  cfg.queues.storyboardEvents.on('active', async ({ jobId }) => {
+    const current = await cfg.store.get(jobId);
+    if (!current) return;
+    await applyPatch(jobId, reduceEvent(current, { kind: 'storyboard:active' }), current.status);
+  });
+
   cfg.queues.storyboardEvents.on('completed', async ({ jobId, returnvalue }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
