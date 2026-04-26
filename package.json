@@ -16,12 +16,14 @@
     "infra:check": "node scripts/infra-check.mjs",
     "lume": "node scripts/lume.mjs",
     "test:scripts": "pnpm --filter @lumespec-internal/scripts test",
-    "a11y": "node scripts/check-a11y.mjs"
+    "a11y": "node scripts/check-a11y.mjs",
+    "db:migrate": "node-pg-migrate up --migrations-dir db/migrations --migration-file-language sql"
   },
   "devDependencies": {
-    "typescript": "5.5.4",
-    "vitest": "2.1.1",
+    "@aws-sdk/client-s3": "3.658.1",
     "@types/node": "20.14.10",
-    "@aws-sdk/client-s3": "3.658.1"
+    "node-pg-migrate": "^8.0.4",
+    "typescript": "5.5.4",
+    "vitest": "2.1.1"
   }
 }
