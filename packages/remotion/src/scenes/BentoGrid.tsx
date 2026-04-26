@@ -54,7 +54,7 @@ const GRID_CONFIGS: Record<number, GridConfig> = {
 
 export function getGridConfig(itemCount: number): GridConfig {
   const clamped = Math.min(Math.max(itemCount, 3), 6) as 3 | 4 | 5 | 6;
-  return GRID_CONFIGS[clamped];
+  return GRID_CONFIGS[clamped]!;
 }
 
 export interface BentoGridProps {

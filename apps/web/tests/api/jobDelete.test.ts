@@ -22,7 +22,7 @@ describe('DELETE /api/jobs/[jobId]', () => {
   });
 
   it('returns 401 when not authenticated', async () => {
-    vi.mocked(auth).mockResolvedValueOnce(null as never);
+    vi.mocked(auth!).mockResolvedValueOnce(null as never);
     const res = await DELETE(new Request('http://localhost/api/jobs/abc', { method: 'DELETE' }), { params: { jobId: 'abc' } });
     expect(res.status).toBe(401);
   });

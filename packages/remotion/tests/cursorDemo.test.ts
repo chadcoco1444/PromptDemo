@@ -12,13 +12,13 @@ describe('REGION_COORDS', () => {
   });
 
   it('top-left region is in the top-left quadrant', () => {
-    const { x, y } = REGION_COORDS['top-left'];
+    const { x, y } = REGION_COORDS['top-left']!;
     expect(x).toBeLessThan(0.3);
     expect(y).toBeLessThan(0.3);
   });
 
   it('bottom-right region is in the bottom-right quadrant', () => {
-    const { x, y } = REGION_COORDS['bottom-right'];
+    const { x, y } = REGION_COORDS['bottom-right']!;
     expect(x).toBeGreaterThan(0.7);
     expect(y).toBeGreaterThan(0.7);
   });

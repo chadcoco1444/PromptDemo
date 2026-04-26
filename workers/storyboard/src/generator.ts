@@ -176,7 +176,7 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
   // AND the post-zod validation cap. Keeps the two in lockstep so a profile
   // change can never desync the prompt-side instructions from the validator.
   const profile = detectPacingProfile(input.intent);
-  const locale = detectLocale(input.crawlResult.texts ?? []);
+  const locale = detectLocale(input.crawlResult.sourceTexts);
   const industry = detectIndustry(input.crawlResult);
   const systemPrompt = buildSystemPrompt({ profile, locale, industry });
   const userMessage = buildUserMessage({

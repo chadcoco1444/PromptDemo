@@ -1,6 +1,6 @@
 export { normalizeText } from './normalizeText';
 export { S3UriSchema, parseS3Uri, toS3Uri, type S3Uri } from './s3Uri';
-export { CrawlResultSchema, type CrawlResult } from './crawlResult';
+export { CrawlResultSchema, ReviewSchema, type CrawlResult, type ExtractedReview } from './crawlResult';
 export {
   IntelPayloadSchema,
   IntelStageSchema,

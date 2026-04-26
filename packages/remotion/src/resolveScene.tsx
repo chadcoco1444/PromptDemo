@@ -72,8 +72,14 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
           theme={theme}
         />
       );
-    case 'BentoGrid':
-      return <BentoGrid items={scene.props.items} theme={theme} />;
+    case 'BentoGrid': {
+      const items = scene.props.items.map(({ title, description, iconHint }) => ({
+        title,
+        ...(description !== undefined ? { description } : {}),
+        ...(iconHint !== undefined ? { iconHint } : {}),
+      }));
+      return <BentoGrid items={items} theme={theme} />;
+    }
     case 'CursorDemo': {
       const screenshotUrl = resolver(assets.screenshots.viewport);
       return (

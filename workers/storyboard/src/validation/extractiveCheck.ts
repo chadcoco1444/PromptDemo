@@ -49,6 +49,10 @@ export function collectSceneTexts(scene: Scene): string[] {
       return [scene.props.text];
     case 'CTA':
       return [scene.props.headline];
+    case 'StatsCounter':
+      return scene.props.stats.flatMap((s) => [s.value, s.label]);
+    case 'ReviewMarquee':
+      return scene.props.reviews.map((r) => r.text);
   }
 }
 

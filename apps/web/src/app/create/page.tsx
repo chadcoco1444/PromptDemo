@@ -35,7 +35,7 @@ export default async function CreatePage({ searchParams }: PageProps) {
             url: row.input.url,
             intent: row.input.intent,
             duration: row.input.duration,
-            hint: row.input.hint,
+            ...(row.input.hint !== undefined ? { hint: row.input.hint } : {}),
           };
         }
       }

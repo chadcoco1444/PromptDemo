@@ -10,7 +10,7 @@ const basePool = [
 
 function sb(scenes: Storyboard['scenes']): Storyboard {
   return {
-    videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+    videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
     assets: { screenshots: {}, sourceTexts: basePool },
     scenes,
   };
@@ -90,7 +90,7 @@ describe('extractiveCheck (Latin)', () => {
 describe('extractiveCheck (CJK)', () => {
   const cjkPool = ['自動化未來', '一鍵生成', '更好的工作流'];
   const cjkBoard: Storyboard = {
-    videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+    videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
     assets: { screenshots: {}, sourceTexts: cjkPool },
     scenes: [],
   };
@@ -136,7 +136,7 @@ describe('extractiveCheck (CJK)', () => {
     // joined them with · for a compact scene display. Each segment must
     // independently match the whitelist — no hallucinations.
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: {
         screenshots: {},
         sourceTexts: [
@@ -165,7 +165,7 @@ describe('extractiveCheck (CJK)', () => {
 
   it('also accepts pipe- and space-slash-separated joins', () => {
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: { screenshots: {}, sourceTexts: ['alpha', 'beta', 'gamma'] },
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
@@ -182,7 +182,7 @@ describe('extractiveCheck (CJK)', () => {
   it('still REJECTS a concatenation where ANY segment is hallucinated', () => {
     // The 3rd segment ("made up feature") isn't in the pool — must fail.
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: { screenshots: {}, sourceTexts: ['real a', 'real b'] },
       scenes: [
         {
@@ -200,7 +200,7 @@ describe('extractiveCheck (CJK)', () => {
 
   it('does NOT split inline uses of / and - (only space-padded separators)', () => {
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: { screenshots: {}, sourceTexts: ['AI/ML platform', 'multi-tenant architecture'] },
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
@@ -216,7 +216,7 @@ describe('extractiveCheck (CJK)', () => {
     // commas + "and" — a common construction when pulling bullet points
     // into a grammatical sentence.
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: {
         screenshots: {},
         sourceTexts: [
@@ -244,7 +244,7 @@ describe('extractiveCheck (CJK)', () => {
 
   it('trims leading "and"/"or" + trailing punctuation from each comma segment', () => {
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: { screenshots: {}, sourceTexts: ['fast', 'reliable', 'secure'] },
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
@@ -257,7 +257,7 @@ describe('extractiveCheck (CJK)', () => {
 
   it('rejects comma list when one segment is hallucinated', () => {
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: { screenshots: {}, sourceTexts: ['fast', 'reliable'] },
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
@@ -272,7 +272,7 @@ describe('extractiveCheck (CJK)', () => {
     // Real-world pattern: Claude generates BentoGrid/FeatureCallout descriptions
     // by joining multiple source-page sentences with full stops.
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: {
         screenshots: {},
         sourceTexts: [
@@ -291,6 +291,8 @@ describe('extractiveCheck (CJK)', () => {
           props: {
             title: 'Scale with confidence',
             description: 'Scale with confidence. Choose an integration path. Connect to existing systems.',
+            layout: 'leftImage' as const,
+            variant: 'image' as const,
           },
         },
       ],
@@ -300,7 +302,7 @@ describe('extractiveCheck (CJK)', () => {
 
   it('rejects period-separated sentences when any sentence is not in the pool', () => {
     const board: Storyboard = {
-      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none' },
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
       assets: {
         screenshots: {},
         sourceTexts: ['Scale with confidence', 'Choose an integration path'],
@@ -315,6 +317,8 @@ describe('extractiveCheck (CJK)', () => {
           props: {
             title: 'Scale with confidence',
             description: 'Scale with confidence. Choose an integration path. Completely invented sentence.',
+            layout: 'leftImage' as const,
+            variant: 'image' as const,
           },
         },
       ],

@@ -48,7 +48,7 @@ export function CreatePageBody({ prefill, initialUrl, fork, _testSubmit }: Creat
         initialUrl: fork.url,
         initialIntent: fork.intent,
         initialDuration: fork.duration,
-        initialHint: fork.hint,
+        ...(fork.hint !== undefined ? { initialHint: fork.hint } : {}),
         parentJobId: fork.parentJobId,
       }
     : prefill

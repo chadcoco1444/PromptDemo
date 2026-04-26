@@ -46,7 +46,7 @@ export const CursorDemo: React.FC<CursorDemoProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const target = REGION_COORDS[targetHint.region] ?? REGION_COORDS['center'];
+  const target = REGION_COORDS[targetHint.region] ?? REGION_COORDS['center']!;
 
   const moveEnd = Math.floor(durationInFrames * 0.4);
   const actionStart = moveEnd;
