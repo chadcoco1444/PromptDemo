@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
+
+vi.mock('../src/credits/store.js');
+import { debitForJob, refundForJob } from '../src/credits/store.js';
 import Fastify from 'fastify';
 import RedisMock from 'ioredis-mock';
 import { SignJWT } from 'jose';
@@ -228,5 +231,63 @@ describe('POST /api/jobs', () => {
       headers: { Authorization: `Bearer ${badToken}` },
     });
     expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('POST /api/jobs — credit gate', () => {
+  function buildWithCredits() {
+    const app = Fastify();
+    const redis = new RedisMock();
+    const store = makeJobStore(redis as any);
+    const crawl = { add: vi.fn().mockResolvedValue({ id: 'q1' }) };
+    const storyboard = { add: vi.fn().mockResolvedValue({ id: 'q2' }) };
+    app.register(postJobRoute, {
+      store,
+      crawlQueue: crawl as any,
+      storyboardQueue: storyboard as any,
+      requireUserIdHeader: true,
+      creditPool: {} as any, // non-null enables pricing gate; debitForJob is mocked
+      now: () => 1000,
+      nanoid: () => 'cred01',
+    });
+    return { app, crawl };
+  }
+
+  beforeEach(() => {
+    vi.mocked(debitForJob).mockReset();
+    vi.mocked(refundForJob).mockReset();
+  });
+
+  it('returns 403 and does NOT call refundForJob when duration not allowed for tier', async () => {
+    vi.mocked(debitForJob).mockResolvedValue({
+      ok: false,
+      code: 'duration_not_allowed_in_tier',
+      tier: 'free',
+    });
+    const { app } = buildWithCredits();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'promo', duration: 60 },
+      headers: { Authorization: await bearerFor('99') },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toMatchObject({ error: 'duration_not_allowed_in_tier', tier: 'free' });
+    expect(vi.mocked(refundForJob)).not.toHaveBeenCalled();
+  });
+
+  it('passes maxDurationForTier callback to debitForJob on every credit-gated request', async () => {
+    vi.mocked(debitForJob).mockResolvedValue({ ok: true, tier: 'pro', balanceAfter: 240 });
+    const { app } = buildWithCredits();
+    await app.inject({
+      method: 'POST',
+      url: '/api/jobs',
+      payload: { url: 'https://x.com', intent: 'promo', duration: 30 },
+      headers: { Authorization: await bearerFor('99') },
+    });
+    expect(vi.mocked(debitForJob)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ maxDurationForTier: expect.any(Function) }),
+    );
   });
 });

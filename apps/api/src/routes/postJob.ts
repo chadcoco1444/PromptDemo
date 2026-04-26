@@ -154,8 +154,16 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
         userId: userIdNum,
         jobId,
         costSeconds: cost,
+        maxDurationForTier: (tier) => isDurationAllowed(tier, input.duration),
       });
       if (!result.ok) {
+        if (result.code === 'duration_not_allowed_in_tier') {
+          return reply.code(403).send({
+            error: 'duration_not_allowed_in_tier',
+            message: `The ${input.duration}s duration is not available on the ${result.tier ?? 'free'} plan. Upgrade to Pro for 60s videos.`,
+            tier: result.tier,
+          });
+        }
         if (result.code === 'concurrency_limit') {
           return reply.code(429).send({
             error: 'concurrency_limit',
@@ -179,32 +187,7 @@ export const postJobRoute: FastifyPluginAsync<PostJobRouteOpts> = async (app, op
         }
       }
 
-      // Tier-restricted duration check (enforced AFTER debit so the refund
-      // handler in the orchestrator can treat it as a normal rejection).
-      // Actually — better to enforce BEFORE debit so we don't charge for
-      // something we're about to reject. Redo: we already hold the tier
-      // from the debit result.ok path below — but if we got here we already
-      // debited. Instead, inline the tier check in the debit transaction.
-      // For now we check post-debit and refund if disallowed — not ideal
-      // but avoids a separate SELECT for tier.
-      //
-      // TODO: fold tier-duration check into debitForJob for atomicity.
-      const tier = (result.tier ?? 'free') as Tier;
-      showWatermark = tier === 'free';
-      if (!isDurationAllowed(tier, input.duration)) {
-        // Already debited — refund immediately + reject.
-        const { refundForJob } = await import('../credits/store.js');
-        await refundForJob(opts.creditPool, {
-          userId: userIdNum,
-          jobId,
-          refundSeconds: cost,
-        });
-        return reply.code(403).send({
-          error: 'duration_not_allowed_in_tier',
-          message: `The ${input.duration}s duration is not available on the ${tier} plan. Upgrade to Pro for 60s videos.`,
-          tier,
-        });
-      }
+      showWatermark = (result.tier ?? 'free') === 'free';
     }
 
     // forceWatermark: dogfood/internal scripts can opt-in to the Pill Badge
