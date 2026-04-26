@@ -37,7 +37,12 @@ const worker = new Worker<JobPayload>(
 
     const uploader = async (buf: Buffer, filename: string): Promise<S3Uri> => {
       const key = buildKey(payload.jobId, filename);
-      const contentType = filename.endsWith('.jpg') ? 'image/jpeg' : 'application/octet-stream';
+      const lower = filename.toLowerCase();
+      const contentType = lower.endsWith('.jpg')  ? 'image/jpeg'
+                        : lower.endsWith('.svg')  ? 'image/svg+xml'
+                        : lower.endsWith('.png')  ? 'image/png'
+                        : lower.endsWith('.webp') ? 'image/webp'
+                        : 'application/octet-stream';
       return putObject(s3, s3Cfg.bucket, key, buf, contentType);
     };
 

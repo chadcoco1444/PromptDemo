@@ -132,4 +132,42 @@ describe('runCrawl', () => {
       })
     ).rejects.toThrow(/tier.?c/i);
   });
+
+  it('downloads partner logos and stores them as s3 URIs', async () => {
+    const uploadedFilenames: string[] = [];
+    const uploader = async (buf: Buffer, filename: string): Promise<S3Uri> => {
+      uploadedFilenames.push(filename);
+      return toS3Uri('fake', `jobs/j/${filename}`);
+    };
+
+    const pw: PlaywrightTrackResult = {
+      kind: 'ok',
+      html: '<html></html>',
+      sourceTexts: ['hello world'],
+      features: [],
+      reviews: [],
+      viewportScreenshot: Buffer.from([1]),
+      fullPageScreenshot: Buffer.from([2]),
+      logoCandidate: null,
+      colors: {},
+      logoSrcCandidates: [{ name: 'Stripe', srcUrl: 'https://cdn.stripe.com/logo.svg' }],
+      codeSnippets: [],
+    };
+
+    const result = await runCrawl({
+      url: 'https://x.com',
+      jobId: 'j',
+      rescueEnabled: true,
+      runPlaywright: async () => pw,
+      runScreenshotOne: async () => ({ kind: 'error', message: 'unused' }) as ScreenshotOneTrackResult,
+      runCheerio: async () => ({ kind: 'error', message: 'unused' }) as CheerioTrackResult,
+      uploader,
+      downloadLogo: async () => Buffer.from([42]),
+    });
+
+    expect(result.logos).toHaveLength(1);
+    expect(result.logos[0]!.name).toBe('Stripe');
+    expect(result.logos[0]!.s3Uri).toMatch(/^s3:\/\//);
+    expect(uploadedFilenames).toContain('logo-partner-0.svg');
+  });
 });

@@ -1,8 +1,10 @@
-import { CrawlResultSchema, type CrawlResult, type S3Uri, type ExtractedReview } from '@lumespec/schema';
+import { CrawlResultSchema, type CrawlResult, type S3Uri, type ExtractedReview, type PartnerLogo } from '@lumespec/schema';
 import type { PlaywrightTrackResult } from './tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from './tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from './tracks/cheerioTrack.js';
 import { isGoogleFontSupported } from './extractors/fontDetector.js';
+import type { ExtractedLogoCandidate } from './extractors/logoExtractor.js';
+import type { ExtractedCodeSnippet } from './extractors/codeExtractor.js';
 
 const DEFAULT_BRAND_COLOR = '#1a1a1a';
 
@@ -28,6 +30,8 @@ interface IntermediateState {
   fontFamily?: string;
   logo?: { src: string; alt?: string };
   trackUsed: 'playwright' | 'screenshot-saas' | 'cheerio';
+  logoSrcCandidates: ExtractedLogoCandidate[];
+  codeSnippets: ExtractedCodeSnippet[];
 }
 
 type MutableFallback = { field: string; reason: string; replacedWith: string };
@@ -105,6 +109,16 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
     });
   }
 
+  const logos: PartnerLogo[] = [];
+  for (const candidate of intermediate.logoSrcCandidates) {
+    if (logos.length >= 12) break;
+    const bytes = await input.downloadLogo(candidate.srcUrl);
+    if (!bytes) continue;
+    const ext = candidate.srcUrl.split('.').pop()?.split('?')[0]?.toLowerCase() ?? 'img';
+    const s3Uri = await input.uploader(bytes, `logo-partner-${logos.length}.${ext}`);
+    logos.push({ name: candidate.name, s3Uri });
+  }
+
   const tier: CrawlResult['tier'] = fallbacks.length === 0 ? 'A' : 'B';
 
   const raw = {
@@ -115,6 +129,8 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
     sourceTexts: intermediate.sourceTexts,
     features: intermediate.features,
     reviews: intermediate.reviews,
+    logos,
+    codeSnippets: intermediate.codeSnippets,
     fallbacks,
     tier,
     trackUsed: intermediate.trackUsed,
@@ -138,6 +154,8 @@ async function pickTrack(
       fullPageBuf: pw.fullPageScreenshot,
       colors: pw.colors,
       trackUsed: 'playwright',
+      logoSrcCandidates: pw.logoSrcCandidates,
+      codeSnippets: pw.codeSnippets,
     };
     if (pw.fontFamily) s.fontFamily = pw.fontFamily;
     if (pw.logoCandidate) s.logo = { src: pw.logoCandidate.src, alt: pw.logoCandidate.alt };
@@ -157,6 +175,8 @@ async function pickTrack(
         fullPageBuf: so.fullPageScreenshot,
         colors: {},
         trackUsed: 'screenshot-saas',
+        logoSrcCandidates: so.logoSrcCandidates,
+        codeSnippets: so.codeSnippets,
       };
     }
     fallbacks.push({
@@ -181,6 +201,8 @@ async function pickTrack(
       reviews: ch.reviews,
       colors: ch.colors,
       trackUsed: 'cheerio',
+      logoSrcCandidates: ch.logoSrcCandidates,
+      codeSnippets: ch.codeSnippets,
     };
   }
   throw new Error(`all tracks failed: pw=${reasonOf(pw)}, so=disabled-or-err, ch=${reasonOf(ch)}`);
