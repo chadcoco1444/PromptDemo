@@ -106,9 +106,12 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
       );
     case 'HeroStylized':
     case 'UseCaseStory':
-    case 'StatsBand':
-      throw new Error(
-        `scene type "${scene.type}" is deferred to v1.1 and not implemented in v1.0`
-      );
+    case 'StatsBand': {
+      // Deferred scene type: substitute a TextPunch placeholder rather than
+      // crashing the render. The storyboard validator should have filtered these
+      // out already; this is a last-resort defence.
+      const label = scene.type;
+      return <TextPunch text={`${label} coming soon`} emphasis="secondary" theme={theme} />;
+    }
   }
 }

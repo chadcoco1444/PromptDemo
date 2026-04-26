@@ -24,16 +24,41 @@ describe('resolveScene', () => {
     expect(el).toBeTruthy();
   });
 
-  it('throws for deferred v1.1 scene types', () => {
-    const scene = {
-      sceneId: 1,
-      type: 'StatsBand',
+  it.each([
+    {
+      type: 'HeroStylized' as const,
+      sceneId: 10,
       durationInFrames: 90,
-      entryAnimation: 'fade',
-      exitAnimation: 'fade',
+      entryAnimation: 'fade' as const,
+      exitAnimation: 'fade' as const,
+      props: { title: 'Coming soon' },
+    },
+    {
+      type: 'UseCaseStory' as const,
+      sceneId: 11,
+      durationInFrames: 90,
+      entryAnimation: 'fade' as const,
+      exitAnimation: 'fade' as const,
+      props: {
+        beats: [
+          { label: 'before' as const, text: 'Before' },
+          { label: 'action' as const, text: 'Action' },
+          { label: 'after' as const, text: 'After' },
+        ],
+      },
+    },
+    {
+      type: 'StatsBand' as const,
+      sceneId: 12,
+      durationInFrames: 90,
+      entryAnimation: 'fade' as const,
+      exitAnimation: 'fade' as const,
       props: { stats: [{ value: '99%', label: 'uptime' }] },
-    } as unknown as Scene;
-    expect(() => resolveScene({ scene, assets, theme, url: 'https://x.com', resolver })).toThrow(/not implemented/i);
+    },
+  ])('returns a TextPunch fallback for deferred scene type $type', (scene) => {
+    const el = resolveScene({ scene: scene as unknown as Scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+    expect(el.props.text).toContain(scene.type);
   });
 
   it('resolves a BentoGrid scene', () => {
