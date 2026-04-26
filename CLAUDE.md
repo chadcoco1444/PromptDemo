@@ -39,14 +39,14 @@ Monorepo 結構：
 ### 新功能 / 新設計
 
 ```
-brainstorming → 設計文件 (docs/superpowers/specs/) →
-writing-plans → subagent-driven-development → finishing-a-development-branch
+/brainstorming → 設計文件 (docs/superpowers/specs/) →
+/writing-plans → /subagent-driven-development → /finishing-a-development-branch
 ```
 
 ### Bug 修復
 
 ```
-systematic-debugging → 找出 root cause → 寫 failing test →
+/systematic-debugging → 找出 root cause → 寫 failing test →
 修正 → 確認全套測試通過 → commit
 ```
 
@@ -82,10 +82,12 @@ systematic-debugging → 找出 root cause → 寫 failing test →
 ## 測試與品質指令
 
 ```bash
-# 執行前提：PostgreSQL 容器必須先啟動
-docker compose -f docker-compose.dev.yaml up -d postgres
+# 執行前提：PostgreSQL 容器必須先啟動（擇一）
+docker compose -f docker-compose.dev.yaml up -d postgres   # 只啟動 PostgreSQL
+# 或，若尚未啟動基礎設施：
+pnpm infra:up                                               # 啟動 Postgres + Redis + MinIO
 
-pnpm test          # 全套測試（354 tests）
+pnpm test          # 全套測試（120 tests across 17 files）
 pnpm typecheck     # 全 monorepo TypeScript 檢查
 pnpm a11y          # Lighthouse a11y 分數驗證（需 dev server 運行中）
 ```
