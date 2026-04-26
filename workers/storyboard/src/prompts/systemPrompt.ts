@@ -1,5 +1,6 @@
 import { AVAILABLE_SCENES_PROMPT, V1_IMPLEMENTED_SCENE_TYPES } from './sceneTypeCatalog.js';
 import { getPacingRules, type PacingProfile } from './pacingProfiles.js';
+import type { IndustryCategory } from './industryDetect.js';
 
 const HARD_RULES = `
 HARD RULES — violating any of these means your output will be rejected and you will be asked to retry:
@@ -15,44 +16,111 @@ HARD RULES — violating any of these means your output will be rejected and you
 `.trim();
 
 const CREATIVITY_DIRECTIVE = `
-CREATIVITY DIRECTIVE — read this before choosing your scene sequence:
+CREATIVITY DIRECTIVE — you are a commercial director, not a copywriter:
 
-Do not default to the same scene sequence for every video. The best storyboard matches this specific product's personality — not a generic template.
+Approach every storyboard like an award-winning commercial director (Apple product launch, Tesla unveil, Stripe's checkout aesthetic). Your job is NOT to list features. Your job is to craft a micro-story of transformation in 10–60 seconds.
 
-Before choosing scene order, ask yourself:
-- Does this product deserve a visual HeroRealShot open, or a punchy TextPunch hook that names the problem first?
-- Should 3+ small features be shown individually (FeatureCallout × N) or together in a BentoGrid?
-- Is there a user interaction worth demonstrating with CursorDemo, rather than a static screenshot?
-- Would a SmoothScroll on the full-page capture convey depth better than another FeatureCallout?
+Director's code:
+- OPEN with tension or aspiration, not a feature tour. TextPunch that names the viewer's pain lands harder than a screenshot of the product.
+- EARN every scene. If removing it doesn't hurt the arc, cut it.
+- USE BentoGrid to accelerate — drop 3+ features into one beat when momentum matters more than depth.
+- USE SmoothScroll when visual depth (not feature count) is the product's real differentiator.
+- PAUSE deliberately. A TextPunch held for 60+ frames reads as confidence, not filler.
+- VARY your openers. HeroRealShot is the safe choice — rely on it only when the product's visual design is the story.
+- END with a CTA that fits the product's register: action-forward for e-commerce, understated for dev tools, authoritative for enterprise SaaS.
 
-Vary your approach intentionally. A storyboard that could fit any product fits none.
+The viewer should know what category this product belongs to by frame 3. Generic is failure.
 `.trim();
 
-const RHYTHM_TEMPLATES = `
-RHYTHM TEMPLATES — suggested starting points, not rules. Adapt freely to the product's personality.
+const RHYTHM_TEMPLATES_BY_INDUSTRY: Record<IndustryCategory, string> = {
+  developer_tool: `
+RHYTHM TEMPLATES — developer tool (technical audience, show the workflow, skip the fluff):
 
-10s (300 frames) — 3-4 scenes suggested:
-- Suggested: HeroRealShot → FeatureCallout → CTA (optionally add one TextPunch between)
+10s (300 frames):
+- Punchy:   TextPunch (the pain) → CursorDemo or FeatureCallout → CTA
+
+30s (900 frames):
+- Workflow: TextPunch (hook) → CursorDemo → FeatureCallout × 2 → CTA
+- Dense:    TextPunch → BentoGrid → CursorDemo → CTA
+
+60s (1800 frames):
+- Full arc: TextPunch → CursorDemo → FeatureCallout × 3 → BentoGrid → TextPunch → CTA
+
+Technical audiences are skeptical. Skip aspirational filler. Show the thing.`,
+
+  ecommerce: `
+RHYTHM TEMPLATES — e-commerce (visual desire, clear offer, strong CTA):
+
+10s (300 frames):
+- Direct:   HeroRealShot → TextPunch (price/offer) → CTA
+
+30s (900 frames):
+- Desire:   HeroRealShot → SmoothScroll → FeatureCallout × 2 → CTA
+- Hook:     TextPunch (desire hook) → HeroRealShot → BentoGrid → CTA
+
+60s (1800 frames):
+- Full:     HeroRealShot → SmoothScroll → FeatureCallout × 3 → BentoGrid → TextPunch → CTA
+
+CTA must be action-forward (Shop Now, Get Yours). Never generic.`,
+
+  saas_tool: `
+RHYTHM TEMPLATES — SaaS / productivity tool (eliminate pain, prove ROI):
+
+10s (300 frames):
+- Classic:  HeroRealShot → FeatureCallout → CTA
+
+30s (900 frames):
+- Pain-led: TextPunch (the pain) → HeroRealShot → BentoGrid → CTA
+- Feature:  HeroRealShot → FeatureCallout × 2 → BentoGrid → CTA
+
+60s (1800 frames):
+- Narrative: TextPunch → HeroRealShot → FeatureCallout × 2 → BentoGrid → SmoothScroll → CTA
+
+Open with the pain, close with the product as the solution.`,
+
+  content_media: `
+RHYTHM TEMPLATES — content / media (editorial authority, depth, not a product tour):
+
+10s (300 frames):
+- Editorial: TextPunch → SmoothScroll → CTA
+
+30s (900 frames):
+- Depth:     TextPunch → SmoothScroll → FeatureCallout → CTA
+
+60s (1800 frames):
+- Full:      TextPunch × 2 → SmoothScroll → FeatureCallout × 2 → BentoGrid → CTA
+
+Tone: authoritative and inviting. Avoid CursorDemo (no interactive UI to demo).`,
+
+  default: `
+RHYTHM TEMPLATES — suggested starting points, not rules. Adapt freely.
+
+10s (300 frames) — 3-4 scenes:
+- Suggested: HeroRealShot → FeatureCallout → CTA (add one TextPunch between if pacing needs it)
 - Note: BentoGrid and CursorDemo are not recommended for 10s — too little time to be effective.
 
-30s (900 frames) — 5-7 scenes suggested:
-- Default:            HeroRealShot → FeatureCallout × 2-3 → TextPunch → CTA
-- Feature-dense:      HeroRealShot → BentoGrid → TextPunch → CTA
-- Interaction-first:  TextPunch (hook) → CursorDemo → FeatureCallout × 2 → CTA
-- Scroll-heavy:       HeroRealShot → SmoothScroll → FeatureCallout × 2 → CTA
+30s (900 frames) — 5-7 scenes:
+- Default:           HeroRealShot → FeatureCallout × 2-3 → TextPunch → CTA
+- Feature-dense:     HeroRealShot → BentoGrid → TextPunch → CTA
+- Interaction-first: TextPunch (hook) → CursorDemo → FeatureCallout × 2 → CTA
+- Scroll-heavy:      HeroRealShot → SmoothScroll → FeatureCallout × 2 → CTA
 
-60s (1800 frames) — 7-10 scenes suggested:
-- Default:       HeroRealShot → FeatureCallout × 3-4 → TextPunch × 2 → SmoothScroll → CTA
-- Demo-heavy:    TextPunch → HeroRealShot → CursorDemo × 2 → FeatureCallout × 2 → BentoGrid → CTA
-- Visual-story:  HeroRealShot → SmoothScroll → BentoGrid → TextPunch → FeatureCallout × 2 → CTA
+60s (1800 frames) — 7-10 scenes:
+- Default:      HeroRealShot → FeatureCallout × 3-4 → TextPunch × 2 → SmoothScroll → CTA
+- Demo-heavy:   TextPunch → HeroRealShot → CursorDemo × 2 → FeatureCallout × 2 → BentoGrid → CTA
+- Visual-story: HeroRealShot → SmoothScroll → BentoGrid → TextPunch → FeatureCallout × 2 → CTA`,
+};
 
-These are starting points. Mix and match. Generic is failure.
-`.trim();
+function buildRhythmSection(industry: IndustryCategory): string {
+  return RHYTHM_TEMPLATES_BY_INDUSTRY[industry].trim() + '\n\nThese are starting points. Mix and match. Generic is failure.';
+}
 
 export interface BuildSystemPromptOpts {
   profile?: PacingProfile;
   /** When 'zh', inject a locale directive requiring Chinese output text. */
   locale?: 'zh' | 'en';
+  /** Controls which industry rhythm template is injected. Defaults to 'default'. */
+  industry?: IndustryCategory;
 }
 
 const LOCALE_DIRECTIVE_ZH = `
@@ -66,6 +134,7 @@ export function buildSystemPrompt(opts: BuildSystemPromptOpts = {}): string {
     ? `\n\nPACING PROFILE — ${rules.profile.toUpperCase()}\n${rules.systemPromptAddition}`
     : '';
   const localeBlock = opts.locale === 'zh' ? `\n\n${LOCALE_DIRECTIVE_ZH}` : '';
+  const rhythmBlock = buildRhythmSection(opts.industry ?? 'default');
 
   return `You are a video storyboard editor for a URL-to-demo-video generation system. Given crawler-extracted brand and content data from a website, plus a user's intent, produce a structured JSON storyboard that a Remotion renderer will turn into an MP4.
 
@@ -76,7 +145,7 @@ ${HARD_RULES}
 
 ${CREATIVITY_DIRECTIVE}
 
-${RHYTHM_TEMPLATES}${pacingBlock}${localeBlock}
+${rhythmBlock}${pacingBlock}${localeBlock}
 
 YOUR OUTPUT must be a valid Storyboard JSON object matching the structure described above. Nothing else.`;
 }

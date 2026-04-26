@@ -6,7 +6,7 @@ export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
   HeroStylized:
     'Opening scene with a stylized re-draw (no screenshot). Props: { title, subtitle? }. Use when assets.screenshots is empty (Tier B fallback).',
   FeatureCallout:
-    'Single feature focus. Props: { title, description, layout: "leftImage"|"rightImage"|"topDown", iconHint? }. The core building block of the middle section.',
+    'Single feature focus. Props: { title, description, layout: "leftImage"|"rightImage"|"topDown", iconHint? }. Use sparingly — two back-to-back is acceptable, three or more in a row is a signal to use BentoGrid instead.',
   CursorDemo:
     "Simulated cursor interaction. Props: { action: \"Click\"|\"Scroll\"|\"Hover\"|\"Type\", targetHint: { region: \"top-left\"|\"top\"|\"top-right\"|\"left\"|\"center\"|\"right\"|\"bottom-left\"|\"bottom\"|\"bottom-right\" }, targetDescription }. Not allowed in 10s videos.",
   SmoothScroll:
@@ -21,6 +21,10 @@ export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
     'Full-screen text beat for pacing. Props: { text, emphasis: "primary"|"secondary"|"neutral" }. Use to break up rhythm between feature scenes.',
   CTA:
     'Closing scene. Props: { headline, url }. Always required as the last scene.',
+  StatsCounter:
+    'Animated numeric counters that roll from zero to the target value. Props: { stats: [{value, label}] (1-4 items) }. ONLY use if sourceTexts contain at least one numeric phrase (e.g. "10× faster", "99.9% uptime", "1 million users"). Do NOT invent numbers — only use figures already present in sourceTexts. Fails gracefully when no valid numbers are supplied.',
+  ReviewMarquee:
+    'Horizontally scrolling testimonial ticker with fade-mask edges. Props: { reviews: [{text, author?}] (2-6 items), speed: "slow"|"medium"|"fast" }. ONLY use when crawlResult.reviews contains at least 2 entries. Pull review text verbatim from those entries. Not recommended for 10s videos.',
 };
 
 export const V1_IMPLEMENTED_SCENE_TYPES = [
@@ -31,6 +35,8 @@ export const V1_IMPLEMENTED_SCENE_TYPES = [
   'CTA',
   'BentoGrid',
   'CursorDemo',
+  'StatsCounter',
+  'ReviewMarquee',
 ] as const;
 
 /**

@@ -63,4 +63,44 @@ describe('buildSystemPrompt', () => {
     const p = buildSystemPrompt({ profile: 'default' });
     expect(p).not.toContain('PACING PROFILE');
   });
+
+  it('contains director persona directive', () => {
+    expect(prompt).toContain('commercial director');
+    expect(prompt).toMatch(/generic is failure/i);
+  });
+
+  it('injects developer_tool rhythm template', () => {
+    const p = buildSystemPrompt({ industry: 'developer_tool' });
+    expect(p).toContain('developer tool');
+    expect(p).toContain('Show the thing');
+  });
+
+  it('injects ecommerce rhythm template', () => {
+    const p = buildSystemPrompt({ industry: 'ecommerce' });
+    expect(p).toContain('e-commerce');
+    expect(p).toContain('Shop Now');
+  });
+
+  it('injects saas_tool rhythm template', () => {
+    const p = buildSystemPrompt({ industry: 'saas_tool' });
+    expect(p).toContain('SaaS');
+    expect(p).toContain('the pain');
+  });
+
+  it('injects content_media rhythm template', () => {
+    const p = buildSystemPrompt({ industry: 'content_media' });
+    expect(p).toContain('content / media');
+    expect(p).toContain('Avoid CursorDemo');
+  });
+
+  it('defaults to generic templates when no industry supplied', () => {
+    const p = buildSystemPrompt();
+    expect(p).toContain('Suggested: HeroRealShot');
+  });
+
+  it('all industry variants fit within prompt cache limit', () => {
+    for (const industry of ['developer_tool', 'ecommerce', 'saas_tool', 'content_media', 'default'] as const) {
+      expect(buildSystemPrompt({ industry }).length).toBeLessThan(60_000);
+    }
+  });
 });
