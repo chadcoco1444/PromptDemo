@@ -177,6 +177,30 @@ const ReviewMarqueeSchema = z.object({
   }),
 });
 
+const LogoCloudSchema = z.object({
+  ...sceneBase,
+  type: z.literal('LogoCloud'),
+  props: z.object({
+    logos: z
+      .array(z.object({ name: z.string().min(1).max(100), s3Uri: S3UriSchema }))
+      .min(2)
+      .max(12),
+    speed: z.enum(['slow', 'medium', 'fast']).default('medium'),
+    label: z.string().max(60).optional(),
+  }),
+});
+
+const CodeToUISchema = z.object({
+  ...sceneBase,
+  type: z.literal('CodeToUI'),
+  props: z.object({
+    code: z.string().min(10).max(800),
+    language: z.string().max(50).optional(),
+    label: z.string().max(100).optional(),
+    screenshotKey: z.enum(['viewport', 'fullPage']).default('viewport'),
+  }),
+});
+
 export const SceneSchema = z.discriminatedUnion('type', [
   HeroRealShotSchema,
   HeroStylizedSchema,
@@ -190,6 +214,8 @@ export const SceneSchema = z.discriminatedUnion('type', [
   CTASchema,
   StatsCounterSchema,
   ReviewMarqueeSchema,
+  LogoCloudSchema,
+  CodeToUISchema,
 ]);
 
 export const SCENE_TYPES = [
@@ -205,6 +231,8 @@ export const SCENE_TYPES = [
   'CTA',
   'StatsCounter',
   'ReviewMarquee',
+  'LogoCloud',
+  'CodeToUI',
 ] as const;
 
 export const V1_MVP_SCENE_TYPES = ['HeroRealShot', 'FeatureCallout', 'TextPunch', 'SmoothScroll', 'CTA'] as const;

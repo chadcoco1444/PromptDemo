@@ -277,6 +277,101 @@ describe('VideoConfigSchema — showWatermark', () => {
   });
 });
 
+describe('LogoCloudSchema', () => {
+  const logoBase = {
+    sceneId: 1,
+    type: 'LogoCloud' as const,
+    durationInFrames: 300,
+    entryAnimation: 'fade' as const,
+    exitAnimation: 'fade' as const,
+    props: {
+      logos: [
+        { name: 'Stripe', s3Uri: 's3://bucket/logo-partner-0.svg' },
+        { name: 'Vercel', s3Uri: 's3://bucket/logo-partner-1.png' },
+      ],
+      speed: 'medium' as const,
+    },
+  };
+
+  it('accepts valid LogoCloud with 2 logos', () => {
+    const parsed = SceneSchema.parse(logoBase);
+    expect(parsed.type).toBe('LogoCloud');
+    if (parsed.type !== 'LogoCloud') throw new Error('narrow');
+    expect(parsed.props.logos).toHaveLength(2);
+    expect(parsed.props.speed).toBe('medium');
+  });
+
+  it('defaults speed to medium when omitted', () => {
+    const parsed = SceneSchema.parse({ ...logoBase, props: { logos: logoBase.props.logos } });
+    if (parsed.type !== 'LogoCloud') throw new Error('narrow');
+    expect(parsed.props.speed).toBe('medium');
+  });
+
+  it('rejects fewer than 2 logos', () => {
+    expect(() =>
+      SceneSchema.parse({
+        ...logoBase,
+        props: { logos: [{ name: 'Stripe', s3Uri: 's3://bucket/a.svg' }] },
+      })
+    ).toThrow();
+  });
+
+  it('rejects plain HTTP URL in logos s3Uri', () => {
+    expect(() =>
+      SceneSchema.parse({
+        ...logoBase,
+        props: {
+          logos: [
+            { name: 'Stripe', s3Uri: 'https://cdn.stripe.com/logo.svg' },
+            { name: 'Vercel', s3Uri: 's3://bucket/b.png' },
+          ],
+        },
+      })
+    ).toThrow();
+  });
+});
+
+describe('CodeToUISchema', () => {
+  const codeBase = {
+    sceneId: 2,
+    type: 'CodeToUI' as const,
+    durationInFrames: 300,
+    entryAnimation: 'fade' as const,
+    exitAnimation: 'fade' as const,
+    props: {
+      code: 'const client = new LumeSpec();\nclient.generate({ url });',
+      language: 'javascript',
+      screenshotKey: 'viewport' as const,
+    },
+  };
+
+  it('accepts valid CodeToUI', () => {
+    const parsed = SceneSchema.parse(codeBase);
+    expect(parsed.type).toBe('CodeToUI');
+    if (parsed.type !== 'CodeToUI') throw new Error('narrow');
+    expect(parsed.props.code).toContain('LumeSpec');
+    expect(parsed.props.screenshotKey).toBe('viewport');
+  });
+
+  it('defaults screenshotKey to viewport', () => {
+    const parsed = SceneSchema.parse({ ...codeBase, props: { code: codeBase.props.code } });
+    if (parsed.type !== 'CodeToUI') throw new Error('narrow');
+    expect(parsed.props.screenshotKey).toBe('viewport');
+  });
+
+  it('rejects code shorter than 10 characters', () => {
+    expect(() =>
+      SceneSchema.parse({ ...codeBase, props: { ...codeBase.props, code: 'short' } })
+    ).toThrow();
+  });
+
+  it('rejects code longer than 800 characters', () => {
+    expect(() =>
+      SceneSchema.parse({ ...codeBase, props: { ...codeBase.props, code: 'x'.repeat(801) } })
+    ).toThrow();
+  });
+});
+
 // helper: fabricate a minimal scene of any type that fills duration 900
 function makeScene(type: string) {
   const base = {
@@ -296,6 +391,17 @@ function makeScene(type: string) {
     BentoGrid: { items: [{ title: 'a' }, { title: 'b' }, { title: 'c' }] },
     TextPunch: { text: 'hi', emphasis: 'primary' },
     CTA: { headline: 'Visit', url: 'https://x.com' },
+    LogoCloud: {
+      logos: [
+        { name: 'Stripe', s3Uri: 's3://bucket/logo-partner-0.svg' },
+        { name: 'Vercel', s3Uri: 's3://bucket/logo-partner-1.png' },
+      ],
+      speed: 'medium',
+    },
+    CodeToUI: {
+      code: 'const x = new LumeSpec();\nx.generate({ url });',
+      screenshotKey: 'viewport',
+    },
   };
   return { ...base, type, props: propsByType[type]! };
 }
