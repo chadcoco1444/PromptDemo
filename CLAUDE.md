@@ -52,7 +52,7 @@ Monorepo 結構：
 
 ### 規則
 
-- **任何新功能必須先走 brainstorming**，禁止跳過直接實作
+- **任何新功能必須先走 `/brainstorming`**，禁止跳過直接實作
 - **main 分支零破燈**（broken window policy）：發現任何測試失敗，必須立即修復才能繼續其他工作
 - Plan 文件的 checkbox 不打勾，以程式碼和測試為完成依據
 
