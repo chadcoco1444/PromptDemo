@@ -18,7 +18,7 @@ describe('OVERLAY_BLOCKER_CSS', () => {
   it('covers HubSpot chat', () => expect(OVERLAY_BLOCKER_CSS).toContain('#hubspot-messages-iframe-container'));
   it('covers Crisp', () => expect(OVERLAY_BLOCKER_CSS).toContain('.crisp-client'));
   it('covers Freshchat', () => expect(OVERLAY_BLOCKER_CSS).toContain('#fc_frame'));
-  it('covers Zendesk', () => expect(OVERLAY_BLOCKER_CSS).toContain('zendesk'));
+  it('covers Zendesk', () => expect(OVERLAY_BLOCKER_CSS).toContain('iframe[src*="zendesk"]'));
   it('covers Tidio', () => expect(OVERLAY_BLOCKER_CSS).toContain('#tidio-chat'));
   it('covers Zoho SalesIQ', () => expect(OVERLAY_BLOCKER_CSS).toContain('[data-id="zsalesiq"]'));
   // Structure

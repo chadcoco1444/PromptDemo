@@ -1,3 +1,5 @@
+// Companion to cookieBanner.ts which CLICKS accept buttons (semantic acceptance).
+// This module HIDES overlays via CSS as a backstop for anything the click missed.
 export const OVERLAY_BLOCKER_CSS = `
 /* === LumeSpec Overlay Blocker v1 === */
 
