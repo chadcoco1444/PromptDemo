@@ -43,10 +43,10 @@ export function makeDualWriteJobStore(opts: DualWriteOptions): JobStore {
     async get(jobId: string) {
       return primary.get(jobId); // Redis is authoritative during transition
     },
-    async patch(jobId, patch, updatedAt) {
-      await primary.patch(jobId, patch, updatedAt); // Redis — must succeed
+    async patch(jobId, patch, updatedAt, expectedStatus?) {
+      await primary.patch(jobId, patch, updatedAt, expectedStatus); // Redis — must succeed
       try {
-        await mirror.patch(jobId, patch, updatedAt); // Postgres — fire-and-forget
+        await mirror.patch(jobId, patch, updatedAt, expectedStatus); // Postgres — fire-and-forget
       } catch (err) {
         handleMirrorErr(err, 'patch', jobId);
       }
