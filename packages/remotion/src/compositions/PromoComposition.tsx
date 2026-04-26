@@ -163,10 +163,12 @@ const Scene2Crawl: React.FC = () => {
 
 // ─── Scene 3: Scene cards flipping (frames 0–150) ────────────────────────────
 const SCENE_CARDS = [
-  { icon: '🦸', label: 'HeroRealShot', desc: 'Full-bleed hero image + headline', delay: 0 },
-  { icon: '⚡', label: 'BentoGrid',    desc: 'Feature grid · up to 6 items',   delay: 15 },
-  { icon: '✨', label: 'FeatureCallout', desc: 'Product detail + screenshot',  delay: 30 },
-  { icon: '🎯', label: 'CTA',          desc: 'Action-driving closer scene',    delay: 45 },
+  { icon: '🦸', label: 'HeroRealShot',   desc: 'Full-bleed hero image + headline',  delay: 0 },
+  { icon: '⚡', label: 'BentoGrid',      desc: 'Feature grid · up to 6 items',      delay: 15 },
+  { icon: '✨', label: 'FeatureCallout', desc: 'Product detail + screenshot',        delay: 30 },
+  { icon: '🎯', label: 'CTA',           desc: 'Action-driving closer scene',         delay: 45 },
+  { icon: '📊', label: 'StatsCounter',  desc: 'Animated metric rollup',              delay: 60 },
+  { icon: '💬', label: 'ReviewMarquee', desc: 'Scrolling testimonials strip',        delay: 75 },
 ];
 
 const Scene3Cards: React.FC = () => {
@@ -186,7 +188,7 @@ const Scene3Cards: React.FC = () => {
           <div style={{ fontSize: 32, fontWeight: 700, color: TEXT, letterSpacing: '-0.02em' }}>Rendered Scene by Scene</div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {SCENE_CARDS.map(({ icon, label, desc, delay }) => {
             const s = spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 110, mass: 0.9 } });
             const cardOpacity = interpolate(s, [0, 1], [0, 1]);
