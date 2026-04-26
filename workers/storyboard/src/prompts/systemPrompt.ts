@@ -51,13 +51,21 @@ These are starting points. Mix and match. Generic is failure.
 
 export interface BuildSystemPromptOpts {
   profile?: PacingProfile;
+  /** When 'zh', inject a locale directive requiring Chinese output text. */
+  locale?: 'zh' | 'en';
 }
+
+const LOCALE_DIRECTIVE_ZH = `
+LOCALE DIRECTIVE — REQUIRED:
+The source website is in Chinese. ALL output text fields (scene titles, descriptions, TextPunch text, CTA headline, beat text, stat labels, etc.) MUST be written in Chinese (Traditional or Simplified, matching the source). Do NOT translate to English. Every text field must still satisfy HARD RULE #3 — it must be a substring or close Chinese paraphrase of a phrase from the provided sourceTexts whitelist.
+`.trim();
 
 export function buildSystemPrompt(opts: BuildSystemPromptOpts = {}): string {
   const rules = getPacingRules(opts.profile ?? 'default');
   const pacingBlock = rules.systemPromptAddition
     ? `\n\nPACING PROFILE — ${rules.profile.toUpperCase()}\n${rules.systemPromptAddition}`
     : '';
+  const localeBlock = opts.locale === 'zh' ? `\n\n${LOCALE_DIRECTIVE_ZH}` : '';
 
   return `You are a video storyboard editor for a URL-to-demo-video generation system. Given crawler-extracted brand and content data from a website, plus a user's intent, produce a structured JSON storyboard that a Remotion renderer will turn into an MP4.
 
@@ -68,7 +76,7 @@ ${HARD_RULES}
 
 ${CREATIVITY_DIRECTIVE}
 
-${RHYTHM_TEMPLATES}${pacingBlock}
+${RHYTHM_TEMPLATES}${pacingBlock}${localeBlock}
 
 YOUR OUTPUT must be a valid Storyboard JSON object matching the structure described above. Nothing else.`;
 }

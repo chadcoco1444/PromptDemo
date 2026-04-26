@@ -11,6 +11,7 @@ import { clampPacing } from './validation/pacingClamp.js';
 import { selectVariants } from './variantSelection.js';
 import type { ClaudeClient } from './claude/claudeClient.js';
 import { assertBudgetAvailable, recordSpend, BudgetExceededError } from './anthropic/spendGuard.js';
+import { detectLocale } from './lib/localeDetect.js';
 
 const MAX_ATTEMPTS = 3;
 const DURATION_FRAMES: Record<10 | 30 | 60, number> = { 10: 300, 30: 900, 60: 1800 };
@@ -174,7 +175,8 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
   // AND the post-zod validation cap. Keeps the two in lockstep so a profile
   // change can never desync the prompt-side instructions from the validator.
   const profile = detectPacingProfile(input.intent);
-  const systemPrompt = buildSystemPrompt({ profile });
+  const locale = detectLocale(input.crawlResult.texts ?? []);
+  const systemPrompt = buildSystemPrompt({ profile, locale });
   const userMessage = buildUserMessage({
     intent: input.intent,
     duration: input.duration,
