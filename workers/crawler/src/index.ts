@@ -1,4 +1,4 @@
-import { Worker, type Job } from 'bullmq';
+import { Worker, UnrecoverableError, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
 import {
@@ -41,10 +41,10 @@ const worker = new Worker<JobPayload>(
     const wasProbe = circuitState === 'half-open-probe-claimed';
 
     if (circuitState === 'open') {
-      throw new Error(`CIRCUIT_OPEN domain=${hostname}`);
+      throw new UnrecoverableError(`CIRCUIT_OPEN domain=${hostname}`);
     }
     if (circuitState === 'half-open-probe-in-flight') {
-      throw new Error(`CIRCUIT_HALF_OPEN domain=${hostname}`);
+      throw new UnrecoverableError(`CIRCUIT_HALF_OPEN domain=${hostname}`);
     }
 
     const uploader = async (buf: Buffer, filename: string): Promise<S3Uri> => {
@@ -67,9 +67,13 @@ const worker = new Worker<JobPayload>(
         await job.updateProgress(makeIntel('crawl', 'Rendering with Playwright'));
         const pw = await runPlaywrightTrack({ url, timeoutMs: playwrightTimeoutMs });
         if (pw.kind === 'ok') {
-          await recordSuccess(connection, hostname);
+          await recordSuccess(connection, hostname).catch((e) =>
+            console.warn('[circuit] recordSuccess failed — circuit state may drift', e)
+          );
         } else {
-          await recordFailure(connection, hostname, wasProbe);
+          await recordFailure(connection, hostname, wasProbe).catch((e) =>
+            console.warn('[circuit] recordFailure failed — circuit state may drift', e)
+          );
         }
         return pw;
       },
