@@ -574,10 +574,10 @@ function tierSet(email, tier) {
 }
 
 /**
- * Render the hardcoded PromoComposition → docs/readme/demo.mp4
- * (and optionally docs/readme/demo.gif when --gif is passed through).
+ * Render the 7-scene PromoComposition at 30s + 60s durations.
+ * Produces MP4 + GIF for each and copies 30s outputs to their canonical paths.
  *
- * Usage: pnpm lume render:promo [--gif]
+ * Usage: pnpm lume render:promo
  */
 function renderPromo(extraArgs = []) {
   // Script lives inside packages/remotion/ so Node ESM resolves @remotion/*
@@ -987,9 +987,11 @@ ${C.bold}Database (Feature 4 Postgres, AUTH_ENABLED=true):${C.reset}
   help       This message
 
 ${C.bold}Brand assets (PromoComposition):${C.reset}
-  ${C.cyan}render:promo${C.reset}       Render the 5-scene promo video → docs/readme/demo.mp4
-                     Pass ${C.bold}--gif${C.reset} to also produce docs/readme/demo.gif (needs ffmpeg).
-                     No API or Docker required — pure Remotion render.
+  ${C.cyan}render:promo${C.reset}       Render the 7-scene promo at 30s + 60s → MP4 + GIF for each.
+                     Outputs: docs/readme/demo-{30s,60s}.{mp4,gif}
+                              apps/web/public/demo.mp4 (30s landing copy)
+                              docs/readme/demo.gif (30s README copy)
+                     Requires ffmpeg on PATH. No API or Docker required.
 
 Requires Docker Desktop running + ANTHROPIC_API_KEY in .env at repo root.
 `);

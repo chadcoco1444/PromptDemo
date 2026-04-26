@@ -1,40 +1,132 @@
 #!/usr/bin/env node
 /**
- * Renders PromoComposition → docs/readme/demo.mp4
+ * Renders PromoComposition (7-scene) at both 30s and 60s durations.
+ * Always produces MP4 + GIF for each (ffmpeg required on PATH).
  *
  * Lives inside packages/remotion/ so Node ESM can resolve @remotion/* from
  * this package's own node_modules. Invoked via `pnpm lume render:promo`.
  *
- * Usage:
- *   node packages/remotion/render-promo.mjs [--gif]
- *
- * Flags:
- *   --gif   Also produce docs/readme/demo.gif via ffmpeg (needs ffmpeg on PATH).
- *
- * Output:
- *   docs/readme/demo.mp4   — 1280×720, H.264, 30fps, 20s
- *   docs/readme/demo.gif   — 960×540, 15fps, palette-optimised (--gif only)
+ * Output (all created/overwritten):
+ *   docs/readme/demo-30s.mp4          — 30-second version
+ *   docs/readme/demo-30s.gif          — 30-second GIF (960×540, 15fps)
+ *   docs/readme/demo-60s.mp4          — 60-second version
+ *   docs/readme/demo-60s.gif          — 60-second GIF (960×540, 15fps)
+ *   apps/web/public/demo.mp4          — copy of 30s (landing page autoplay)
+ *   docs/readme/demo.gif              — copy of 30s GIF (README)
  */
 
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { mkdirSync, existsSync, readdirSync, copyFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
-// This file is at packages/remotion/render-promo.mjs → two levels up = repo root
 const REPO_ROOT = resolve(dirname(__filename), '../..');
 const ENTRY_POINT = resolve(REPO_ROOT, 'packages/remotion/src/Root.tsx');
 const OUT_DIR = resolve(REPO_ROOT, 'docs/readme');
-const OUT_MP4 = resolve(OUT_DIR, 'demo.mp4');
-const OUT_GIF = resolve(OUT_DIR, 'demo.gif');
-const COMPOSITION_ID = 'PromoComposition';
+const WEB_PUBLIC = resolve(REPO_ROOT, 'apps/web/public');
 
-const makeGif = process.argv.includes('--gif');
+const OUT_30S_MP4 = resolve(OUT_DIR, 'demo-30s.mp4');
+const OUT_30S_GIF = resolve(OUT_DIR, 'demo-30s.gif');
+const OUT_60S_MP4 = resolve(OUT_DIR, 'demo-60s.mp4');
+const OUT_60S_GIF = resolve(OUT_DIR, 'demo-60s.gif');
+const README_GIF  = resolve(OUT_DIR, 'demo.gif');
+const LANDING_MP4 = resolve(WEB_PUBLIC, 'demo.mp4');
 
 mkdirSync(OUT_DIR, { recursive: true });
+mkdirSync(WEB_PUBLIC, { recursive: true });
+
+// ─── ffmpeg resolution ───────────────────────────────────────────────────────
+
+function findFfmpegWin() {
+  const w = spawnSync('where.exe', ['ffmpeg'], { encoding: 'utf8', windowsHide: true });
+  if (w.status === 0) return w.stdout.trim().split(/\r?\n/)[0].trim();
+
+  const ps = spawnSync(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-Command',
+     '(Get-Command ffmpeg -ErrorAction SilentlyContinue).Source'],
+    { encoding: 'utf8', windowsHide: true },
+  );
+  const psOut = ps.stdout?.trim();
+  if (ps.status === 0 && psOut) return psOut;
+
+  const local = process.env.LOCALAPPDATA ?? '';
+  const candidates = [
+    resolve(local, 'Microsoft', 'WinGet', 'Links', 'ffmpeg.exe'),
+    resolve(local, 'Microsoft', 'WindowsApps', 'ffmpeg.exe'),
+  ];
+  for (const c of candidates) if (existsSync(c)) return c;
+
+  const pkgs = resolve(local, 'Microsoft', 'WinGet', 'Packages');
+  if (existsSync(pkgs)) {
+    for (const pkg of readdirSync(pkgs)) {
+      if (!pkg.toLowerCase().includes('ffmpeg')) continue;
+      const found = walkForFfmpeg(resolve(pkgs, pkg));
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function walkForFfmpeg(dir, depth = 0) {
+  if (depth > 3) return null;
+  let entries;
+  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return null; }
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    const sub = resolve(dir, e.name);
+    const candidate = resolve(sub, 'ffmpeg.exe');
+    if (existsSync(candidate)) return candidate;
+    const deeper = walkForFfmpeg(sub, depth + 1);
+    if (deeper) return deeper;
+  }
+  return null;
+}
+
+const isWin = process.platform === 'win32';
+const ffmpegBin = isWin ? findFfmpegWin() : 'ffmpeg';
+if (!ffmpegBin) {
+  console.error('[render-promo] ffmpeg not found — required for GIF output.');
+  console.error('  Install: winget install ffmpeg');
+  console.error('  Then open a fresh terminal and re-run.');
+  process.exit(1);
+}
+if (isWin) console.log(`[render-promo] ffmpeg: ${ffmpegBin}`);
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function makeGif(inMp4, outGif) {
+  const paletteFile = outGif.replace(/\.gif$/, '_palette.png');
+  console.log(`[render-promo] GIF palette pass → ${basename(outGif)}…`);
+  const pass1 = spawnSync(ffmpegBin, [
+    '-y', '-i', inMp4,
+    '-vf', 'fps=15,scale=960:-1:flags=lanczos,palettegen=stats_mode=diff',
+    paletteFile,
+  ], { stdio: 'inherit', windowsHide: true });
+  if (pass1.status !== 0) {
+    console.error('[render-promo] ffmpeg palette pass failed');
+    process.exit(1);
+  }
+
+  console.log(`[render-promo] GIF encode pass → ${basename(outGif)}…`);
+  const pass2 = spawnSync(ffmpegBin, [
+    '-y', '-i', inMp4, '-i', paletteFile,
+    '-lavfi', 'fps=15,scale=960:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5',
+    outGif,
+  ], { stdio: 'inherit', windowsHide: true });
+  if (pass2.status !== 0) {
+    console.error('[render-promo] ffmpeg GIF encode failed');
+    process.exit(1);
+  }
+
+  spawnSync(isWin ? 'del' : 'rm', [paletteFile], { shell: true });
+  console.log(`[render-promo] GIF written → ${basename(outGif)}`);
+}
+
+// ─── bundle ──────────────────────────────────────────────────────────────────
 
 console.log('[render-promo] Bundling Remotion entry point…');
 const bundleStart = Date.now();
@@ -44,122 +136,64 @@ const serveUrl = await bundle({
 });
 console.log(`[render-promo] Bundle ready in ${((Date.now() - bundleStart) / 1000).toFixed(1)}s`);
 
-console.log(`[render-promo] Selecting composition "${COMPOSITION_ID}"…`);
-const composition = await selectComposition({
-  serveUrl,
-  id: COMPOSITION_ID,
-  inputProps: {},
-});
-console.log(`[render-promo] Composition: ${composition.durationInFrames} frames @ ${composition.fps}fps (${(composition.durationInFrames / composition.fps).toFixed(1)}s)`);
+const chromiumOpts = process.env.PUPPETEER_EXECUTABLE_PATH
+  ? { chromiumOptions: { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH } }
+  : {};
 
-console.log('[render-promo] Rendering MP4…');
-const renderStart = Date.now();
+// ─── 30-second render ────────────────────────────────────────────────────────
+
+console.log('\n[render-promo] ── 30-second version ──');
+const comp30 = await selectComposition({ serveUrl, id: 'PromoComposition', inputProps: {} });
+console.log(`[render-promo] ${comp30.durationInFrames} frames @ ${comp30.fps}fps (${(comp30.durationInFrames / comp30.fps).toFixed(1)}s)`);
+
+const render30Start = Date.now();
 await renderMedia({
-  composition,
+  composition: comp30,
   serveUrl,
   codec: 'h264',
-  outputLocation: OUT_MP4,
+  outputLocation: OUT_30S_MP4,
   inputProps: {},
-  ...(process.env.PUPPETEER_EXECUTABLE_PATH
-    ? { chromiumOptions: { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH } }
-    : {}),
-  onProgress: ({ progress }) => {
-    process.stdout.write(`\r[render-promo] ${(progress * 100).toFixed(0)}%`);
-  },
+  ...chromiumOpts,
+  onProgress: ({ progress }) => process.stdout.write(`\r[render-promo] 30s ${(progress * 100).toFixed(0)}%`),
 });
 process.stdout.write('\n');
-console.log(`[render-promo] MP4 written to ${OUT_MP4} in ${((Date.now() - renderStart) / 1000).toFixed(1)}s`);
+console.log(`[render-promo] MP4 written in ${((Date.now() - render30Start) / 1000).toFixed(1)}s → ${basename(OUT_30S_MP4)}`);
 
-if (makeGif) {
-  // On Windows, winget installs a command-line alias that bare spawnSync misses
-  // when the terminal hasn't been fully restarted. Use where.exe to resolve the
-  // real executable path before spawning.
-  function findFfmpegWin() {
-    // 1. where.exe — finds anything already on the inherited PATH
-    const w = spawnSync('where.exe', ['ffmpeg'], { encoding: 'utf8', windowsHide: true });
-    if (w.status === 0) return w.stdout.trim().split(/\r?\n/)[0].trim();
+makeGif(OUT_30S_MP4, OUT_30S_GIF);
 
-    // 2. PowerShell Get-Command — resolves App Execution Aliases (winget's
-    //    "command-line aliases" live in %LOCALAPPDATA%\Microsoft\WindowsApps\)
-    const ps = spawnSync(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-Command',
-       '(Get-Command ffmpeg -ErrorAction SilentlyContinue).Source'],
-      { encoding: 'utf8', windowsHide: true },
-    );
-    const psOut = ps.stdout?.trim();
-    if (ps.status === 0 && psOut) return psOut;
+// ─── 60-second render ────────────────────────────────────────────────────────
 
-    // 3. Known winget alias / package locations
-    const local = process.env.LOCALAPPDATA ?? '';
-    const candidates = [
-      resolve(local, 'Microsoft', 'WinGet', 'Links', 'ffmpeg.exe'),
-      resolve(local, 'Microsoft', 'WindowsApps', 'ffmpeg.exe'),
-    ];
-    for (const c of candidates) if (existsSync(c)) return c;
+console.log('\n[render-promo] ── 60-second version ──');
+const comp60 = await selectComposition({ serveUrl, id: 'PromoComposition60', inputProps: {} });
+console.log(`[render-promo] ${comp60.durationInFrames} frames @ ${comp60.fps}fps (${(comp60.durationInFrames / comp60.fps).toFixed(1)}s)`);
 
-    // 4. Walk winget Packages tree for the first ffmpeg.exe under a bin\ dir
-    const pkgs = resolve(local, 'Microsoft', 'WinGet', 'Packages');
-    if (existsSync(pkgs)) {
-      for (const pkg of readdirSync(pkgs)) {
-        if (!pkg.toLowerCase().includes('ffmpeg')) continue;
-        const found = walkForFfmpeg(resolve(pkgs, pkg));
-        if (found) return found;
-      }
-    }
-    return null;
-  }
+const render60Start = Date.now();
+await renderMedia({
+  composition: comp60,
+  serveUrl,
+  codec: 'h264',
+  outputLocation: OUT_60S_MP4,
+  inputProps: {},
+  ...chromiumOpts,
+  onProgress: ({ progress }) => process.stdout.write(`\r[render-promo] 60s ${(progress * 100).toFixed(0)}%`),
+});
+process.stdout.write('\n');
+console.log(`[render-promo] MP4 written in ${((Date.now() - render60Start) / 1000).toFixed(1)}s → ${basename(OUT_60S_MP4)}`);
 
-  function walkForFfmpeg(dir, depth = 0) {
-    if (depth > 3) return null;
-    let entries;
-    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return null; }
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      const sub = resolve(dir, e.name);
-      const candidate = resolve(sub, 'ffmpeg.exe');
-      if (existsSync(candidate)) return candidate;
-      const deeper = walkForFfmpeg(sub, depth + 1);
-      if (deeper) return deeper;
-    }
-    return null;
-  }
+makeGif(OUT_60S_MP4, OUT_60S_GIF);
 
-  const isWin = process.platform === 'win32';
-  const ffmpegBin = isWin ? findFfmpegWin() : 'ffmpeg';
-  if (!ffmpegBin) {
-    console.error('[render-promo] ffmpeg not found.');
-    console.error('  Install: winget install ffmpeg');
-    console.error('  Then open a fresh terminal and re-run.');
-    process.exit(1);
-  }
-  if (isWin) console.log(`[render-promo] ffmpeg: ${ffmpegBin}`);
+// ─── copy canonical outputs ──────────────────────────────────────────────────
 
-  const paletteFile = resolve(OUT_DIR, '_palette.png');
-  console.log('[render-promo] Converting to GIF (palette pass 1)…');
-  const pass1 = spawnSync(ffmpegBin, [
-    '-y', '-i', OUT_MP4,
-    '-vf', 'fps=15,scale=960:-1:flags=lanczos,palettegen=stats_mode=diff',
-    paletteFile,
-  ], { stdio: 'inherit', windowsHide: true });
-  if (pass1.status !== 0) {
-    console.error('[render-promo] ffmpeg palette pass failed');
-    process.exit(1);
-  }
+console.log('\n[render-promo] Copying canonical outputs…');
+copyFileSync(OUT_30S_MP4, LANDING_MP4);
+console.log(`[render-promo] Landing preview → ${LANDING_MP4}`);
+copyFileSync(OUT_30S_GIF, README_GIF);
+console.log(`[render-promo] README GIF     → ${README_GIF}`);
 
-  console.log('[render-promo] Converting to GIF (palette pass 2)…');
-  const pass2 = spawnSync(ffmpegBin, [
-    '-y', '-i', OUT_MP4, '-i', paletteFile,
-    '-lavfi', 'fps=15,scale=960:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5',
-    OUT_GIF,
-  ], { stdio: 'inherit', windowsHide: true });
-  if (pass2.status !== 0) {
-    console.error('[render-promo] ffmpeg GIF pass failed');
-    process.exit(1);
-  }
-
-  spawnSync(isWin ? 'del' : 'rm', [paletteFile], { shell: true });
-  console.log(`[render-promo] GIF written to ${OUT_GIF}`);
-}
-
-console.log('[render-promo] Done.');
+console.log('\n[render-promo] Done. All outputs:');
+console.log(`  ${OUT_30S_MP4}`);
+console.log(`  ${OUT_30S_GIF}`);
+console.log(`  ${OUT_60S_MP4}`);
+console.log(`  ${OUT_60S_GIF}`);
+console.log(`  ${LANDING_MP4}  (30s copy)`);
+console.log(`  ${README_GIF}   (30s copy)`);
