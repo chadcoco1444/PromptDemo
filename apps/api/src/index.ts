@@ -31,7 +31,12 @@ let pgPoolForCredits: import('pg').Pool | null = null;
 if (authEnabled) {
   // Lazy import so the Redis-only path doesn't pull in pg.
   const { Pool } = await import('pg');
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 10,
+    connectionTimeoutMillis: 5_000,
+    idleTimeoutMillis: 30_000,
+  });
   pgPoolForCredits = pool;
   shutdownPool = () => pool.end();
   const pgStore = makePostgresJobStore({
