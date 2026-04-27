@@ -36,7 +36,7 @@ graph LR
 ## 模組職責 (Responsibilities)
 
 - **MainComposition** — 讀取 `VideoConfig`，透過 `resolveScene.tsx` 將場景 discriminated union 映射至對應的 React 元件，按順序渲染每個場景
-- **場景元件庫（7 種）** — `FeatureCallout`（4 個 variant）、`HeroRealShot`（Ken Burns 效果的截圖展示）、`BentoGrid`（非對稱卡片 grid）、`StatsCounter`（數字滾動動畫）、`ReviewMarquee`（水平滾動評論條）、`LogoCloud`（無限滾動 Logo 走馬燈）、`CodeToUI`（打字機程式碼 + 截圖 transition）
+- **場景元件庫（8 種）** — `FeatureCallout`（4 個 variant）、`HeroRealShot`（Ken Burns 效果的截圖展示）、`BentoGrid`（非對稱卡片 grid）、`StatsCounter`（數字滾動動畫）、`ReviewMarquee`（水平滾動評論條）、`LogoCloud`（無限滾動 Logo 走馬燈）、`CodeToUI`（打字機程式碼 + 截圖 transition）、`DeviceMockup`（hero opener — 暗色筆電外殼 + Pan/Zoom 推拉鏡頭 + 靜態文案錨點）
 - **Watermark** — `<Watermark />` 元件在 `showWatermark=true` 時疊加在每個場景右下角，由 `MainComposition` 統一控制，場景元件本身無感知
 - **PromoComposition** — 固定劇本的行銷示範影片，包含所有場景類型的精選展示，由 `pnpm lume render:promo` 獨立渲染
 - **primitives/** — 共享的動畫 primitive：`SpringFade`、`SlideIn`、`deriveTheme`（品牌色計算，必須 `useMemo`）
