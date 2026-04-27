@@ -25,8 +25,18 @@ export interface DominantColors {
 
 export function pickDominantFromFrequencies(counts: Map<string, number>): DominantColors {
   const ranked = [...counts.entries()]
-    .filter(([hex]) => /^#[0-9a-f]{6}$/i.test(hex) && !isNeutral(hex))
-    .sort((a, b) => b[1] - a[1])
+    .filter(([hex]) => /^#[0-9a-f]{6}$/i.test(hex))
+    .sort((a, b) => {
+      // Non-neutral wins over neutral. Preserves "Duolingo green > black"
+      // preference for sites with a colorful brand, while still letting
+      // minimalist brands (Vercel-style) get a real answer when their
+      // entire palette is neutral. Within same neutral-ness, higher
+      // frequency wins.
+      const an = isNeutral(a[0]);
+      const bn = isNeutral(b[0]);
+      if (an !== bn) return an ? 1 : -1;
+      return b[1] - a[1];
+    })
     .map(([hex]) => hex);
   const out: DominantColors = {};
   if (ranked[0]) out.primary = ranked[0];
