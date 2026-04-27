@@ -56,8 +56,12 @@ const PIXEL_DIFF_THRESHOLD = 0.005; // 0.5% — Q D.3 calibration
 const PIXELMATCH_THRESHOLD = 0.1;   // pixelmatch sensitivity (0=strict, 1=permissive)
 const COMPOSITION_ID = 'PromoComposition'; // 30s version per Root.tsx
 
+// Remotion 4.x: top-level `browserExecutable: string | null`, NOT
+// `chromiumOptions.executablePath` (which doesn't exist on ChromiumOptions).
+// The original spelling silently passed when PUPPETEER_EXECUTABLE_PATH was
+// unset (spread of `{}` is a no-op) but failed `exactOptionalPropertyTypes`.
 const chromiumOpts = process.env.PUPPETEER_EXECUTABLE_PATH
-  ? { chromiumOptions: { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH } }
+  ? { browserExecutable: process.env.PUPPETEER_EXECUTABLE_PATH }
   : {};
 
 let serveUrl: string;
