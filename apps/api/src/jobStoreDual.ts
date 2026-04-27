@@ -19,6 +19,12 @@ export interface DualWriteOptions {
   pgBackfillQueue: Queue;
 }
 
+// NOTE: intentionally mirrors queues.ts pgBackfill `defaultJobOptions` —
+// defense-in-depth so a future enqueue site that forgets `attempts` won't
+// trip the DLQ guard `attemptsMade >= (job.opts.attempts ?? 0)` on first
+// failure (see cron/pgBackfill.ts). Do NOT "DRY" by removing one side; the
+// queue-level default is the safety net, the call-site explicit is the
+// contract. Per spec docs/superpowers/specs/2026-04-27-pg-backfill-eventual-consistency-design.md §I1.
 const RETRY_CONFIG = {
   attempts: 5,
   backoff: { type: 'exponential' as const, delay: 5_000 },

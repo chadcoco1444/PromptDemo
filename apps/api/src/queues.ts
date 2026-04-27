@@ -29,6 +29,13 @@ export function makeQueueBundle(connection: Redis): QueueBundle {
     storyboard: new Queue('storyboard', opts),
     render: new Queue('render', opts),
     retention: new Queue('retention', { connection: connection as any }),
+    // NOTE: `defaultJobOptions` intentionally duplicates `RETRY_CONFIG` in
+    // jobStoreDual.ts — queue-level safety net for any future enqueue site
+    // that forgets to spec retry config. The DLQ guard in cron/pgBackfill.ts
+    // does `attemptsMade >= (job.opts.attempts ?? 0)`; without this default,
+    // an unspec'd enqueue would fire CRITICAL on the first failure. Do NOT
+    // "DRY" by removing this — the redundancy is the point. Per spec
+    // docs/superpowers/specs/2026-04-27-pg-backfill-eventual-consistency-design.md §I1.
     pgBackfill: new Queue('pg-backfill', {
       connection: connection as any,
       defaultJobOptions: {
