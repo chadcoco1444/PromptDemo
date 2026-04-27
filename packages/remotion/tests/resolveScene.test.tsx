@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect } from 'vitest';
 import type { Scene, CrawlResult } from '@lumespec/schema';
 import { resolveScene } from '../src/resolveScene.js';
@@ -9,6 +10,11 @@ const assets = {
 } as unknown as Storyboard['assets'];
 
 const resolver = (uri: string | undefined) => uri?.replace('s3://fake/', 'http://fake/');
+
+function componentName(el: React.ReactElement): string | undefined {
+  return (el.type as { displayName?: string }).displayName
+    ?? (el.type as { name?: string }).name;
+}
 
 describe('resolveScene', () => {
   it('returns an element for HeroRealShot', () => {
@@ -188,23 +194,28 @@ describe('resolveScene — DeviceMockup', () => {
     const scene = { ...baseScene, props: baseProps } as unknown as Scene;
     const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
     expect(el).toBeTruthy();
-    // Component name check works because Vitest preserves React displayName
-    expect((el.type as { displayName?: string; name?: string }).displayName ?? (el.type as { name?: string }).name).toBe('DeviceMockup');
+    expect(componentName(el)).toBe('DeviceMockup');
   });
 
   it('falls back to HeroRealShot when device="phone"', () => {
     const scene = { ...baseScene, props: { ...baseProps, device: 'phone' as const } } as unknown as Scene;
     const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
     expect(el).toBeTruthy();
-    expect((el.type as { displayName?: string; name?: string }).displayName ?? (el.type as { name?: string }).name).toBe('HeroRealShot');
+    expect(componentName(el)).toBe('HeroRealShot');
+    // I1 regression guard: the resolved screenshot URL must be threaded
+    // through, NOT replaced with an empty string.
+    expect((el.props as { screenshotUrl?: string }).screenshotUrl).toBe(resolver(assets.screenshots.viewport));
   });
 
-  it('falls back to HeroRealShot when viewport screenshot is missing', () => {
+  it('falls back to TextPunch when viewport screenshot is missing', () => {
     const scene = { ...baseScene, props: baseProps } as unknown as Scene;
     const emptyAssets = { screenshots: {} } as unknown as typeof assets;
     const el = resolveScene({ scene, assets: emptyAssets, theme, url: 'https://x.com', resolver });
     expect(el).toBeTruthy();
-    expect((el.type as { displayName?: string; name?: string }).displayName ?? (el.type as { name?: string }).name).toBe('HeroRealShot');
+    expect(componentName(el)).toBe('TextPunch');
+    // The headline must be threaded through to TextPunch's text prop so the
+    // fallback still surfaces the intended message.
+    expect((el.props as { text?: string }).text).toBe('Ship demos');
   });
 });
 

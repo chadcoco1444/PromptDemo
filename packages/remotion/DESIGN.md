@@ -105,3 +105,5 @@ Remotion 的渲染是**確定性的**（同一幀永遠輸出同一畫面）。`
 
 ### 6. 把 hero scene 的標題塞進動畫元素裡
 若 hero opener 的 headline 跟著裝置/截圖一起做 Pan/Zoom，文字會在運鏡中模糊或偏離可讀區。**Hero opener 的 headline + subtitle 必須是靜止 anchor**，唯有裝置/截圖層做 transform。這樣文字反而成為穩定的視覺重力中心，跟動態元素產生空間張力。範例：`DeviceMockup` 把 headline 放在 70% Y 軸位置、不帶 transform。
+
+`resolveScene` 對 `DeviceMockup` 採用兩級 cascade fallback：viewport 缺失 → `TextPunch`（`HeroRealShot` 也依賴 viewport，無法承接資料缺口）；`device='phone'` 但有 screenshot → `HeroRealShot`。不可把兩種失敗模式合併到同一個 fallback：data gap 與 capability gap 性質不同，混用會把空字串當作 `screenshotUrl` 傳進 `<Img>`，於渲染期才崩潰。

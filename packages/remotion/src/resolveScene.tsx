@@ -136,16 +136,28 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
       );
     }
     case 'DeviceMockup': {
-      // v1 only ships 'laptop'. If AI emits 'phone' before mobile-viewport
-      // crawling is built, fall back to HeroRealShot — Q6 graceful-degradation
-      // policy. Same fallback fires when the viewport screenshot is missing.
+      // Q6 graceful-degradation. Two distinct failure modes; fall back differently:
+      //   1. !screenshotUrl   — data gap; HeroRealShot also depends on viewport
+      //                          → cascade to TextPunch (same pattern as the
+      //                            deferred-scene-types fallback below).
+      //   2. device !== 'laptop' — capability gap; v1 only renders laptop, but the
+      //                          screenshot is fine → HeroRealShot is the right fallback.
       const screenshotUrl = resolver(assets.screenshots.viewport);
-      if (scene.props.device !== 'laptop' || !screenshotUrl) {
+      if (!screenshotUrl) {
+        return (
+          <TextPunch
+            text={scene.props.headline}
+            emphasis="primary"
+            theme={theme}
+          />
+        );
+      }
+      if (scene.props.device !== 'laptop') {
         return (
           <HeroRealShot
             title={scene.props.headline}
             {...(scene.props.subtitle ? { subtitle: scene.props.subtitle } : {})}
-            screenshotUrl={screenshotUrl ?? ''}
+            screenshotUrl={screenshotUrl}
             url={url}
             theme={theme}
           />
