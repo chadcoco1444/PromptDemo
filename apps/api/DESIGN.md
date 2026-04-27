@@ -45,12 +45,13 @@ graph LR
 
 ## 模組職責 (Responsibilities)
 
-- **REST API** — 接收來自 `apps/web` BFF 的請求，提供任務建立（`POST /api/jobs`）、狀態查詢（`GET /api/jobs/:id`）、用戶歷史（`GET /api/users/me/jobs`）
+- **REST API** — 接收來自 `apps/web` BFF 的請求，提供任務建立（`POST /api/jobs`）、狀態查詢（`GET /api/jobs/:id`）、用戶歷史與額度（`GET /api/users/me/jobs`、`GET /api/users/me/credits`，皆以內部 JWT 驗證）
 - **SSE 進度串流** — 透過 Redis Pub/Sub (`redisBroker`) 將 Worker 的即時進度轉發給瀏覽器（`GET /api/jobs/:id/stream`）
 - **Orchestrator** — 監聽 BullMQ QueueEvents，依 `crawl → storyboard → render` 的流水線順序串接佇列
 - **信用點數閘門** — 任務建立時扣款（`debitForJob`），任務失敗時退款（`refundForJob`）；使用 `SELECT … FOR UPDATE` 防止競爭條件
+- **Anthropic 花費守衛 (`credits/spendGuard`)** — Orchestrator 在 `crawl:completed` 將任務丟入 storyboard queue 前呼叫 `assertBudgetAvailable`；在 `storyboard:completed` 從 worker 回傳的 `anthropicUsage` 呼叫 `recordSpend`。此責任**過去在 storyboard worker**，2026-04 隨 Spec 3 R2 搬入此處以維持「Worker 不接 PG」的鐵律
 - **退款補償** — Orchestrator 監聽 `storyboard.failed` / `render.failed` 事件，自動觸發 `refundForJob`
-- **歷史保留 Cron** — `retentionCron.ts` 每日刪除超過保留期限的任務記錄（Free=30天，Pro=90天，Max=365天）
+- **歷史保留 Cron** — `cron/retentionCron.ts` 透過 BullMQ Repeatable Job (`jobId='retention-daily'`、cron `0 3 * * *`、`Worker(concurrency=1, lockDuration=300_000)`) 每日刪除超過保留期限的任務記錄（Free=30天，Pro=90天，Max=365天）。**多副本部署下 BullMQ 在 Redis 端去重，N 個 instance 只會排出一筆任務**
 
 ---
 
@@ -71,11 +72,14 @@ POST /api/jobs
 ```
 crawlEvents.completed
   → 從 S3 下載 crawlResult.json
+  → assertBudgetAvailable(creditPool)        ← Anthropic 日花費 gate（pricingEnabled 時）
+      ↳ BudgetExceededError → reduceEvent('storyboard:failed', BUDGET_EXCEEDED) → return
   → storyboardQueue.add({ jobId, crawlResultUri, showWatermark })
 
 storyboardEvents.completed
   → 反壓機制檢查 (backpressure.ts, renderQueueDepth)
   → renderQueue.add({ jobId, storyboardUri })
+  → recordSpend(creditPool, parsed.anthropicUsage)   ← 記錄 worker 累積的 Claude token 花費
 
 storyboardEvents.failed | renderEvents.failed
   → refundForJob(jobId)
@@ -92,11 +96,23 @@ interface QueueBundle {
   crawl: Queue;
   storyboard: Queue;
   render: Queue;
+  retention: Queue;          // BullMQ Repeatable Job 用，不接事件
   crawlEvents: QueueEvents;
   storyboardEvents: QueueEvents;
   renderEvents: QueueEvents;
 }
 ```
+
+### 用戶資料路由（內部 JWT 驗證）
+
+```
+GET /api/users/me/jobs    → verifyInternalToken → pgPool 查詢 jobs + tier → { jobs, hasMore, tier }
+GET /api/users/me/credits → verifyInternalToken → pgPool 查詢 credits     → { balance, tier, allowance, ... }
+```
+
+- 兩個路由都要 `Authorization: Bearer <JWT>`，由 apps/web 用 `signInternalToken(userId)` 在 server 端鑄造
+- `pgPool` 在 `AUTH_ENABLED=true` 時注入；當 pool 為 null 兩條路由都不註冊（會回 404）
+- SQL 結構與分頁邏輯都在 `routes/getUserJobs.ts` / `routes/getUserCredits.ts`，**不在 apps/web**
 
 ---
 
@@ -116,3 +132,6 @@ BullMQ 在高並發下事件順序無法保證。在 `stateMachine.ts` 中應用
 
 ### 5. 未使用 UnrecoverableError 的刻意跳過任務
 當 Circuit Breaker 觸發 `CIRCUIT_OPEN` 或點數不足時，必須拋出 `UnrecoverableError`（來自 BullMQ）而非普通 `Error`，以防 BullMQ 浪費重試配額在注定失敗的任務上。
+
+### 6. 用 setInterval / setTimeout 排程 cron
+多副本部署下 `setInterval` 會每個 instance 各跑一次，造成重複工作（例如 retention cron 同時刪同一筆 job）。**任何週期性任務必須走 BullMQ Repeatable Job + 靜態 `jobId`**，BullMQ 在 Redis 端去重；對應的 Worker 用 `concurrency: 1` 與足夠長的 `lockDuration` 確保只有一個 instance 在跑。

@@ -32,6 +32,24 @@ Monorepo 結構：
 | packages/remotion | [packages/remotion/DESIGN.md](packages/remotion/DESIGN.md) |
 | db | [db/DESIGN.md](db/DESIGN.md) |
 
+## 修改後的強制動作 — 同步 DESIGN.md
+
+**若你的變更動到了模組的「系統定位」「職責」「介面 / 資料流」或「反模式」，必須在同一個 PR / commit 系列中更新對應 `DESIGN.md`。**
+
+DESIGN.md 是給「下一個改這個模組的人」讀的 source of truth；不更新就等於主動讓它失效，下次別人讀到的會是錯的架構。
+
+**何時更新：**
+- 新增 / 移除 / 搬移 模組職責（如 spend guard 從 worker 搬到 orchestrator）
+- 改動 BullMQ Queue / SSE / Auth / DB 邊界
+- 新增或改名公開介面（route、function、event payload schema）
+- 為了修一個 bug 而違反原本的反模式（先在 DESIGN 把該反模式撤下，並寫清楚為什麼）
+
+**何時可以略過：**
+- 純內部 refactor、加註解、改 log message、調 test、修 typo
+- 純 UI 字面改動（按鈕文字、顏色、間距）
+
+**順序建議：** 先改程式 → 跑完測試 → 再回頭改 DESIGN.md → 一起 commit（同個 PR 比較容易 review 是否一致）。
+
 ---
 
 ## 標準開發流程 (SOP)

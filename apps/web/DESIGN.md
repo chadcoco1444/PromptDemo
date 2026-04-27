@@ -7,7 +7,9 @@
 
 ## 系統定位 (System Position)
 
-`apps/web` 是使用者唯一的接觸面。它扮演兩個角色：**使用者介面**（Next.js App Router 頁面）與 **BFF（Backend-For-Frontend）代理**（`/api/` 路由將所有請求透過 `X-User-Id` header 轉發至 `apps/api`）。瀏覽器**永遠不**直接與 `apps/api` 通訊。
+`apps/web` 是使用者唯一的接觸面。它扮演兩個角色：**使用者介面**（Next.js App Router 頁面）與 **BFF（Backend-For-Frontend）代理**（`/api/` 路由以內部 JWT 將請求轉發至 `apps/api`）。瀏覽器**永遠不**直接與 `apps/api` 通訊。
+
+PostgreSQL 連線僅留給 NextAuth 的 session 表與少量 web-only 路由（cover redirect、download 簽章、API key 管理、billing 顯示）；**業務資料（jobs、credits、subscriptions）的查詢一律走 apps/api**。
 
 ```mermaid
 graph LR
@@ -15,29 +17,30 @@ graph LR
     Web["apps/web\n(Next.js 15)"]
     Auth["NextAuth v5\n(Google OAuth)"]
     API["apps/api\n(Fastify)"]
-    DB[(PostgreSQL\nsessions / jobs)]
-    S3[(S3 / MinIO\ncover images)]
+    DB[(PostgreSQL\nsessions only)]
+    S3[(S3 / MinIO\ncover / download)]
 
     Browser -- "HTTPS / SSE" --> Web
-    Web -- "session lookup" --> DB
+    Web -- "NextAuth session" --> DB
     Web -- "OAuth flow" --> Auth
     Auth -- "session write" --> DB
-    Web -- "X-User-Id\nproxy header" --> API
+    Web -- "internal JWT\n(signInternalToken)" --> API
     API -- "SSE events" --> Web
-    Web -- "cover proxy\n/api/jobs/[id]/cover" --> S3
+    Web -- "cover / download" --> S3
 
     style Web fill:#7c3aed,color:#fff,stroke:#5b21b6
 ```
 
 **此模組是唯一允許：**
-- 讀取 `next-auth` session 並注入 `X-User-Id` header 的服務
+- 讀取 `next-auth` session 並用 `signInternalToken(userId)` 鑄造內部 JWT 的服務
 - 直接渲染給瀏覽器的 React Server Component
 
 ---
 
 ## 模組職責 (Responsibilities)
 
-- **BFF 代理** — `src/app/api/` 下的所有路由驗證 session、注入 `X-User-Id`，再代理轉發至 `apps/api`。瀏覽器的 CORS 隔離、CSRF 保護均在此層完成
+- **BFF JWT Proxy** — `src/app/api/users/me/{jobs,credits}` 路由驗證 session → 用 `signInternalToken(userId)` 鑄 60s JWT → 加 `Authorization: Bearer` 轉發到 `apps/api`。**整層應 ≤ 20 行，無任何 SQL**
+- **RSC 預取（Server Component fetch）** — `app/history/page.tsx` 與 `app/layout.tsx` 是 async RSC，在 server 端先 `signInternalToken` 並 `fetch(API_BASE/api/users/me/...)` 拿首屏資料，以 props 傳給 client component（`HistoryGrid initialJobs/initialHasMore/initialTier`、`UsageIndicator initialCredits`），消除瀏覽器初次掛載的 fetch waterfall
 - **認證** — NextAuth v5 整合 Google OAuth；session 存入 PostgreSQL；`AUTH_ENABLED=false` 時自動注入 dev 預設用戶 ID
 - **Landing Page** — 行銷首頁，含 PromoComposition 影片展示、功能說明、定價區塊
 - **History Vault (`/history`)** — 展示用戶歷史任務，含列表/格狀切換、狀態徽章、封面縮圖、搜尋過濾、Cursor 分頁
@@ -48,14 +51,41 @@ graph LR
 
 ## 關鍵介面與資料流 (Key Interfaces & Data Flow)
 
-### BFF 代理模式
+### BFF JWT Proxy 模式（用戶資料路由）
+
+```
+瀏覽器 fetch('/api/users/me/jobs?limit=24')
+  → src/app/api/users/me/jobs/route.ts
+  → auth() 驗證 session
+  → signInternalToken(userId) 鑄 60s HS256 JWT
+  → fetch(`${API_BASE}/api/users/me/jobs?...`, { headers: { Authorization: 'Bearer <jwt>' } })
+  → 直接回傳 upstream body / status
+```
+
+### 任務建立 Proxy（保留 X-User-Id）
 
 ```
 瀏覽器 fetch('/api/jobs', { method: 'POST', body: ... })
-  → src/app/api/jobs/route.ts
-  → getServerSession() 驗證
-  → fetch(`${API_URL}/api/jobs`, { headers: { 'X-User-Id': session.user.id } })
-  → 回傳 apps/api 的響應
+  → src/app/api/jobs/create/route.ts
+  → auth() + 限流
+  → signInternalToken(userId) 或 X-User-Id 注入
+  → fetch(`${API_BASE}/api/jobs`, { headers: { Authorization: 'Bearer <jwt>' } })
+```
+
+### RSC 預取模式（首屏無 waterfall）
+
+```
+app/history/page.tsx (async RSC)
+  → auth() → 拿到 userId
+  → signInternalToken(userId)
+  → fetch(`${API_BASE}/api/users/me/jobs?limit=24`, { cache: 'no-store' })
+  → <HistoryGrid initialJobs={...} initialHasMore={...} initialTier={...} />
+       ↳ Client component 用 useRef 跳過第一次 useEffect fetch；
+         之後的 filter / load-more 才走 fetch('/api/users/me/jobs?...')
+
+app/layout.tsx (async RSC)
+  → 同樣 server-fetch /api/users/me/credits
+  → <UsageIndicator initialCredits={...} />
 ```
 
 ### SSE 進度串流
@@ -103,4 +133,10 @@ middleware.ts (matcher: /api/*)
 BFF 路由必須在轉發前**強制驗證 session**。若 `getServerSession()` 回傳 `null`，應立即回傳 `401`，絕不允許匿名請求穿透到 `apps/api`。AUTH_ENABLED=false 的 dev 模式是唯一例外，且僅限本地開發環境。
 
 ### 5. 在 BFF 層實作業務邏輯
-apps/web 的 `/api/` 路由是純代理層，**不應包含任何業務邏輯**（如扣款計算、任務狀態機、點數校驗）。這些邏輯屬於 `apps/api`。代理層只做：驗證 session → 注入 header → 轉發 → 回傳。
+apps/web 的 `/api/` 路由是純代理層，**不應包含任何業務邏輯**（如扣款計算、任務狀態機、點數校驗）。這些邏輯屬於 `apps/api`。代理層只做：驗證 session → 鑄 JWT → 轉發 → 回傳。
+
+### 6. 在 apps/web 寫業務資料的 SQL
+歷史上 `app/api/users/me/{jobs,credits}/route.ts` 直接接 `lib/pg.ts` 跑 100+ 行 JOIN / WHERE / 分頁 SQL — 這條路被 Spec 3 R6（2026-04）封閉。**業務資料（jobs / credits / subscriptions / users）一律走 apps/api 的對應路由**。`lib/pg.ts` 只允許用於 NextAuth session 表與少數 web-only 路由（cover redirect、download 簽章、API key 管理、billing 顯示）。如要新增任何讀寫業務資料的 web 路由，先去 `apps/api/src/routes/` 加 endpoint，再在這裡加 thin JWT proxy。
+
+### 7. Client component 在 mount 時對自己 server 已預取的資料再 fetch 一次
+RSC 已經在 server 端把首屏資料塞進 props（`initialJobs`、`initialCredits` 等）。Client component 必須用 `useRef` 或類似機制跳過「初次掛載 useEffect」的 fetch，否則使用者會看到一閃而過的 loading skeleton 然後 instantly 替換為相同內容 — 浪費頻寬也破壞 RSC 預取的意義。
