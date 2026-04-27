@@ -57,6 +57,11 @@ const MODULES = [
       /^workers\/storyboard\/src\/generator\.ts$/,
       /^workers\/storyboard\/src\/anthropic\//,
       /^workers\/storyboard\/src\/validation\//,
+      // Added 2026-04-27 (gap surfaced during DeviceMockup Task 4):
+      /^workers\/storyboard\/src\/prompts\//,        // sceneTypeCatalog, systemPrompt — shape AI behaviour
+      /^workers\/storyboard\/src\/claude\//,         // Claude client wrapper — external API contract
+      /^workers\/storyboard\/src\/variantSelection\.ts$/,
+      /^workers\/storyboard\/src\/mockMode\.ts$/,    // fixture loader — affects dev/test behaviour
       /^workers\/storyboard\/package\.json$/,
     ],
   },
@@ -79,7 +84,14 @@ const MODULES = [
     triggers: [
       /^packages\/remotion\/src\/scenes\//,
       /^packages\/remotion\/src\/resolveScene\.tsx$/,
-      /^packages\/remotion\/src\/Composition\.tsx$/,
+      // Added 2026-04-27 (gap surfaced during DeviceMockup Task 5):
+      /^packages\/remotion\/src\/compositions\//,    // PromoComposition + future compositions
+      /^packages\/remotion\/src\/MainComposition\.tsx$/,
+      /^packages\/remotion\/src\/Root\.tsx$/,        // composition registry + canvas dimensions
+      /^packages\/remotion\/src\/primitives\//,      // public reusable React primitives (AnimatedText etc.)
+      /^packages\/remotion\/src\/animations\//,      // shared animation helpers — affect scene behaviour
+      /^packages\/remotion\/src\/fonts\.ts$/,        // font registration affects all scenes
+      /^packages\/remotion\/src\/s3Resolver\.ts$/,   // S3 → URL resolver, cross-cutting
       /^packages\/remotion\/package\.json$/,
     ],
   },

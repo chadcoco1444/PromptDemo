@@ -48,10 +48,10 @@ Monorepo 結構：
 | `apps/web/src/app/{layout,history,billing,create}/**` | `apps/web/DESIGN.md` |
 | `apps/web/package.json` | `apps/web/DESIGN.md` |
 | `workers/crawler/src/{index.ts,circuitBreaker.ts}` 或 `workers/crawler/package.json` | `workers/crawler/DESIGN.md` |
-| `workers/storyboard/src/{index.ts,generator.ts,anthropic/**,validation/**}` 或 `workers/storyboard/package.json` | `workers/storyboard/DESIGN.md` |
+| `workers/storyboard/src/{index.ts,generator.ts,variantSelection.ts,mockMode.ts,anthropic/**,validation/**,prompts/**,claude/**}` 或 `workers/storyboard/package.json` | `workers/storyboard/DESIGN.md` |
 | `workers/render/src/index.ts` 或 `workers/render/package.json` | `workers/render/DESIGN.md` |
 | `packages/schema/src/**` | `packages/schema/DESIGN.md` |
-| `packages/remotion/src/{scenes/**,resolveScene.tsx,Composition.tsx}` 或 `packages/remotion/package.json` | `packages/remotion/DESIGN.md` |
+| `packages/remotion/src/{scenes/**,compositions/**,primitives/**,animations/**,resolveScene.tsx,MainComposition.tsx,Root.tsx,fonts.ts,s3Resolver.ts}` 或 `packages/remotion/package.json` | `packages/remotion/DESIGN.md` |
 | `db/migrations/**` | `db/DESIGN.md` |
 
 **何時可以略過（用 `--no-verify` 並在 commit message 註記）：**
