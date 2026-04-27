@@ -53,6 +53,7 @@ graph LR
 - **退款補償** — Orchestrator 監聽 `storyboard.failed` / `render.failed` 事件，自動觸發 `refundForJob`
 - **歷史保留 Cron** — `cron/retentionCron.ts` 透過 BullMQ Repeatable Job (`jobId='retention-daily'`、cron `0 3 * * *`、`Worker(concurrency=1, lockDuration=300_000)`) 每日刪除超過保留期限的任務記錄（Free=30天，Pro=90天，Max=365天）。**多副本部署下 BullMQ 在 Redis 端去重，N 個 instance 只會排出一筆任務**
 - **PG mirror reconciliation primitive (`jobStorePostgres.upsert()`)** — idempotent INSERT-or-UPDATE used by `pg-backfill` worker (added in T2) to land current Redis state into PG. OCC-guarded by `WHERE jobs.updated_at < EXCLUDED.updated_at` so stale reads can't regress PG state.
+- **PG mirror eventual-consistency cron (`cron/pgBackfill.ts`)** — BullMQ Worker on the `pg-backfill` queue. When `DualWriteJobStore` (T3) catches a PG mirror write failure, it enqueues `{ jobId }` to this queue. Worker reads CURRENT Redis state via `primary.get()`, writes to PG via `mirror.upsert()`, then VERIFIES the row landed via `mirror.get()` (M2 defense: upsert silently no-ops on `resolveUserId() === null` — verify-then-throw converts silent skip into BullMQ retry/DLQ). Retry config: `attempts: 5, backoff: exponential(5_000)` — total max wait 75s before DLQ. Exhausted retries log `[CRITICAL] pg-backfill DLQ: ...` (greppable for future log-aggregator alerts). Queue depth (waiting / delayed / failed) exposed on `GET /healthz`.
 
 ---
 

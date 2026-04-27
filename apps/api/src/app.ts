@@ -46,6 +46,11 @@ export interface BuildOpts {
    */
   pgPool?: Pool | null;
   /**
+   * When set, /healthz exposes pg-backfill queue depth (waiting + delayed + failed)
+   * as an operator-visible health signal. Omit to hide the field.
+   */
+  pgBackfillQueue?: Queue | null;
+  /**
    * Explicit list of origins allowed by the CORS plugin. Defaults to parsing
    * ALLOWED_ORIGINS env var (comma-separated), then 'http://localhost:3001'.
    * Always pass this in tests to avoid depending on process.env.
@@ -111,6 +116,19 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
     await app.register(getUserCreditsRoute, { pgPool: opts.pgPool });
   }
 
-  app.get('/healthz', async () => ({ ok: true }));
+  app.get('/healthz', async () => {
+    if (!opts.pgBackfillQueue) {
+      return { ok: true };
+    }
+    const counts = await opts.pgBackfillQueue.getJobCounts('waiting', 'delayed', 'failed');
+    return {
+      ok: true,
+      pgBackfill: {
+        waiting: counts.waiting,
+        delayed: counts.delayed,
+        failed: counts.failed,
+      },
+    };
+  });
   return app;
 }

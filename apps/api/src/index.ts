@@ -11,6 +11,7 @@ import { startOrchestrator } from './orchestrator/index.js';
 import { refundForJob } from './credits/store.js';
 import { calculateCost, calculateRefund } from './credits/ledger.js';
 import { scheduleRetentionJob } from './cron/retentionCron.js';
+import { startPgBackfillWorker } from './cron/pgBackfill.js';
 
 const cfg = loadConfig();
 const redis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
@@ -28,6 +29,8 @@ let shutdownPool: (() => Promise<void>) | null = null;
 // Pool shared between the job-store mirror and the credits gate — one pool,
 // two consumers, drained together on shutdown.
 let pgPoolForCredits: import('pg').Pool | null = null;
+let redisStoreForBackfill: JobStore | null = null;
+let pgStoreForBackfill: import('./jobStorePostgres.js').JobStoreWithUpsert | null = null;
 if (authEnabled) {
   // Lazy import so the Redis-only path doesn't pull in pg.
   const { Pool } = await import('pg');
@@ -44,6 +47,8 @@ if (authEnabled) {
     resolveUserId: async (job) => (job as { userId?: string }).userId ?? null,
   });
   const redisStore = makeJobStore(redis);
+  redisStoreForBackfill = redisStore;
+  pgStoreForBackfill = pgStore;
   store = makeDualWriteJobStore({ primary: redisStore, mirror: pgStore });
   console.log('[apps/api] AUTH_ENABLED + DATABASE_URL present → DualWriteJobStore active');
   if (pricingEnabled) {
@@ -91,6 +96,7 @@ const app = await build({
   creditPool: pricingEnabled ? pgPoolForCredits : null,
   apiKeyPool: pricingEnabled ? pgPoolForCredits : null,
   pgPool: authEnabled ? pgPoolForCredits : null,
+  pgBackfillQueue: authEnabled ? queues.pgBackfill : null,
 });
 
 const orchestratorOpts: Parameters<typeof startOrchestrator>[0] = {
@@ -131,6 +137,15 @@ if (pricingEnabled && pgPoolForCredits) {
   });
 }
 
+let pgBackfillWorker: import('bullmq').Worker | null = null;
+if (authEnabled && redisStoreForBackfill && pgStoreForBackfill) {
+  pgBackfillWorker = startPgBackfillWorker({
+    connection: redis,
+    primary: redisStoreForBackfill,
+    mirror: pgStoreForBackfill,
+  });
+}
+
 // Last-resort safety net: BullMQ QueueEvents callbacks register handlers
 // asynchronously, so a thrown error there propagates out as an unhandled
 // rejection. Default Node behaviour (>= 15) is to terminate the process.
@@ -146,6 +161,7 @@ const shutdown = async () => {
   await app.close();
   await stopOrchestrator();
   if (retentionWorker) await retentionWorker.close();
+  if (pgBackfillWorker) await pgBackfillWorker.close();
   await closeBroker();           // ① quit subRedis before shared connections close
   await closeQueueBundle(queues);
   if (shutdownPool) await shutdownPool();

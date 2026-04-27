@@ -148,6 +148,33 @@ describe('api app', () => {
     expect(r.json()).toEqual({ ok: true });
     await app.close();
   });
+
+  it('healthz exposes pg-backfill queue depth when pgBackfillQueue is provided', async () => {
+    const store = makeJobStore(new RedisMock() as any);
+    const broker = makeBroker();
+    const crawl = { add: vi.fn().mockResolvedValue({ id: 'q' }) } as any;
+    const storyboard = { add: vi.fn().mockResolvedValue({ id: 'q2' }) } as any;
+    const pgBackfillQueue = {
+      getJobCounts: vi.fn().mockResolvedValue({ waiting: 2, delayed: 1, failed: 0 }),
+    } as any;
+    const app = await build({
+      store,
+      crawlQueue: crawl,
+      storyboardQueue: storyboard,
+      broker,
+      fetchJson: async () => null,
+      creditPool: null,
+      pgBackfillQueue,
+      logger: false,
+    });
+    const r = await app.inject({ method: 'GET', url: '/healthz' });
+    expect(r.json()).toEqual({
+      ok: true,
+      pgBackfill: { waiting: 2, delayed: 1, failed: 0 },
+    });
+    expect(pgBackfillQueue.getJobCounts).toHaveBeenCalledWith('waiting', 'delayed', 'failed');
+    await app.close();
+  });
 });
 
 describe('CORS allowlist', () => {
