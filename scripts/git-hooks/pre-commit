@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# LumeSpec pre-commit guard — enforces DESIGN.md sync.
+# See CLAUDE.md「修改後的強制動作 — 同步 DESIGN.md」for the rule.
+# Bypass with: git commit --no-verify
+exec node "$(git rev-parse --show-toplevel)/scripts/check-design-sync.mjs"

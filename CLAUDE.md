@@ -34,21 +34,34 @@ Monorepo 結構：
 
 ## 修改後的強制動作 — 同步 DESIGN.md
 
-**若你的變更動到了模組的「系統定位」「職責」「介面 / 資料流」或「反模式」，必須在同一個 PR / commit 系列中更新對應 `DESIGN.md`。**
+**動到下表任何路徑 → 必須在同一個 commit 系列裡更新對應的 `DESIGN.md`。**
 
-DESIGN.md 是給「下一個改這個模組的人」讀的 source of truth；不更新就等於主動讓它失效，下次別人讀到的會是錯的架構。
+由 pre-commit hook (`scripts/check-design-sync.mjs`) 機械化執行；漏更新會 block commit，必須加 `--no-verify` 才能繞過（並請寫清楚理由在 commit message）。
 
-**何時更新：**
-- 新增 / 移除 / 搬移 模組職責（如 spend guard 從 worker 搬到 orchestrator）
-- 改動 BullMQ Queue / SSE / Auth / DB 邊界
-- 新增或改名公開介面（route、function、event payload schema）
-- 為了修一個 bug 而違反原本的反模式（先在 DESIGN 把該反模式撤下，並寫清楚為什麼）
+| 動到這裡 | 必須同步這份 DESIGN.md |
+|---|---|
+| `apps/api/src/{routes,cron,credits,orchestrator,auth,sse}/**` | `apps/api/DESIGN.md` |
+| `apps/api/src/{jobStore*,queues,index,app}.ts` | `apps/api/DESIGN.md` |
+| `apps/api/package.json` | `apps/api/DESIGN.md` |
+| `apps/web/src/app/api/**` | `apps/web/DESIGN.md` |
+| `apps/web/src/{auth.ts,middleware.ts,lib/internalToken.ts}` | `apps/web/DESIGN.md` |
+| `apps/web/src/app/{layout,history,billing,create}/**` | `apps/web/DESIGN.md` |
+| `apps/web/package.json` | `apps/web/DESIGN.md` |
+| `workers/crawler/src/{index.ts,circuitBreaker.ts}` 或 `workers/crawler/package.json` | `workers/crawler/DESIGN.md` |
+| `workers/storyboard/src/{index.ts,generator.ts,anthropic/**,validation/**}` 或 `workers/storyboard/package.json` | `workers/storyboard/DESIGN.md` |
+| `workers/render/src/index.ts` 或 `workers/render/package.json` | `workers/render/DESIGN.md` |
+| `packages/schema/src/**` | `packages/schema/DESIGN.md` |
+| `packages/remotion/src/{scenes/**,resolveScene.tsx,Composition.tsx}` 或 `packages/remotion/package.json` | `packages/remotion/DESIGN.md` |
+| `db/migrations/**` | `db/DESIGN.md` |
 
-**何時可以略過：**
-- 純內部 refactor、加註解、改 log message、調 test、修 typo
-- 純 UI 字面改動（按鈕文字、顏色、間距）
+**何時可以略過（用 `--no-verify` 並在 commit message 註記）：**
+- 純內部 refactor、變數改名、log message 微調、test fixture 補強、typo 修正
+- 純 UI 字面 / 樣式變更（不涉及前述路徑）
+- 變更只在註解 / docstring 內
 
-**順序建議：** 先改程式 → 跑完測試 → 再回頭改 DESIGN.md → 一起 commit（同個 PR 比較容易 review 是否一致）。
+**順序建議：** 先改程式 → 跑完測試 → 再回頭改 DESIGN.md → 一起 commit。
+
+> **為什麼用機械化檢查：** 我（AI 開發者）已經證實「光靠下次記得」會違反 30 分鐘前才剛寫進這份文件的規則（見 commit `2a9d8de`）。系統限制比自律可靠。
 
 ---
 
