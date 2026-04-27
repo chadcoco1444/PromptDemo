@@ -135,3 +135,20 @@ BullMQ 在高並發下事件順序無法保證。在 `stateMachine.ts` 中應用
 
 ### 6. 用 setInterval / setTimeout 排程 cron
 多副本部署下 `setInterval` 會每個 instance 各跑一次，造成重複工作（例如 retention cron 同時刪同一筆 job）。**任何週期性任務必須走 BullMQ Repeatable Job + 靜態 `jobId`**，BullMQ 在 Redis 端去重；對應的 Worker 用 `concurrency: 1` 與足夠長的 `lockDuration` 確保只有一個 instance 在跑。
+
+### 7. 在 BullMQ QueueEvents callback 裡 `throw err`
+`crawlEvents` / `storyboardEvents` / `renderEvents` 的 `.on(...)` callback 是純消費端，BullMQ 不會「retry 事件」。任何從 callback 逃出的 exception 直接變成 process 級的 `unhandledRejection`，Node ≥ 15 預設讓 API 整個 die（這就是 2026-04 spendGuard 42P18 事故的真正放大器）。
+
+**規則：** orchestrator 的每個事件 handler 必須把整個 body 包在 try/catch；catch 內**只能**做這三件事 —
+1. `console.error` 紀錄
+2. 用 `reduceEvent(..., 'X:failed')` 把 job 標成失敗（讓使用者看到狀態、refund 觸發）
+3. `return`
+
+**絕不** rethrow。`apps/api/src/index.ts` 雖然有 `process.on('unhandledRejection', ...)` 兜底紀錄，那是 last-resort，不是程式碼可以偷懶的藉口。
+
+### 8. 在事件 handler 的 catch 內用 stale `current` 算下一個 patch
+事件 handler 開頭 `const current = await cfg.store.get(jobId)` 拿的是 catch 之前的快照。若 catch 之前已經呼叫過 `applyPatch`（例如 `crawl:completed` 先把 status 從 `crawling` patch 到 `generating`、再呼叫 `assertBudgetAvailable`），那麼 catch 區裡的 `current.status` 還是舊的 `crawling`。
+
+把 stale `current` 餵給 `reduceEvent('storyboard:failed')` 會匹配不到 `VALID_EVENTS['crawling']` → 回 null → 後面的 `applyPatch(null)` 變成 no-op，job 就永遠卡在中間狀態。
+
+**規則：** 若 catch 之前可能已經套過 patch，catch 內必須先 `const post = await cfg.store.get(jobId)` 再用 `post`、`post.status` 來算下一個 patch。
