@@ -29,6 +29,8 @@ export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
     'Horizontally scrolling partner/integration logo strip. Props: { logos: [{name, s3Uri}] (2-12 items from crawlResult.logos), speed: "slow"|"medium"|"fast", label? (optional section heading, e.g. "Trusted by 1,000+ teams") }. ONLY use when crawlResult.logos contains at least 2 entries. Pull logos verbatim from crawlResult.logos.',
   CodeToUI:
     'Split-screen: code typewriter on left, product screenshot reveal on right. Props: { code (verbatim from crawlResult.codeSnippets[n].code), language?, label?, screenshotKey: "viewport"|"fullPage" }. ONLY use when crawlResult.codeSnippets is non-empty AND assets.screenshots.viewport exists. Best for SaaS/dev-tool products.',
+  DeviceMockup:
+    'Premium dark laptop shell wrapping a hero screenshot with cinematic Pan/Zoom motion and a STATIC headline below. PREFERRED OPENER for SaaS / web-app products — use as scenes[0] whenever assets.screenshots.viewport is non-empty. Props: { headline, subtitle?, screenshotKey: "viewport" (only), device: "laptop" (only — "phone" exists in schema but is NOT yet rendered), motion: "pushIn" (focus / hook energy) | "pullOut" (reveal / build energy) }. Fall back to HeroRealShot only when the viewport screenshot is unsuitable (mostly white, no visual hierarchy, or absent).',
 };
 
 export const V1_IMPLEMENTED_SCENE_TYPES = [
@@ -43,6 +45,7 @@ export const V1_IMPLEMENTED_SCENE_TYPES = [
   'ReviewMarquee',
   'LogoCloud',
   'CodeToUI',
+  'DeviceMockup',
 ] as const;
 
 /**

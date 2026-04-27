@@ -13,6 +13,7 @@ HARD RULES — violating any of these means your output will be rejected and you
 6. fps is always 30. videoConfig.durationInFrames is always 300 (10s), 900 (30s), or 1800 (60s).
 7. Every scene needs entryAnimation and exitAnimation. Valid: fade, slideLeft, slideRight, slideUp, zoomIn, zoomOut, none.
 8. brandColor must be the brand color from the input (or #1a1a1a fallback). Do not substitute other colors.
+9. For DeviceMockup scenes, props.device MUST be "laptop". The "phone" value is reserved in the schema for future versions but is not yet rendered. Emitting "phone" will be silently downgraded to HeroRealShot — do not use it.
 `.trim();
 
 const CREATIVITY_DIRECTIVE = `
@@ -26,7 +27,7 @@ Director's code:
 - USE BentoGrid to accelerate — drop 3+ features into one beat when momentum matters more than depth.
 - USE SmoothScroll when visual depth (not feature count) is the product's real differentiator.
 - PAUSE deliberately. A TextPunch held for 60+ frames reads as confidence, not filler.
-- VARY your openers. HeroRealShot is the safe choice — rely on it only when the product's visual design is the story.
+- DEFAULT to DeviceMockup as the opener — it wraps the viewport screenshot in a premium laptop shell with cinematic Pan/Zoom (motion: "pushIn" for focus, "pullOut" for reveal). Fall back to HeroRealShot only when the viewport screenshot is visually weak (mostly text, no hierarchy) or missing.
 - END with a CTA that fits the product's register: action-forward for e-commerce, understated for dev tools, authoritative for enterprise SaaS.
 
 The viewer should know what category this product belongs to by frame 3. Generic is failure.

@@ -104,3 +104,23 @@ describe('buildSystemPrompt', () => {
     }
   });
 });
+
+describe('systemPrompt — DeviceMockup integration', () => {
+  it('mentions DeviceMockup as the preferred opener', () => {
+    const prompt = buildSystemPrompt({
+      locale: 'en',
+      industry: 'developer_tool',
+    });
+    expect(prompt).toContain('DeviceMockup');
+    expect(prompt).toMatch(/prefer\s+DeviceMockup|DeviceMockup.*opener|opener.*DeviceMockup|DEFAULT to DeviceMockup/i);
+  });
+
+  it('contains HARD RULE forbidding device="phone" in v1', () => {
+    const prompt = buildSystemPrompt({
+      locale: 'en',
+      industry: 'developer_tool',
+    });
+    expect(prompt).toMatch(/device.*['"`]?laptop['"`]?/i);
+    expect(prompt).toMatch(/(do\s+not|must\s+not|MUST\s+be).*['"`]?phone['"`]?|['"`]?laptop['"`]?.*only/i);
+  });
+});
