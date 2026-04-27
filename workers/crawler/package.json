@@ -19,6 +19,7 @@
     "cheerio": "1.0.0",
     "ioredis": "5.4.1",
     "playwright": "1.48.0",
+    "sharp": "^0.34.5",
     "zod": "3.23.8"
   },
   "devDependencies": {
