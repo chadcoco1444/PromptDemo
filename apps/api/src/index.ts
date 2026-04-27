@@ -10,7 +10,7 @@ import { makeRedisBroker } from './sse/redisBroker.js';
 import { startOrchestrator } from './orchestrator/index.js';
 import { refundForJob } from './credits/store.js';
 import { calculateCost, calculateRefund } from './credits/ledger.js';
-import { startRetentionCron } from './cron/retentionCron.js';
+import { scheduleRetentionJob } from './cron/retentionCron.js';
 
 const cfg = loadConfig();
 const redis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
@@ -120,9 +120,15 @@ const stopOrchestrator = await startOrchestrator(orchestratorOpts);
 
 // Daily history retention: prune jobs older than tier's window (free=30d, pro=90d, max=365d).
 // Only active when auth + pricing are enabled (we need the subscriptions table).
-let stopRetentionCron: (() => void) | null = null;
+// Uses BullMQ Repeatable Job so N instances produce exactly one scheduled entry.
+let retentionWorker: import('bullmq').Worker | null = null;
 if (pricingEnabled && pgPoolForCredits) {
-  stopRetentionCron = startRetentionCron({ pool: pgPoolForCredits, s3 });
+  retentionWorker = scheduleRetentionJob({
+    queue: queues.retention,
+    connection: redis,
+    pool: pgPoolForCredits,
+    s3,
+  });
 }
 
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
@@ -130,7 +136,7 @@ await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 const shutdown = async () => {
   await app.close();
   await stopOrchestrator();
-  if (stopRetentionCron) stopRetentionCron();
+  if (retentionWorker) await retentionWorker.close();
   await closeBroker();           // ① quit subRedis before shared connections close
   await closeQueueBundle(queues);
   if (shutdownPool) await shutdownPool();

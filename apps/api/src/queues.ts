@@ -5,6 +5,7 @@ export interface QueueBundle {
   crawl: Queue;
   storyboard: Queue;
   render: Queue;
+  retention: Queue;
   crawlEvents: QueueEvents;
   storyboardEvents: QueueEvents;
   renderEvents: QueueEvents;
@@ -26,6 +27,7 @@ export function makeQueueBundle(connection: Redis): QueueBundle {
     crawl: new Queue('crawl', opts),
     storyboard: new Queue('storyboard', opts),
     render: new Queue('render', opts),
+    retention: new Queue('retention', { connection: connection as any }),
     crawlEvents: new QueueEvents('crawl', { connection: connection as any }),
     storyboardEvents: new QueueEvents('storyboard', { connection: connection as any }),
     renderEvents: new QueueEvents('render', { connection: connection as any }),
@@ -37,6 +39,7 @@ export async function closeQueueBundle(b: QueueBundle): Promise<void> {
     b.crawl.close(),
     b.storyboard.close(),
     b.render.close(),
+    b.retention.close(),
     b.crawlEvents.close(),
     b.storyboardEvents.close(),
     b.renderEvents.close(),

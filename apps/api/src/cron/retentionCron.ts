@@ -1,6 +1,8 @@
 import { DeleteObjectCommand, type S3Client } from '@aws-sdk/client-s3';
 import { parseS3Uri } from '@lumespec/schema';
 import type { Pool } from 'pg';
+import { Queue, Worker } from 'bullmq';
+import type { Redis } from 'ioredis';
 
 /** History retention windows in days, keyed by subscription tier. */
 export const RETENTION_DAYS = { free: 30, pro: 90, max: 365 } as const;
@@ -129,4 +131,47 @@ export function startRetentionCron(opts: {
   timer.unref(); // don't prevent clean process.exit()
 
   return () => clearInterval(timer);
+}
+
+/**
+ * Schedule the daily retention job via BullMQ Repeatable Jobs.
+ *
+ * BullMQ deduplicates on `jobId: 'retention-daily'` in Redis — N instances
+ * calling this function still produce exactly one scheduled entry. The Worker
+ * uses `concurrency: 1` and a 5-minute lock so only one instance runs the
+ * cleanup at a time even in a multi-replica deployment.
+ *
+ * Returns the Worker so the caller can close it during graceful shutdown.
+ */
+export function scheduleRetentionJob(opts: {
+  queue: Queue;
+  connection: Redis;
+  pool: Pool;
+  s3: S3Client;
+  log?: Pick<typeof console, 'log' | 'error'>;
+}): Worker {
+  const { queue, connection, pool, s3, log = console } = opts;
+
+  void queue.add(
+    'daily-cleanup',
+    {},
+    {
+      jobId: 'retention-daily',
+      repeat: { pattern: '0 3 * * *' },
+      removeOnComplete: { count: 7 },
+      removeOnFail: { count: 7 },
+    },
+  );
+
+  return new Worker(
+    'retention',
+    async () => {
+      await runRetentionOnce(pool, s3, log);
+    },
+    {
+      connection: connection as never,
+      concurrency: 1,
+      lockDuration: 300_000, // 5 min — retention can take a while on large datasets
+    },
+  );
 }

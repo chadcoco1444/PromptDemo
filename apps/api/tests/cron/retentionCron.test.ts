@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import pg from 'pg';
 import { type S3Client } from '@aws-sdk/client-s3';
-import { runRetentionOnce, RETENTION_DAYS } from '../../src/cron/retentionCron.js';
+import { runRetentionOnce, RETENTION_DAYS, scheduleRetentionJob } from '../../src/cron/retentionCron.js';
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://lumespec:lumespec@localhost:5432/lumespec';
@@ -95,6 +95,36 @@ describe('RETENTION_DAYS', () => {
     expect(RETENTION_DAYS.free).toBe(30);
     expect(RETENTION_DAYS.pro).toBe(90);
     expect(RETENTION_DAYS.max).toBe(365);
+  });
+});
+
+describe('scheduleRetentionJob', () => {
+  it('schedules a repeatable BullMQ job with the idempotent jobId', async () => {
+    const queueAdd = vi.fn().mockResolvedValue(undefined);
+    const workerClose = vi.fn().mockResolvedValue(undefined);
+
+    // Mock Worker constructor to avoid real Redis connection
+    vi.doMock('bullmq', () => ({
+      Queue: class { add = queueAdd; close = vi.fn(); },
+      Worker: class { close = workerClose; },
+    }));
+
+    const mockQueue = { add: queueAdd, close: vi.fn() } as never;
+    const mockConnection = {} as never;
+    const mockPool = {} as never;
+    const mockS3 = {} as never;
+
+    const worker = scheduleRetentionJob({ queue: mockQueue, connection: mockConnection, pool: mockPool, s3: mockS3 });
+
+    expect(queueAdd).toHaveBeenCalledWith(
+      'daily-cleanup',
+      {},
+      expect.objectContaining({
+        jobId: 'retention-daily',
+        repeat: expect.objectContaining({ pattern: '0 3 * * *' }),
+      }),
+    );
+    expect(worker).toBeDefined();
   });
 });
 
