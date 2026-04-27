@@ -141,3 +141,70 @@ describe('orchestrator — refund-leak regression', () => {
     expect(patchSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('orchestrator — assertBudgetAvailable error containment', () => {
+  it('does not let an unexpected creditPool error escape as unhandled rejection', async () => {
+    // Simulates the Postgres 42P18 crash: creditPool.connect throws and the
+    // rejection MUST be swallowed inside the crawl:completed handler. If it
+    // escapes, BullMQ's QueueEvents EventEmitter forwards it as an
+    // unhandledRejection and Node terminates the api process.
+    const onJobFailed = vi.fn().mockResolvedValue(undefined);
+    const redis = new RedisMock() as any;
+    const store = makeJobStore(redis);
+    const broker = makeBroker();
+    const crawlEvents = new EventEmitter();
+    const storyboardEvents = new EventEmitter();
+    const renderEvents = new EventEmitter();
+    const queues = {
+      crawl: { add: vi.fn() },
+      storyboard: { add: vi.fn() },
+      render: {
+        add: vi.fn(),
+        getJobCounts: vi.fn().mockResolvedValue({ active: 0, waiting: 0 }),
+      },
+      crawlEvents,
+      storyboardEvents,
+      renderEvents,
+    } as any;
+
+    const explodingPool = {
+      connect: vi.fn().mockRejectedValue(new Error('pg 42P18 simulated')),
+    } as any;
+
+    await startOrchestrator({ queues, store, broker, onJobFailed, creditPool: explodingPool });
+
+    const job: Job = {
+      jobId: 'budget-crash-job',
+      status: 'crawling',
+      stage: 'crawl',
+      progress: 100,
+      input: { url: 'https://example.com', intent: 'demo', duration: 30 },
+      fallbacks: [],
+      createdAt: 1000,
+      updatedAt: 2000,
+    };
+    await store.create(job);
+
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+
+    crawlEvents.emit('completed', {
+      jobId: job.jobId,
+      returnvalue: { crawlResultUri: 's3://b/crawl.json' },
+    });
+
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+
+    process.off('unhandledRejection', onUnhandled);
+
+    expect(unhandled).toEqual([]);
+    const updated = await store.get(job.jobId);
+    expect(updated?.status).toBe('failed');
+    expect(updated?.error?.code).toBe('INTERNAL_ERROR');
+    expect(updated?.error?.retryable).toBe(true);
+    // storyboard.add must NOT be reached
+    expect(queues.storyboard.add).not.toHaveBeenCalled();
+  });
+});

@@ -104,15 +104,29 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
       try {
         await assertBudgetAvailable({ pool: cfg.creditPool });
       } catch (err) {
-        if (err instanceof BudgetExceededError) {
-          const patch = reduceEvent(current, {
-            kind: 'storyboard:failed',
-            error: { code: 'BUDGET_EXCEEDED', message: (err as Error).message, retryable: false },
-          });
-          await applyPatch(jobId, patch, current.status);
-          return;
+        // BullMQ QueueEvents callbacks have no retry semantics — letting an
+        // exception escape becomes an unhandled rejection that kills the
+        // whole apps/api process under Node ≥ 15. Always swallow + mark the
+        // job failed so the user sees feedback and refunds fire.
+        const isBudget = err instanceof BudgetExceededError;
+        if (!isBudget) {
+          console.error('[orchestrator] assertBudgetAvailable failed unexpectedly:', { jobId, err });
         }
-        throw err;
+        // The crawl:completed patch above already moved status crawling →
+        // generating, so the captured `current` is stale. Re-fetch so the
+        // storyboard:failed transition originates from the right state.
+        const post = await cfg.store.get(jobId);
+        if (!post) return;
+        const patch = reduceEvent(post, {
+          kind: 'storyboard:failed',
+          error: {
+            code: isBudget ? 'BUDGET_EXCEEDED' : 'INTERNAL_ERROR',
+            message: (err as Error).message,
+            retryable: !isBudget,
+          },
+        });
+        await applyPatch(jobId, patch, post.status);
+        return;
       }
     }
 

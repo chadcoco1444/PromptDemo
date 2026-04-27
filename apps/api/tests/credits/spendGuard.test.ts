@@ -18,8 +18,8 @@ function makeMockPool(initial: Record<string, string>) {
         return { rows, rowCount: rows.length };
       }
 
-      if (text.startsWith('UPDATE system_limits SET value=$2 WHERE key=')) {
-        store.set('anthropic_daily_spend_usd', String(params?.[1] ?? '0'));
+      if (text.startsWith("UPDATE system_limits SET value=$1 WHERE key='anthropic_daily_spend_usd'")) {
+        store.set('anthropic_daily_spend_usd', String(params?.[0] ?? '0'));
         return { rows: [], rowCount: 1 };
       }
       if (text.startsWith("UPDATE system_limits SET value=$1 WHERE key='anthropic_daily_reset_at'")) {

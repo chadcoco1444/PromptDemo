@@ -131,6 +131,15 @@ if (pricingEnabled && pgPoolForCredits) {
   });
 }
 
+// Last-resort safety net: BullMQ QueueEvents callbacks register handlers
+// asynchronously, so a thrown error there propagates out as an unhandled
+// rejection. Default Node behaviour (>= 15) is to terminate the process.
+// We log and keep running; per-handler try/catch is the real fix, this is
+// just to prevent a single bug from taking down the whole API.
+process.on('unhandledRejection', (reason) => {
+  console.error('[apps/api] UNHANDLED REJECTION (process kept alive):', reason);
+});
+
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
 const shutdown = async () => {

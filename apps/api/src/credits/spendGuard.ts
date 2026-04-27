@@ -34,9 +34,13 @@ export async function assertBudgetAvailable(opts: SpendGuardOpts): Promise<void>
     const resetMarker = map.get('anthropic_daily_reset_at') ?? '';
     const isStale = resetMarker !== today.toISOString();
     if (isStale) {
+      // Reset today's spend counter. SQL only references $1 — passing an
+      // unused second parameter trips Postgres 42P18 ("could not determine
+      // data type of parameter $1") and bubbles up as an unhandled
+      // rejection that kills the orchestrator.
       await client.query(
-        `UPDATE system_limits SET value=$2 WHERE key='anthropic_daily_spend_usd'`,
-        [today.toISOString(), '0'],
+        `UPDATE system_limits SET value=$1 WHERE key='anthropic_daily_spend_usd'`,
+        ['0'],
       );
       await client.query(
         `UPDATE system_limits SET value=$1 WHERE key='anthropic_daily_reset_at'`,
