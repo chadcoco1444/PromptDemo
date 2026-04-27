@@ -149,16 +149,17 @@ const Scene2Crawl: React.FC = () => {
   );
 };
 
-// ─── Scene 3: Scene gallery (8 shipped scene types) ──────────────────────────
+// ─── Scene 3: Scene gallery (9 shipped scene types) ──────────────────────────
 const SCENE_CARDS = [
-  { icon: '🦸', label: 'HeroRealShot',   desc: 'Full-bleed hero image + headline',  delay: 0 },
-  { icon: '⚡', label: 'BentoGrid',      desc: 'Feature grid · up to 6 items',      delay: 12 },
-  { icon: '✨', label: 'FeatureCallout', desc: 'Product detail + screenshot',        delay: 24 },
-  { icon: '🎯', label: 'CTA',           desc: 'Action-driving closer scene',         delay: 36 },
-  { icon: '📊', label: 'StatsCounter',  desc: 'Animated metric rollup',              delay: 48 },
-  { icon: '💬', label: 'ReviewMarquee', desc: 'Scrolling testimonials strip',        delay: 60 },
-  { icon: '🏷️', label: 'LogoCloud',     desc: 'Infinite partner logo marquee',       delay: 72 },
-  { icon: '💻', label: 'CodeToUI',      desc: 'Typewriter code → live screenshot',  delay: 84 },
+  { icon: '💻', label: 'DeviceMockup',  desc: 'Hero opener · laptop shell + Pan/Zoom',  delay: 0 },
+  { icon: '🦸', label: 'HeroRealShot',   desc: 'Full-bleed hero image + headline',       delay: 12 },
+  { icon: '⚡', label: 'BentoGrid',      desc: 'Feature grid · up to 6 items',           delay: 24 },
+  { icon: '✨', label: 'FeatureCallout', desc: 'Product detail + screenshot',             delay: 36 },
+  { icon: '🎯', label: 'CTA',           desc: 'Action-driving closer scene',              delay: 48 },
+  { icon: '📊', label: 'StatsCounter',  desc: 'Animated metric rollup',                   delay: 60 },
+  { icon: '💬', label: 'ReviewMarquee', desc: 'Scrolling testimonials strip',             delay: 72 },
+  { icon: '🏷️', label: 'LogoCloud',     desc: 'Infinite partner logo marquee',            delay: 84 },
+  { icon: '🖥️', label: 'CodeToUI',      desc: 'Typewriter code → live screenshot',       delay: 96 },
 ];
 
 const Scene3Cards: React.FC = () => {
@@ -175,10 +176,10 @@ const Scene3Cards: React.FC = () => {
       <div style={{ position: 'relative', width: 1040 }}>
         <div style={{ opacity: headerOpacity, transform: `translateY(${headerY}px)`, textAlign: 'center', marginBottom: 36 }}>
           <div style={{ fontSize: 13, color: 'rgba(167,139,250,0.8)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, marginBottom: 10 }}>AI Storyboard</div>
-          <div style={{ fontSize: 30, fontWeight: 700, color: TEXT, letterSpacing: '-0.02em' }}>8 Scene Types. Rendered Scene by Scene.</div>
+          <div style={{ fontSize: 30, fontWeight: 700, color: TEXT, letterSpacing: '-0.02em' }}>9 Scene Types. Rendered Scene by Scene.</div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
           {SCENE_CARDS.map(({ icon, label, desc, delay }) => {
             const s = spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 110, mass: 0.9 } });
             const cardOpacity = interpolate(s, [0, 1], [0, 1]);
