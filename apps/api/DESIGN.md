@@ -52,6 +52,7 @@ graph LR
 - **Anthropic 花費守衛 (`credits/spendGuard`)** — Orchestrator 在 `crawl:completed` 將任務丟入 storyboard queue 前呼叫 `assertBudgetAvailable`；在 `storyboard:completed` 從 worker 回傳的 `anthropicUsage` 呼叫 `recordSpend`。此責任**過去在 storyboard worker**，2026-04 隨 Spec 3 R2 搬入此處以維持「Worker 不接 PG」的鐵律
 - **退款補償** — Orchestrator 監聽 `storyboard.failed` / `render.failed` 事件，自動觸發 `refundForJob`
 - **歷史保留 Cron** — `cron/retentionCron.ts` 透過 BullMQ Repeatable Job (`jobId='retention-daily'`、cron `0 3 * * *`、`Worker(concurrency=1, lockDuration=300_000)`) 每日刪除超過保留期限的任務記錄（Free=30天，Pro=90天，Max=365天）。**多副本部署下 BullMQ 在 Redis 端去重，N 個 instance 只會排出一筆任務**
+- **PG mirror reconciliation primitive (`jobStorePostgres.upsert()`)** — idempotent INSERT-or-UPDATE used by `pg-backfill` worker (added in T2) to land current Redis state into PG. OCC-guarded by `WHERE jobs.updated_at < EXCLUDED.updated_at` so stale reads can't regress PG state.
 
 ---
 

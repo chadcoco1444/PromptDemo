@@ -2,6 +2,16 @@ import type { Pool } from 'pg';
 import { JobSchema, type Job, type JobStatus } from './model/job.js';
 import type { JobStore } from './jobStore.js';
 
+export interface JobStoreWithUpsert extends JobStore {
+  /**
+   * Idempotent reconciliation write — used by pg-backfill worker to land Redis state
+   * into PG without depending on whether the row exists. Optimistic concurrency:
+   * `WHERE jobs.updated_at < EXCLUDED.updated_at` prevents stale Redis reads from
+   * regressing newer PG state during multi-worker races.
+   */
+  upsert(job: Job): Promise<void>;
+}
+
 /**
  * Postgres-backed implementation of JobStore. Mirrors the Redis shape but
  * splits into native SQL columns for queryability (user filter, status
@@ -25,7 +35,7 @@ export interface PostgresJobStoreOptions {
   resolveUserId: (job: Job) => Promise<string | null>;
 }
 
-export function makePostgresJobStore(opts: PostgresJobStoreOptions): JobStore {
+export function makePostgresJobStore(opts: PostgresJobStoreOptions): JobStoreWithUpsert {
   const { pool, resolveUserId } = opts;
 
   return {
@@ -124,6 +134,47 @@ export function makePostgresJobStore(opts: PostgresJobStoreOptions): JobStore {
       if (expectedStatus && (result.rowCount ?? 0) === 0) {
         console.warn('[jobStore:pg] OCC blocked or row not found', { jobId, expectedStatus });
       }
+    },
+
+    async upsert(job) {
+      const userId = await resolveUserId(job);
+      if (!userId) return;
+      await pool.query(
+        `INSERT INTO jobs
+           (id, user_id, parent_job_id, status, stage, input,
+            crawl_result_uri, storyboard_uri, video_url, fallbacks,
+            error, credits_charged, created_at, updated_at)
+         VALUES
+           ($1, $2, $3, $4, $5, $6::jsonb,
+            $7, $8, $9, $10::jsonb,
+            $11, $12, to_timestamp($13 / 1000.0), to_timestamp($14 / 1000.0))
+         ON CONFLICT (id) DO UPDATE SET
+           status            = EXCLUDED.status,
+           stage             = EXCLUDED.stage,
+           crawl_result_uri  = EXCLUDED.crawl_result_uri,
+           storyboard_uri    = EXCLUDED.storyboard_uri,
+           video_url         = EXCLUDED.video_url,
+           fallbacks         = EXCLUDED.fallbacks,
+           error             = EXCLUDED.error,
+           updated_at        = EXCLUDED.updated_at
+         WHERE jobs.updated_at < EXCLUDED.updated_at`,
+        [
+          job.jobId,
+          userId,
+          job.parentJobId ?? null,
+          job.status,
+          job.stage,
+          JSON.stringify(job.input),
+          job.crawlResultUri ?? null,
+          job.storyboardUri ?? null,
+          job.videoUrl ?? null,
+          JSON.stringify(job.fallbacks ?? []),
+          job.error ? JSON.stringify(job.error) : null,
+          0,
+          job.createdAt,
+          job.updatedAt,
+        ],
+      );
     },
   };
 }

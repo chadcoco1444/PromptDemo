@@ -90,3 +90,49 @@ describe('jobStorePostgres — OCC patch', () => {
     warn.mockRestore();
   });
 });
+
+describe('upsert', () => {
+  const baseJob = (overrides: Partial<Job> = {}): Job => ({
+    jobId: `upsert-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    status: 'queued' as const,
+    stage: null,
+    progress: 0,
+    input: { url: 'https://example.com', intent: 'test', duration: 30 as const },
+    fallbacks: [],
+    createdAt: 1_700_000_000_000,
+    updatedAt: 1_700_000_000_000,
+    ...overrides,
+  });
+
+  it('inserts when row does not exist', async () => {
+    const store = makePostgresJobStore({ pool, resolveUserId: async () => String(testUserId) });
+    const job = baseJob();
+    await store.upsert(job);
+    const row = await store.get(job.jobId);
+    expect(row?.status).toBe('queued');
+    await pool.query('DELETE FROM jobs WHERE id = $1', [job.jobId]);
+  });
+
+  it('updates when row exists AND incoming updated_at is newer', async () => {
+    const store = makePostgresJobStore({ pool, resolveUserId: async () => String(testUserId) });
+    const job = baseJob();
+    await store.create(job);
+    const updated = { ...job, status: 'done' as const, updatedAt: job.updatedAt + 1000 };
+    await store.upsert(updated);
+    const row = await store.get(job.jobId);
+    expect(row?.status).toBe('done');
+    await pool.query('DELETE FROM jobs WHERE id = $1', [job.jobId]);
+  });
+
+  it('does NOT update when row exists AND incoming updated_at is older (OCC guard)', async () => {
+    const store = makePostgresJobStore({ pool, resolveUserId: async () => String(testUserId) });
+    const job = baseJob({ status: 'done' });
+    await store.create(job);
+    // Stale write attempt — older updated_at
+    const stale = { ...job, status: 'queued' as const, updatedAt: job.updatedAt - 1000 };
+    await store.upsert(stale);
+    const row = await store.get(job.jobId);
+    expect(row?.status).toBe('done');  // unchanged
+    await pool.query('DELETE FROM jobs WHERE id = $1', [job.jobId]);
+  });
+});
