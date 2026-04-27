@@ -24,6 +24,16 @@ function decodeEntities(input: string): string {
 const ZERO_WIDTH_OR_BOM = /[\u200B-\u200D\uFEFF]/g;
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
 const WHITESPACE = /\s+/g;
+// Typographic quotes → ASCII straight quotes. Crawled HTML often contains
+// curly quotes (U+2018, U+2019, U+201C, U+201D) while LLM output frequently
+// uses ASCII straight quotes, or vice versa. NFKC alone does NOT fold these
+// — they are typographically distinct under Unicode compatibility rules.
+// Without this step, "world's" (curly U+2019) != "world's" (ASCII U+0027)
+// for extractive-check comparisons, causing flaky storyboard failures
+// (incident 2026-04-27 with duolingo emotional intent: first attempt failed
+// extractive check, retry succeeded only because LLM picked different text).
+const SMART_SINGLE_QUOTES = /[‘’‚‛]/g;
+const SMART_DOUBLE_QUOTES = /[“”„‟]/g;
 
 // Unified CJK range: CJK Unified Ideographs + Hiragana + Katakana + Hangul Syllables + common compat.
 const CJK_CHAR = '[\\u3040-\\u30FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uAC00-\\uD7AF\\uF900-\\uFAFF]';
@@ -37,6 +47,8 @@ export function normalizeText(input: string): string {
   out = out.normalize('NFKC');
   out = out.replace(ZERO_WIDTH_OR_BOM, '');
   out = out.replace(CONTROL_CHARS, '');
+  out = out.replace(SMART_SINGLE_QUOTES, "'");
+  out = out.replace(SMART_DOUBLE_QUOTES, '"');
   out = out.replace(WHITESPACE, ' ').trim();
   out = out.toLowerCase();
   // Tighten CJK: drop any whitespace between adjacent CJK chars. Run twice to catch overlapping matches.

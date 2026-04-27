@@ -42,6 +42,22 @@ describe('normalizeText', () => {
     expect(normalizeText('')).toBe('');
   });
 
+  // Regression: 2026-04-27 duolingo emotional intent failed extractive
+  // check because crawled HTML had U+2019 (curly apostrophe) in "world's"
+  // while the LLM emitted U+0027 (ASCII). NFKC alone does not fold these —
+  // a separate normalization step is required.
+  it('folds typographic single quotes (U+2018/U+2019) to ASCII apostrophe', () => {
+    expect(normalizeText('world’s most popular')).toBe("world's most popular");
+    // Curly and ASCII forms must normalize to the same string.
+    expect(normalizeText('world’s')).toBe(normalizeText("world's"));
+    expect(normalizeText('‘hi’')).toBe("'hi'");
+  });
+
+  it('folds typographic double quotes (U+201C/U+201D) to ASCII', () => {
+    expect(normalizeText('“hello”')).toBe('"hello"');
+    expect(normalizeText('“hi”')).toBe(normalizeText('"hi"'));
+  });
+
   it('strips control chars but keeps printable punctuation', () => {
     expect(normalizeText('hello\u0001, world!')).toBe('hello, world!');
   });
