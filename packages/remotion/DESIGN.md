@@ -102,3 +102,6 @@ Remotion 的渲染是**確定性的**（同一幀永遠輸出同一畫面）。`
 
 ### 5. 在 `packages/remotion` 中引入 Node.js 模組
 此套件運行在 Remotion Studio（瀏覽器環境）和 Chromium headless 渲染環境中。引入 `fs`、`path`、`crypto` 等 Node.js 原生模組會導致在瀏覽器環境中崩潰。所有檔案 I/O 必須由 `workers/render` 在呼叫 `renderMedia` 前完成，資料透過 props 傳入。
+
+### 6. 把 hero scene 的標題塞進動畫元素裡
+若 hero opener 的 headline 跟著裝置/截圖一起做 Pan/Zoom，文字會在運鏡中模糊或偏離可讀區。**Hero opener 的 headline + subtitle 必須是靜止 anchor**，唯有裝置/截圖層做 transform。這樣文字反而成為穩定的視覺重力中心，跟動態元素產生空間張力。範例：`DeviceMockup` 把 headline 放在 70% Y 軸位置、不帶 transform。

@@ -11,6 +11,7 @@ import { StatsCounter } from './scenes/StatsCounter';
 import { ReviewMarquee } from './scenes/ReviewMarquee';
 import { LogoCloud } from './scenes/LogoCloud';
 import { CodeToUI } from './scenes/CodeToUI';
+import { DeviceMockup } from './scenes/DeviceMockup';
 import type { BrandTheme } from './utils/brandTheme';
 
 export interface ResolveSceneInput {
@@ -131,6 +132,34 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
           {...(screenshotUrl ? { screenshotUrl } : {})}
           theme={theme}
           durationInFrames={scene.durationInFrames}
+        />
+      );
+    }
+    case 'DeviceMockup': {
+      // v1 only ships 'laptop'. If AI emits 'phone' before mobile-viewport
+      // crawling is built, fall back to HeroRealShot — Q6 graceful-degradation
+      // policy. Same fallback fires when the viewport screenshot is missing.
+      const screenshotUrl = resolver(assets.screenshots.viewport);
+      if (scene.props.device !== 'laptop' || !screenshotUrl) {
+        return (
+          <HeroRealShot
+            title={scene.props.headline}
+            {...(scene.props.subtitle ? { subtitle: scene.props.subtitle } : {})}
+            screenshotUrl={screenshotUrl ?? ''}
+            url={url}
+            theme={theme}
+          />
+        );
+      }
+      return (
+        <DeviceMockup
+          headline={scene.props.headline}
+          {...(scene.props.subtitle ? { subtitle: scene.props.subtitle } : {})}
+          screenshotUrl={screenshotUrl}
+          device={scene.props.device}
+          motion={scene.props.motion}
+          durationInFrames={scene.durationInFrames}
+          theme={theme}
         />
       );
     }

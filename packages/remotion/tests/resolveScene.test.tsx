@@ -169,5 +169,44 @@ describe('resolveScene', () => {
   });
 });
 
+describe('resolveScene — DeviceMockup', () => {
+  const baseScene = {
+    sceneId: 1,
+    type: 'DeviceMockup' as const,
+    durationInFrames: 150,
+    entryAnimation: 'fade' as const,
+    exitAnimation: 'fade' as const,
+  };
+  const baseProps = {
+    headline: 'Ship demos',
+    screenshotKey: 'viewport' as const,
+    device: 'laptop' as const,
+    motion: 'pushIn' as const,
+  };
+
+  it('renders DeviceMockup for valid laptop scene', () => {
+    const scene = { ...baseScene, props: baseProps } as unknown as Scene;
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+    // Component name check works because Vitest preserves React displayName
+    expect((el.type as { displayName?: string; name?: string }).displayName ?? (el.type as { name?: string }).name).toBe('DeviceMockup');
+  });
+
+  it('falls back to HeroRealShot when device="phone"', () => {
+    const scene = { ...baseScene, props: { ...baseProps, device: 'phone' as const } } as unknown as Scene;
+    const el = resolveScene({ scene, assets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+    expect((el.type as { displayName?: string; name?: string }).displayName ?? (el.type as { name?: string }).name).toBe('HeroRealShot');
+  });
+
+  it('falls back to HeroRealShot when viewport screenshot is missing', () => {
+    const scene = { ...baseScene, props: baseProps } as unknown as Scene;
+    const emptyAssets = { screenshots: {} } as unknown as typeof assets;
+    const el = resolveScene({ scene, assets: emptyAssets, theme, url: 'https://x.com', resolver });
+    expect(el).toBeTruthy();
+    expect((el.type as { displayName?: string; name?: string }).displayName ?? (el.type as { name?: string }).name).toBe('HeroRealShot');
+  });
+});
+
 // Minimal type import so tests are self-contained
 import type { Storyboard } from '@lumespec/schema';
