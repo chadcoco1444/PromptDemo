@@ -36,7 +36,7 @@ graph LR
 
 ## 模組職責 (Responsibilities)
 
-- **Schema 版本管理** — `migrations/` 目錄下的有序 SQL 檔案，由 `apps/api` 啟動時的 `runMigrations()` 自動執行，確保生產與開發環境的 Schema 一致
+- **Schema 版本管理** — `migrations/` 目錄下的有序 SQL 檔案，由 `node-pg-migrate` CLI 透過 `pnpm db:migrate` 套用。Local dev 由開發者手動執行；CI/CD pipeline 在 `Build + push` 之後、`Deploy all services` 之前自動執行（見 `.github/workflows/deploy.yaml`）。`pgmigrations` table 由 runner 自動建立，記錄已套用的 migration 名稱以保證 exactly-once 套用
 - **核心業務表** — `users`（NextAuth 用戶）、`jobs`（任務生命週期 + 屬主）、`credits`（點數餘額，含 `SELECT FOR UPDATE` 支援）、`credit_transactions`（不可變的借貸明細帳）
 - **訂閱與金流** — `subscriptions`（Stripe 訂閱狀態與 tier）、`stripe_events`（冪等性防護，避免 Webhook 重複處理）
 - **效能索引** — `idx_jobs_user_created`（`user_id + created_at DESC`，支援 History Vault 分頁查詢）、`idx_jobs_user_status`（狀態過濾）、`pg_trgm` GIN 索引（intent 全文搜尋）
@@ -48,11 +48,14 @@ graph LR
 ### Migration 執行流程
 
 ```
-apps/api 啟動
-  → runMigrations(pool) (apps/api/src/db/migrate.ts)
-  → SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1
-  → 執行所有 version > current 的 migrations/*.sql
-  → INSERT INTO schema_migrations (version) VALUES (...)
+任何時刻（local dev / CI / prod deploy）
+  → pnpm db:migrate
+  → node-pg-migrate up --migrations-dir db/migrations --migration-file-language sql
+  → 連線 DATABASE_URL，建立 pgmigrations table（若不存在）
+  → SELECT name FROM pgmigrations  → 已套用清單
+  → 對所有未套用的 migrations/*.sql 按字典序執行
+  → INSERT INTO pgmigrations (name, run_on) VALUES (...)
+  → exit 0 表示成功；CI/CD 必須在此 exit 0 後才繼續部署 service
 ```
 
 ### 核心資料表關係
@@ -112,7 +115,7 @@ CREATE INDEX IF NOT EXISTS idx_foo_bar ON foo(bar);
 在 `BEGIN; ... COMMIT;` 的事務中，若存在 `await fetch(...)` 或 `await delay(...)` 等長時間操作，該事務持有的 Row Lock 會阻塞所有其他試圖讀取或更新同一用戶點數的操作，在高並發下迅速導致連線池耗盡。**扣款事務必須是純 SQL 操作，無任何外部 I/O**。
 
 ### 4. 手動 `ALTER TABLE` 修改生產資料庫
-直接對生產 DB 執行 `ALTER TABLE` 既不可重現（其他環境的 Schema 會偏離），也無法回溯（沒有 down migration）。**所有 Schema 變更必須寫成 `migrations/00N_description.sql`**，透過 `runMigrations()` 統一管理，確保每個環境（本地 / CI / 生產）的 Schema 完全一致。
+直接對生產 DB 執行 `ALTER TABLE` 既不可重現（其他環境的 Schema 會偏離），也無法回溯（沒有 down migration）。**所有 Schema 變更必須寫成 `migrations/00N_description.sql`**，透過 `pnpm db:migrate` 統一管理，確保每個環境（本地 / CI / 生產）的 Schema 完全一致。
 
 ### 5. 在 credit_transactions 中更新或刪除記錄
 `credit_transactions` 是不可變的**帳本**（Append-Only Ledger）。若要退款，必須新增一筆 `delta = +N, reason = 'refund'` 的記錄，而非修改或刪除原始的扣款記錄。歷史帳本的完整性是稽核與爭議解決的基礎。
