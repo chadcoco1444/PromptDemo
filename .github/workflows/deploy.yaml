@@ -38,6 +38,17 @@ jobs:
           AR_REPO_LOCATION: ${{ vars.GCP_REGION }}
           AR_REPO_NAME: ${{ vars.AR_REPO_NAME }}
 
+      # Apply DB schema changes BEFORE rolling out new service images.
+      # Migrations are idempotent (CREATE ... IF NOT EXISTS guards + the
+      # apps/api migration test enforces this), so re-running is safe.
+      # Failure here aborts the deploy — services keep their old image,
+      # which is by design: we'd rather skip a deploy than ship code
+      # against a half-migrated schema.
+      - name: Apply DB migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+
       - name: Deploy all services
         run: |
           for svc in web api crawler storyboard render; do

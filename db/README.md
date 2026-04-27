@@ -56,3 +56,19 @@ docker volume rm lumespec_postgres-data
 pnpm infra:up
 DATABASE_URL=postgres://lumespec:lumespec@localhost:5432/lumespec pnpm db:migrate
 ```
+
+## CI / Production Deploys
+
+`pnpm db:migrate` runs automatically as a step in `.github/workflows/deploy.yaml`,
+positioned **between** `Build + push` and `Deploy all services`. It uses the
+GitHub Actions secret `DATABASE_URL_PROD`, which **must** be configured in the
+repo settings (Settings → Secrets and variables → Actions) before the first
+deploy after this wiring lands.
+
+If the migration step fails, the deploy aborts and services keep their old
+image — by design, so we never ship code against a half-migrated schema.
+
+Idempotency is enforced by `apps/api/tests/migrations.test.ts`, which runs
+`pnpm db:migrate` twice and asserts the second run is a no-op. Any new
+migration that omits `IF NOT EXISTS` / `IF EXISTS` guards will fail this
+test.
