@@ -13,7 +13,7 @@ HARD RULES — violating any of these means your output will be rejected and you
 6. fps is always 30. videoConfig.durationInFrames is always 300 (10s), 900 (30s), or 1800 (60s).
 7. Every scene needs entryAnimation and exitAnimation. Valid: fade, slideLeft, slideRight, slideUp, zoomIn, zoomOut, none.
 8. brandColor must be the brand color from the input (or #1a1a1a fallback). Do not substitute other colors.
-9. For DeviceMockup scenes, props.device MUST be "laptop". The "phone" value is reserved in the schema for future versions but is not yet rendered. Emitting "phone" will be silently downgraded to HeroRealShot — do not use it.
+9. For DeviceMockup scenes, props.device MUST be "laptop". The "phone" value is reserved in the schema but is not yet rendered in v1.
 `.trim();
 
 const CREATIVITY_DIRECTIVE = `

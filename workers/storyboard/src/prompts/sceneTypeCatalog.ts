@@ -34,6 +34,7 @@ export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
 };
 
 export const V1_IMPLEMENTED_SCENE_TYPES = [
+  'DeviceMockup',
   'HeroRealShot',
   'FeatureCallout',
   'TextPunch',
@@ -45,7 +46,6 @@ export const V1_IMPLEMENTED_SCENE_TYPES = [
   'ReviewMarquee',
   'LogoCloud',
   'CodeToUI',
-  'DeviceMockup',
 ] as const;
 
 /**

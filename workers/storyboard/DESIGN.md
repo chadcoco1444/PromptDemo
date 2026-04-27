@@ -55,7 +55,7 @@ graph LR
 - **Token 用量累積** — 跨所有重試 attempt 累加 `input_tokens` / `output_tokens` / `cache_read_input_tokens` / `cache_creation_input_tokens` 至 `accUsage`；成功時將 `anthropicUsage: accUsage` 放入 GenerateResult 與 BullMQ job return value 一併回傳給 orchestrator。**worker 不再自行寫入 system_limits 表**
 - **重試策略** — 最多 `MAX_ATTEMPTS` 次重試（預設 3），每次重試前記錄失敗原因，避免無限重試抽乾 Token 配額
 - **S3 讀寫** — 下載 `crawlResult.json`（輸入），上傳 `storyboard.json`（輸出）
-- **Opener-preference policy** — system prompt teaches AI to default to `DeviceMockup` for the first scene when `viewport` screenshot exists; `HeroRealShot` becomes the fallback. Encoded in `sceneTypeCatalog.ts` (catalog description) + `systemPrompt.ts` (CREATIVITY_DIRECTIVE bullet + HARD RULE #9 forbidding `device='phone'` in v1).
+- **開場場景偏好策略** — system prompt 預設使用 `DeviceMockup` 作為第一個場景（當 `viewport` screenshot 存在時），`HeroRealShot` 退化為 fallback。實作於 `sceneTypeCatalog.ts`（catalog 描述）+ `systemPrompt.ts`（CREATIVITY_DIRECTIVE bullet + HARD RULE #9 禁止 `device='phone'`）。
 
 ---
 
