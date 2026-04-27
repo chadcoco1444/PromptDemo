@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Img, interpolate, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
 import { AnimatedText } from '../primitives/AnimatedText';
 import type { BrandTheme } from '../utils/brandTheme';
 
@@ -18,26 +18,30 @@ export interface DeviceMockupProps {
 /** Cinematic Pan/Zoom keyframes per Q5 design spec.
  *  pushIn  : scale 1.00 → 1.18, translateY  0  → -2  (easeOutCubic)
  *  pullOut : scale 1.25 → 1.00, translateY -3  →  0  (easeInOutCubic)
- *
- *  Easing math is computed inline so we avoid depending on @remotion/transitions
- *  easings; identical visually for these small ranges at 30fps.
  */
+// easeOutCubic for pushIn (focus); easeInOutCubic for pullOut (reveal)
 function computeTransform(motion: 'pushIn' | 'pullOut', frame: number, total: number) {
-  const t = total > 1 ? Math.max(0, Math.min(1, frame / (total - 1))) : 0;
-  const eased =
-    motion === 'pushIn'
-      ? 1 - Math.pow(1 - t, 3) // easeOutCubic
-      : t < 0.5
-        ? 4 * t * t * t
-        : 1 - Math.pow(-2 * t + 2, 3) / 2; // easeInOutCubic
+  // Guard: Remotion's interpolate throws on non-monotonic input ranges (e.g. [0, 0]).
+  if (total <= 1) {
+    return motion === 'pushIn'
+      ? { scale: 1.0, translateY: 0 }
+      : { scale: 1.25, translateY: -3 };
+  }
+
+  const easing = motion === 'pushIn' ? Easing.out(Easing.cubic) : Easing.inOut(Easing.cubic);
+  const opts = {
+    easing,
+    extrapolateLeft: 'clamp' as const,
+    extrapolateRight: 'clamp' as const,
+  };
 
   if (motion === 'pushIn') {
-    const scale = interpolate(eased, [0, 1], [1.0, 1.18]);
-    const translateY = interpolate(eased, [0, 1], [0, -2]); // percent of frame
+    const scale = interpolate(frame, [0, total - 1], [1.0, 1.18], opts);
+    const translateY = interpolate(frame, [0, total - 1], [0, -2], opts); // percent of frame
     return { scale, translateY };
   }
-  const scale = interpolate(eased, [0, 1], [1.25, 1.0]);
-  const translateY = interpolate(eased, [0, 1], [-3, 0]);
+  const scale = interpolate(frame, [0, total - 1], [1.25, 1.0], opts);
+  const translateY = interpolate(frame, [0, total - 1], [-3, 0], opts);
   return { scale, translateY };
 }
 
@@ -45,10 +49,13 @@ export const DeviceMockup: React.FC<DeviceMockupProps> = ({
   headline,
   subtitle,
   screenshotUrl,
+  device,
   motion,
   durationInFrames,
   theme,
 }) => {
+  void device; // v1: laptop-only — phone routes via resolveScene fallback to HeroRealShot
+
   const frame = useCurrentFrame();
   const { scale, translateY } = computeTransform(motion, frame, durationInFrames);
 
