@@ -12,16 +12,13 @@ interface CreditsSnapshot {
 
 type FetchState = { kind: 'loading' } | { kind: 'ok'; data: CreditsSnapshot } | { kind: 'error' };
 
-/**
- * Small pill in the nav showing "180s left · free". Fetches once on mount;
- * caller can tell it to refresh via a prop or event listener in a future
- * iteration. For now the component re-fetches when the URL pathname changes
- * (user navigated to /history or /billing — likely wants fresh data).
- */
-export function UsageIndicator() {
-  const [state, setState] = useState<FetchState>({ kind: 'loading' });
+export function UsageIndicator({ initialCredits }: { initialCredits?: CreditsSnapshot | null }) {
+  const [state, setState] = useState<FetchState>(
+    initialCredits ? { kind: 'ok', data: initialCredits } : { kind: 'loading' },
+  );
 
   useEffect(() => {
+    if (initialCredits) return; // server pre-fetched, skip client fetch
     let cancelled = false;
     (async () => {
       try {
@@ -40,9 +37,9 @@ export function UsageIndicator() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialCredits]);
 
-  if (state.kind !== 'ok') return null; // silent on loading/error — never a visual distraction
+  if (state.kind !== 'ok') return null;
 
   const { balance, tier, allowance } = state.data;
   const pctLeft = allowance > 0 ? balance / allowance : 0;

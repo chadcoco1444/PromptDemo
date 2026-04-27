@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -20,18 +20,26 @@ interface FetchState {
 
 const PAGE_SIZE = 24;
 
-export function HistoryGrid() {
+interface HistoryGridProps {
+  initialJobs?: HistoryJob[];
+  initialHasMore?: boolean;
+  initialTier?: 'free' | 'pro' | 'max';
+}
+
+export function HistoryGrid({ initialJobs, initialHasMore, initialTier }: HistoryGridProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = parseHistoryQuery(new URLSearchParams(searchParams.toString()));
 
+  const hasInitialData = initialJobs !== undefined;
+
   const [state, setState] = useState<FetchState>({
-    jobs: [],
-    hasMore: false,
-    loading: true,
+    jobs: initialJobs ?? [],
+    hasMore: initialHasMore ?? false,
+    loading: !hasInitialData,
     loadingMore: false,
     error: null,
-    tier: 'free',
+    tier: initialTier ?? 'free',
   });
 
   // Track the cursor we last loaded, used by Load More.
@@ -41,8 +49,16 @@ export function HistoryGrid() {
   // Identifier for the freshest filter set; throw away stale responses.
   const filterKey = JSON.stringify({ q: query.q, status: query.status, duration: query.duration, time: query.time });
 
+  // Skip the first filter fetch when the RSC already pre-populated data.
+  // Subsequent filter changes (user clicks a filter) always refetch.
+  const skipNextFetchRef = useRef(hasInitialData);
+
   // Initial / filter-change fetch (no `before` cursor).
   useEffect(() => {
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
     let cancelled = false;
     setState((s) => ({ ...s, loading: true, error: null }));
     const { before: _drop, ...queryWithoutCursor } = query;

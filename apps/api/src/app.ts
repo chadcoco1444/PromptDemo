@@ -10,6 +10,8 @@ import { postJobRoute } from './routes/postJob.js';
 import { getJobRoute } from './routes/getJob.js';
 import { getStoryboardRoute } from './routes/getStoryboard.js';
 import { streamRoute } from './routes/stream.js';
+import { getUserJobsRoute } from './routes/getUserJobs.js';
+import { getUserCreditsRoute } from './routes/getUserCredits.js';
 import { verifyInternalToken } from './auth/internalToken.js';
 
 export interface BuildOpts {
@@ -37,6 +39,12 @@ export interface BuildOpts {
    * creditPool. Omit to disable API key auth.
    */
   apiKeyPool?: Pool | null;
+  /**
+   * When set, GET /api/users/me/jobs and GET /api/users/me/credits are
+   * registered. Requires AUTH_ENABLED=true so BFF can mint internal JWTs.
+   * Typically the same pool as creditPool.
+   */
+  pgPool?: Pool | null;
   /**
    * Explicit list of origins allowed by the CORS plugin. Defaults to parsing
    * ALLOWED_ORIGINS env var (comma-separated), then 'http://localhost:3001'.
@@ -98,6 +106,10 @@ export async function build(opts: BuildOpts): Promise<FastifyInstance> {
     broker: opts.broker,
     allowedOrigins,
   });
+  if (opts.pgPool) {
+    await app.register(getUserJobsRoute, { pgPool: opts.pgPool });
+    await app.register(getUserCreditsRoute, { pgPool: opts.pgPool });
+  }
 
   app.get('/healthz', async () => ({ ok: true }));
   return app;

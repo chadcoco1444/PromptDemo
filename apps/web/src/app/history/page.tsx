@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth, isAuthEnabled } from '../../auth';
 import { HistoryGrid } from '../../components/HistoryGrid';
+import { signInternalToken } from '../../lib/internalToken';
+import { API_BASE } from '../../lib/config';
+import type { HistoryJob } from '../../components/history/HistoryCard';
 
 export default async function HistoryPage() {
   if (!isAuthEnabled() || !auth) {
@@ -26,6 +29,29 @@ export default async function HistoryPage() {
 
   const session = await auth();
   if (!session?.user) redirect('/auth/signin?callbackUrl=/history');
+
+  let initialJobs: HistoryJob[] = [];
+  let initialHasMore = false;
+  let initialTier: 'free' | 'pro' | 'max' = 'free';
+
+  const userId = (session.user as { id?: string }).id;
+  if (userId) {
+    try {
+      const token = await signInternalToken(userId);
+      const res = await fetch(`${API_BASE}/api/users/me/jobs?limit=24`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const body = (await res.json()) as { jobs: HistoryJob[]; hasMore: boolean; tier?: 'free' | 'pro' | 'max' };
+        initialJobs = body.jobs ?? [];
+        initialHasMore = body.hasMore;
+        initialTier = body.tier ?? 'free';
+      }
+    } catch {
+      // Non-fatal: HistoryGrid will fetch on mount
+    }
+  }
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-16 space-y-6">
@@ -54,7 +80,7 @@ export default async function HistoryPage() {
         </Link>
       </header>
 
-      <HistoryGrid />
+      <HistoryGrid initialJobs={initialJobs} initialHasMore={initialHasMore} initialTier={initialTier} />
     </main>
   );
 }

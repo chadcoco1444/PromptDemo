@@ -90,6 +90,7 @@ const app = await build({
   requireUserIdHeader: authEnabled,
   creditPool: pricingEnabled ? pgPoolForCredits : null,
   apiKeyPool: pricingEnabled ? pgPoolForCredits : null,
+  pgPool: authEnabled ? pgPoolForCredits : null,
 });
 
 const orchestratorOpts: Parameters<typeof startOrchestrator>[0] = {
