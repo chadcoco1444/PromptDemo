@@ -236,7 +236,8 @@ We're building the fastest path from "product exists" to "demo is live." The roa
 | ✅ **Shipped** | **ReviewMarquee scene** — horizontal scrolling testimonials strip | Real reviews crawled from your page, gated to avoid fabrication |
 | ✅ **Shipped** | **LogoCloud scene** — infinite-scroll partner logo marquee from crawled logos | Social proof without lifting a finger |
 | ✅ **Shipped** | **CodeToUI scene** — typewriter code reveal with live screenshot transition | Built for devtools and API products |
-| 🔜 **Up next** | **History thumbnails** — first-frame preview for every job | Browse your vault visually, not just by title |
+| ✅ **Shipped** | **DeviceMockup hero opener** — dark laptop chassis with Pan/Zoom camera moves and static headline anchor | High-impact opener for hero-driven landing pages |
+| ✅ **Shipped** | **History thumbnails** — first-frame WebP preview for every job, extracted from the same Remotion bundle | Browse your vault visually, not just by title |
 | 💡 **Planned** | **Scheduled re-renders** — cron-triggered re-crawl when your site updates | Your demo stays fresh automatically |
 | 💡 **Planned** | **Custom brand kit** — save your palette and fonts once, apply everywhere | Zero-config brand consistency across every video |
 | 💡 **Planned** | **9:16 vertical video** — TikTok / Reels / Shorts format with auto-reflow | One product, every platform |
