@@ -38,7 +38,8 @@ graph LR
 
 - **BullMQ Payload Schema** — 定義三個 Worker 的任務輸入格式：`CrawlJobPayload`、`StoryboardJobPayload`、`RenderJobPayload`；Orchestrator 使用這些類型建立任務，Worker 使用 `.parse()` 驗證輸入
 - **Storyboard/Video Schema** — 核心的 `VideoConfigSchema`（含 `showWatermark`、`fps`、`scenes`）以及所有場景類型的 discriminated union，是 Claude 輸出驗證的 Zod 防火牆
-- **場景 Schema（discriminated union）** — 目前支援：`FeatureCallout`、`HeroRealShot`、`BentoGrid`、`StatsCounter`、`ReviewMarquee`、`LogoCloud`、`CodeToUI`；新增場景類型**必須在此先定義 Zod Schema**，再到 `packages/remotion` 實作 React 元件
+- **場景 Schema（discriminated union）** — 目前支援：`FeatureCallout`、`HeroRealShot`、`BentoGrid`、`StatsCounter`、`ReviewMarquee`、`LogoCloud`、`CodeToUI`、`DeviceMockup`；新增場景類型**必須在此先定義 Zod Schema**，再到 `packages/remotion` 實作 React 元件
+  - **DeviceMockup** — hero-opener scene wrapping a viewport screenshot in a dark laptop shell with cinematic Pan/Zoom motion. Schema reserves `device: 'laptop' | 'phone'` for future phone-viewport crawler capture.
 - **共享工具類型** — `S3Uri`、`Tier`、`CircuitState` 等跨模組使用的基礎類型
 
 ---

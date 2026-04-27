@@ -201,6 +201,31 @@ const CodeToUISchema = z.object({
   }),
 });
 
+const DeviceMockupSchema = z.object({
+  ...sceneBase,
+  type: z.literal('DeviceMockup'),
+  props: z.object({
+    /** Hero headline. Must come from sourceTexts whitelist (extractive check). */
+    headline: z.string().min(1).max(80),
+    /** Optional supporting line below the headline. */
+    subtitle: z.string().min(1).max(120).optional(),
+    /** v1 only supports viewport — fullPage doesn't fit a laptop screen aspect ratio. */
+    screenshotKey: z.literal('viewport'),
+    /**
+     * v1 only ships 'laptop'. The 'phone' option is reserved so future mobile-viewport
+     * crawler capture can be added without a breaking change. resolveScene falls back to
+     * HeroRealShot if AI emits 'phone' before phone-viewport capture exists.
+     */
+    device: z.enum(['laptop', 'phone']),
+    /**
+     * Cinematic motion. AI picks per video based on intent:
+     *  - pushIn  : start wide, slowly zoom in (focus / hook energy)
+     *  - pullOut : start tight on UI detail, pull back to reveal device (reveal / build)
+     */
+    motion: z.enum(['pushIn', 'pullOut']),
+  }),
+});
+
 export const SceneSchema = z.discriminatedUnion('type', [
   HeroRealShotSchema,
   HeroStylizedSchema,
@@ -216,6 +241,7 @@ export const SceneSchema = z.discriminatedUnion('type', [
   ReviewMarqueeSchema,
   LogoCloudSchema,
   CodeToUISchema,
+  DeviceMockupSchema,
 ]);
 
 export const SCENE_TYPES = [
@@ -233,9 +259,10 @@ export const SCENE_TYPES = [
   'ReviewMarquee',
   'LogoCloud',
   'CodeToUI',
+  'DeviceMockup',
 ] as const;
 
-export const V1_MVP_SCENE_TYPES = ['HeroRealShot', 'FeatureCallout', 'TextPunch', 'SmoothScroll', 'CTA'] as const;
+export const V1_MVP_SCENE_TYPES = ['HeroRealShot', 'FeatureCallout', 'TextPunch', 'SmoothScroll', 'CTA', 'DeviceMockup'] as const;
 
 export const StoryboardSchema = z
   .object({

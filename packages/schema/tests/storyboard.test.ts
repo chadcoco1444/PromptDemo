@@ -372,6 +372,55 @@ describe('CodeToUISchema', () => {
   });
 });
 
+describe('DeviceMockupSchema (via SceneSchema)', () => {
+  const validBase = {
+    sceneId: 1,
+    type: 'DeviceMockup' as const,
+    durationInFrames: 150,
+    entryAnimation: 'fade' as const,
+    exitAnimation: 'fade' as const,
+  };
+  const validProps = {
+    headline: 'Ship demos in seconds',
+    subtitle: 'Paste a URL, hit enter.',
+    screenshotKey: 'viewport' as const,
+    device: 'laptop' as const,
+    motion: 'pushIn' as const,
+  };
+
+  it('accepts a valid DeviceMockup scene', () => {
+    const parsed = SceneSchema.parse({ ...validBase, props: validProps });
+    expect(parsed.type).toBe('DeviceMockup');
+  });
+
+  it('accepts a valid DeviceMockup with motion=pullOut and device=phone (schema-reserved)', () => {
+    const parsed = SceneSchema.parse({
+      ...validBase,
+      props: { ...validProps, motion: 'pullOut', device: 'phone' },
+    });
+    expect(parsed.type).toBe('DeviceMockup');
+  });
+
+  it('rejects DeviceMockup with motion="lidOpen"', () => {
+    expect(() =>
+      SceneSchema.parse({ ...validBase, props: { ...validProps, motion: 'lidOpen' } }),
+    ).toThrow();
+  });
+
+  it('rejects DeviceMockup with screenshotKey="fullPage"', () => {
+    expect(() =>
+      SceneSchema.parse({ ...validBase, props: { ...validProps, screenshotKey: 'fullPage' } }),
+    ).toThrow();
+  });
+
+  it('rejects DeviceMockup without headline', () => {
+    const { headline, ...withoutHeadline } = validProps;
+    expect(() =>
+      SceneSchema.parse({ ...validBase, props: withoutHeadline as typeof validProps }),
+    ).toThrow();
+  });
+});
+
 // helper: fabricate a minimal scene of any type that fills duration 900
 function makeScene(type: string) {
   const base = {
