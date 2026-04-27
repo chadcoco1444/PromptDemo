@@ -2,7 +2,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Worker, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
-import type { Pool } from 'pg';
 import { CrawlResultSchema, makeIntel, type Storyboard } from '@lumespec/schema';
 import { makeS3Client, putObject, buildKey, s3ConfigFromEnv, getObjectJson } from './s3/s3Client.js';
 import { generateStoryboard } from './generator.js';
@@ -39,15 +38,6 @@ const anthropic = mockMode
 
 const claude = anthropic ? createClaudeClient({ sdk: anthropic, model, maxTokens }) : null;
 
-// Phase 5.1 spend guard: opt-in via BUDGET_GUARD_ENABLED=true and DATABASE_URL.
-// Pool is shared across all jobs for the worker's lifetime.
-let spendGuardPool: Pool | null = null;
-const budgetGuardEnabled = env.BUDGET_GUARD_ENABLED === 'true' && !!env.DATABASE_URL;
-if (budgetGuardEnabled) {
-  const { Pool } = await import('pg');
-  spendGuardPool = new Pool({ connectionString: env.DATABASE_URL });
-  console.log(`[storyboard] BUDGET_GUARD_ENABLED=true → Anthropic daily spend guard active`);
-}
 
 const worker = new Worker<JobPayload>(
   'storyboard',
@@ -55,6 +45,7 @@ const worker = new Worker<JobPayload>(
     const payload = JobPayload.parse(job.data);
 
     let storyboard: Storyboard;
+    let anthropicUsage: import('./anthropic/pricing.js').ClaudeUsage | undefined;
     if (mockMode) {
       await job.updateProgress(makeIntel('storyboard', 'Loading a canned storyboard (mock mode)'));
       storyboard = await loadMockStoryboard(payload.duration);
@@ -75,10 +66,10 @@ const worker = new Worker<JobPayload>(
         showWatermark: payload.showWatermark,
         ...(payload.hint ? { hint: payload.hint } : {}),
         ...(previous ? { previousStoryboard: previous } : {}),
-        ...(spendGuardPool ? { spendGuardPool } : {}),
       });
       if (res.kind === 'error') throw new Error(res.message);
       storyboard = res.storyboard;
+      anthropicUsage = res.anthropicUsage;
       await job.updateProgress(
         makeIntel('storyboard', `Got ${storyboard.scenes.length} scenes from Claude`),
       );
@@ -93,7 +84,7 @@ const worker = new Worker<JobPayload>(
       Buffer.from(JSON.stringify(storyboard, null, 2)),
       'application/json'
     );
-    return { storyboardUri };
+    return { storyboardUri, ...(anthropicUsage ? { anthropicUsage } : {}) };
   },
   {
     connection,

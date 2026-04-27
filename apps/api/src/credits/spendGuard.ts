@@ -1,24 +1,5 @@
 import type { Pool } from 'pg';
-import { totalCostUsd, type ClaudeUsage } from './pricing.js';
-
-/**
- * Anthropic daily-spend guard. Reads/writes the `system_limits` table seeded
- * by db/migrations/002_pricing.sql. Two effective hooks:
- *
- *   1. assertBudgetAvailable(pool) — pre-flight, throws BudgetExceededError
- *      if today's running total has hit the configured cap. Resets the
- *      counter to 0 when the previous reset_at marker is from a prior UTC
- *      day. Concurrency-safe via SELECT FOR UPDATE.
- *
- *   2. recordSpend(pool, usage) — post-Claude-call, increments the day's
- *      running total by the computed USD cost. Idempotent under retry only
- *      to the extent that the underlying UPDATE is atomic; no per-call
- *      idempotency key (we accept slight over-count on rare worker restarts
- *      vs. risking under-count and over-spend).
- *
- * Both are no-ops when pool is null — keeps PRICING_ENABLED=false and
- * BUDGET_GUARD_ENABLED=false paths identical to v1.
- */
+import { totalCostUsd, type ClaudeUsage } from './anthropicPricing.js';
 
 export class BudgetExceededError extends Error {
   readonly code = 'STORYBOARD_BUDGET_EXCEEDED';
@@ -27,12 +8,6 @@ export class BudgetExceededError extends Error {
     this.name = 'BudgetExceededError';
   }
 }
-
-const TODAY_UTC = () => new Date(Date.UTC(
-  new Date().getUTCFullYear(),
-  new Date().getUTCMonth(),
-  new Date().getUTCDate(),
-));
 
 export interface SpendGuardOpts {
   pool: Pool | null;
@@ -48,7 +23,6 @@ export async function assertBudgetAvailable(opts: SpendGuardOpts): Promise<void>
   const client = await opts.pool.connect();
   try {
     await client.query('BEGIN');
-    // Lock the three relevant rows so a concurrent reset doesn't race the read.
     const { rows } = await client.query(
       `SELECT key, value FROM system_limits
        WHERE key IN ('anthropic_daily_limit_usd','anthropic_daily_spend_usd','anthropic_daily_reset_at')
@@ -86,8 +60,6 @@ export async function recordSpend(opts: SpendGuardOpts, usage: ClaudeUsage): Pro
   if (!opts.pool) return 0;
   const cost = totalCostUsd(usage);
   if (!Number.isFinite(cost) || cost <= 0) return 0;
-  // Single-statement UPDATE so we don't need a transaction. value is TEXT
-  // in system_limits so we cast through numeric for the math.
   const { rows } = await opts.pool.query(
     `UPDATE system_limits
        SET value = ((COALESCE(NULLIF(value, ''), '0')::numeric + $1::numeric))::text

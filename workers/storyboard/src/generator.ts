@@ -1,4 +1,3 @@
-import type { Pool } from 'pg';
 import type { CrawlResult, Storyboard } from '@lumespec/schema';
 import { buildSystemPrompt } from './prompts/systemPrompt.js';
 import { buildUserMessage } from './prompts/userMessage.js';
@@ -10,7 +9,7 @@ import { adjustDuration, adjustStoryboardDuration } from './validation/durationA
 import { clampPacing } from './validation/pacingClamp.js';
 import { selectVariants } from './variantSelection.js';
 import type { ClaudeClient } from './claude/claudeClient.js';
-import { assertBudgetAvailable, recordSpend, BudgetExceededError } from './anthropic/spendGuard.js';
+import type { ClaudeUsage } from './anthropic/pricing.js';
 import { detectLocale } from './lib/localeDetect.js';
 import { detectIndustry } from './prompts/industryDetect.js';
 
@@ -150,7 +149,7 @@ function enrichFromCrawlResult(
 }
 
 export type GenerateResult =
-  | { kind: 'ok'; storyboard: Storyboard; attempts: number }
+  | { kind: 'ok'; storyboard: Storyboard; attempts: number; anthropicUsage: ClaudeUsage }
   | { kind: 'error'; message: string; attempts: number };
 
 export interface GenerateInput {
@@ -160,13 +159,6 @@ export interface GenerateInput {
   duration: 10 | 30 | 60;
   hint?: string;
   previousStoryboard?: Storyboard;
-  /**
-   * When non-null, the Anthropic daily spend guard runs pre-flight (rejects
-   * with STORYBOARD_BUDGET_EXCEEDED if cap is hit) and post-call (records
-   * the cost from the usage block). Null = guard disabled, behavior matches
-   * pre-Phase-5.
-   */
-  spendGuardPool?: Pool | null;
   /** Baked into videoConfig by enrichFromCrawlResult — never set by Claude. */
   showWatermark: boolean;
 }
@@ -188,29 +180,23 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
       : {}),
   });
   let feedback = '';
+  let accUsage: ClaudeUsage = { input_tokens: 0, output_tokens: 0 };
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    // Pre-flight budget gate. Guard auto-resets at UTC midnight.
-    try {
-      await assertBudgetAvailable({ pool: input.spendGuardPool ?? null });
-    } catch (err) {
-      if (err instanceof BudgetExceededError) {
-        return { kind: 'error', message: `${err.code}: ${err.message}`, attempts: attempt };
-      }
-      throw err;
-    }
-
     const msg = feedback ? `${userMessage}\n\n## Previous attempt errors — fix these:\n${feedback}` : userMessage;
     const resp = await input.claude.complete({ systemPrompt, userMessage: msg });
     if (resp.kind === 'error') {
       feedback = `Claude API error: ${resp.message}`;
       continue;
     }
-    // Record actual spend whether or not validation succeeds — we already
-    // paid for the tokens. Best-effort; failure here doesn't fail the job.
-    await recordSpend({ pool: input.spendGuardPool ?? null }, resp.usage).catch((err) =>
-      console.error('[storyboard] recordSpend failed:', err),
-    );
+    // Accumulate token usage across all attempts so the orchestrator can
+    // record total spend in a single call after the job succeeds.
+    accUsage = {
+      input_tokens: accUsage.input_tokens + resp.usage.input_tokens,
+      output_tokens: accUsage.output_tokens + resp.usage.output_tokens,
+      cache_read_input_tokens: (accUsage.cache_read_input_tokens ?? 0) + (resp.usage.cache_read_input_tokens ?? 0),
+      cache_creation_input_tokens: (accUsage.cache_creation_input_tokens ?? 0) + (resp.usage.cache_creation_input_tokens ?? 0),
+    };
 
     const parsed = parseJson(resp.text);
     if (parsed.kind === 'error') {
@@ -319,7 +305,7 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
       continue;
     }
 
-    return { kind: 'ok', storyboard: adjusted.storyboard, attempts: attempt };
+    return { kind: 'ok', storyboard: adjusted.storyboard, attempts: attempt, anthropicUsage: accUsage };
   }
 
   return { kind: 'error', message: `STORYBOARD_GEN_FAILED: ${feedback}`, attempts: MAX_ATTEMPTS };

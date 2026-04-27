@@ -8,6 +8,8 @@ import { reduceEvent } from './stateMachine.js';
 import { shouldDeferRender, renderQueueDepth, DEFAULT_RENDER_CAP } from './backpressure.js';
 import type { Pool } from 'pg';
 import { getUserTier } from '../credits/ledger.js';
+import { assertBudgetAvailable, recordSpend, BudgetExceededError } from '../credits/spendGuard.js';
+import type { ClaudeUsage } from '../credits/anthropicPricing.js';
 
 export interface OrchestratorConfig {
   queues: QueueBundle;
@@ -98,6 +100,22 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
     // forceWatermark set by dogfood/internal scripts overrides tier derivation.
     if (current.input.forceWatermark) showWatermark = true;
 
+    if (cfg.creditPool) {
+      try {
+        await assertBudgetAvailable({ pool: cfg.creditPool });
+      } catch (err) {
+        if (err instanceof BudgetExceededError) {
+          const patch = reduceEvent(current, {
+            kind: 'storyboard:failed',
+            error: { code: 'BUDGET_EXCEEDED', message: (err as Error).message, retryable: false },
+          });
+          await applyPatch(jobId, patch, current.status);
+          return;
+        }
+        throw err;
+      }
+    }
+
     await cfg.queues.storyboard.add(
       'generate',
       {
@@ -140,7 +158,7 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
   cfg.queues.storyboardEvents.on('completed', async ({ jobId, returnvalue }) => {
     const current = await cfg.store.get(jobId);
     if (!current) return;
-    const parsed = parseReturn<{ storyboardUri: S3Uri }>(returnvalue);
+    const parsed = parseReturn<{ storyboardUri: S3Uri; anthropicUsage?: ClaudeUsage }>(returnvalue);
     const depth = await renderQueueDepth(cfg.queues.render);
     const defer = shouldDeferRender({ active: depth.active, cap });
     await applyPatch(
@@ -167,6 +185,11 @@ export async function startOrchestrator(cfg: OrchestratorConfig): Promise<() => 
         event: 'queued',
         data: { position: depth.waiting + 1, aheadOfYou: depth.waiting },
       });
+    }
+    if (cfg.creditPool && parsed.anthropicUsage) {
+      await recordSpend({ pool: cfg.creditPool }, parsed.anthropicUsage).catch((err) =>
+        console.error('[orchestrator] recordSpend failed:', err),
+      );
     }
   });
 

@@ -57,6 +57,23 @@ describe('generateStoryboard', () => {
     if (result.kind === 'error') expect(result.attempts).toBe(3);
   });
 
+  it('returns accumulated anthropicUsage across retry attempts', async () => {
+    const client = mockClient('not-json-first-attempt', JSON.stringify(validStoryboard));
+    const result = await generateStoryboard({
+      claude: client,
+      crawlResult: crawl,
+      intent: 'x',
+      duration: 30,
+      showWatermark: false,
+    });
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      // 2 attempts × {input:100, output:50}
+      expect(result.anthropicUsage.input_tokens).toBe(200);
+      expect(result.anthropicUsage.output_tokens).toBe(100);
+    }
+  });
+
   it('overwrites CTA scene url with the source URL even if Claude emits garbage', async () => {
     // Claude regression: occasionally produces a relative path or an invented
     // shortened url (fails z.string().url()) for the CTA scene. We enrich

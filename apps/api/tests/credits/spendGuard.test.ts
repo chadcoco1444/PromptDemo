@@ -1,11 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { assertBudgetAvailable, recordSpend, BudgetExceededError } from '../../src/anthropic/spendGuard.js';
+import { assertBudgetAvailable, recordSpend, BudgetExceededError } from '../../src/credits/spendGuard.js';
 
-/**
- * Mock pg.Pool with a tiny in-memory key/value store. Lets us exercise the
- * sql logic without spinning up Postgres. Each test gets a fresh fixture so
- * we never leak state between assertions.
- */
 function makeMockPool(initial: Record<string, string>) {
   const store = new Map<string, string>(Object.entries(initial));
   const events: Array<{ q: string; params: unknown[] }> = [];
@@ -18,14 +13,12 @@ function makeMockPool(initial: Record<string, string>) {
       if (text.startsWith('COMMIT')) return { rows: [], rowCount: 0 };
       if (text.startsWith('ROLLBACK')) return { rows: [], rowCount: 0 };
 
-      // SELECT key, value FROM system_limits WHERE key IN (...) FOR UPDATE
       if (text.startsWith('SELECT key, value')) {
         const rows = [...store.entries()].map(([k, v]) => ({ key: k, value: v }));
         return { rows, rowCount: rows.length };
       }
 
       if (text.startsWith('UPDATE system_limits SET value=$2 WHERE key=')) {
-        // assertBudgetAvailable's stale-marker reset (2 args: ts, value)
         store.set('anthropic_daily_spend_usd', String(params?.[1] ?? '0'));
         return { rows: [], rowCount: 1 };
       }
@@ -95,7 +88,6 @@ describe('spend guard', () => {
       anthropic_daily_spend_usd: '24.99',
       anthropic_daily_reset_at: yesterday.toISOString(),
     });
-    // Yesterday's spend was almost-cap, but today resets to 0.
     await expect(
       assertBudgetAvailable({ pool, now: () => today }),
     ).resolves.toBeUndefined();
@@ -106,10 +98,8 @@ describe('spend guard', () => {
     const { pool, store } = makeMockPool({
       anthropic_daily_spend_usd: '0',
     });
-    // 1M input @ $3/M = $3
     await recordSpend({ pool }, { input_tokens: 1_000_000, output_tokens: 0 });
     expect(Number(store.get('anthropic_daily_spend_usd'))).toBeCloseTo(3, 4);
-    // Another 1M output @ $15/M
     await recordSpend({ pool }, { input_tokens: 0, output_tokens: 1_000_000 });
     expect(Number(store.get('anthropic_daily_spend_usd'))).toBeCloseTo(18, 4);
   });
