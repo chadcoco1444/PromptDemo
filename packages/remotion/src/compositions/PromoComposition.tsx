@@ -125,7 +125,7 @@ const Scene2Crawl: React.FC = () => {
   const jsonScale = interpolate(frame, [72, 88], [0.92, 1], { extrapolateRight: 'clamp' });
 
   return (
-    <AbsoluteFill style={{ background: '#050508', display: 'flex', fontFamily: FONT }}>
+    <AbsoluteFill style={{ background: '#050508', display: 'flex', flexDirection: 'row', fontFamily: FONT }}>
       <div style={{ width: '50%', padding: '40px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ fontSize: 12, color: MUTED, marginBottom: 16, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>Crawl & Understand</div>
         <div style={{ background: 'rgba(0,0,0,0.7)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '20px 20px', fontFamily: 'monospace', fontSize: 13, lineHeight: 1.9 }}>
@@ -439,7 +439,7 @@ const Scene7CodeToUI: React.FC = () => {
   const rightOpacity = interpolate(rightProgress, [0, 1], [0, 1]);
 
   return (
-    <AbsoluteFill style={{ background: '#050508', display: 'flex', fontFamily: FONT }}>
+    <AbsoluteFill style={{ background: '#050508', display: 'flex', flexDirection: 'row', fontFamily: FONT }}>
       <div style={{ width: '50%', padding: '48px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center', opacity: leftFade }}>
         <div style={{ fontSize: 12, color: 'rgba(167,139,250,0.8)', marginBottom: 16, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, opacity: headerOpacity }}>CodeToUI Scene</div>
         <div style={{ fontSize: 26, fontWeight: 700, color: TEXT, letterSpacing: '-0.01em', marginBottom: 28, lineHeight: 1.3 }}>
