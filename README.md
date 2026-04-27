@@ -108,7 +108,7 @@ Each stage runs in an **isolated BullMQ worker** — the crawl worker never touc
 ```mermaid
 graph TD
     Browser(["`**Browser**`"])
-    Web["**apps/web**\nNext.js 15\nLanding · History Vault · Auth"]
+    Web["**apps/web**\nNext.js 14\nLanding · History Vault · Auth"]
     API["**apps/api**\nFastify\nOrchestrator · Credit Gate · SSE"]
     Crawler["**workers/crawler**\nPlaywright · OverlayBlocker\nCircuit Breaker"]
     Storyboard["**workers/storyboard**\nClaude 3.5 Sonnet\n7-Layer Defense"]
@@ -213,13 +213,13 @@ pnpm typecheck            # type-check the whole monorepo
 
 | Layer | Technology | Why it's the right call |
 |---|---|---|
-| **Frontend** | Next.js 15 · Tailwind CSS · shadcn/ui | App Router, RSC, and a design system that doesn't fight you |
+| **Frontend** | Next.js 14 · Tailwind CSS · shadcn/ui | App Router, RSC, and a design system that doesn't fight you |
 | **Animations** | Framer Motion | Spring physics for the landing page; Remotion for inside the video |
 | **AI** | Anthropic Claude 3.5 Sonnet | Best structured JSON generation + industry tone reasoning available |
 | **Video** | Remotion 4 | Code-driven rendering — deterministic, versionable, and GPU-accelerated |
 | **Queue** | BullMQ + Redis | Isolated worker stages with built-in retry, backpressure, and visibility |
 | **Crawler** | Playwright | Full Chromium — handles SPAs, lazy images, and dark-mode screenshots |
-| **Database** | PostgreSQL + Drizzle ORM | Type-safe migrations, credit ledger, job lifecycle tracking |
+| **Database** | PostgreSQL + node-postgres (raw SQL) | Hand-tuned migrations, credit ledger, job lifecycle tracking |
 | **Storage** | AWS S3 / MinIO | Presigned download URLs, per-tier retention policies |
 | **Auth** | NextAuth.js v5 | GitHub + Google OAuth; database sessions; trusted proxy forwarding |
 
