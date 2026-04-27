@@ -29,6 +29,41 @@ describe('collectSceneTexts', () => {
     expect(texts).toEqual(['HELLO', 'there']);
   });
 
+  it('pulls headline + subtitle from DeviceMockup', () => {
+    const texts = collectSceneTexts({
+      sceneId: 1,
+      type: 'DeviceMockup',
+      durationInFrames: 300,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: {
+        headline: 'ship faster',
+        subtitle: 'paste a url, get a video',
+        screenshotKey: 'viewport',
+        device: 'laptop',
+        motion: 'pushIn',
+      },
+    });
+    expect(texts).toEqual(['ship faster', 'paste a url, get a video']);
+  });
+
+  it('omits subtitle from DeviceMockup when absent', () => {
+    const texts = collectSceneTexts({
+      sceneId: 1,
+      type: 'DeviceMockup',
+      durationInFrames: 300,
+      entryAnimation: 'fade',
+      exitAnimation: 'fade',
+      props: {
+        headline: 'ship faster',
+        screenshotKey: 'viewport',
+        device: 'laptop',
+        motion: 'pullOut',
+      },
+    });
+    expect(texts).toEqual(['ship faster']);
+  });
+
   it('pulls bento items titles and descriptions', () => {
     const texts = collectSceneTexts({
       sceneId: 2,

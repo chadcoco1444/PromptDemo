@@ -132,3 +132,6 @@ Claude 的輸出中永遠不應信任 `showWatermark` 欄位。即使 LLM 在輸
 
 ### 6. 在 worker 重新引入 PostgreSQL 連線
 Spec 3 R2（2026-04）已將 Anthropic spend guard 與 recordSpend 完整搬到 `apps/api/src/credits/spendGuard.ts`，本 worker 不應再 `import { Pool } from 'pg'` 或讀取 `DATABASE_URL`。任何「需要查 DB 才能決定怎麼跑」的需求，都應該轉成「orchestrator 在入隊前 gate / 在完成後記帳」的模式 — worker 留純粹（純 S3 讀寫 + Claude 呼叫 + Schema 驗證）才能保持中央化的故障與計費邊界。
+
+### 7. 在 scene-type discriminated switch 漏 `assertNever` default
+`validation/extractiveCheck.ts:collectSceneTexts` 是 `switch (scene.type)`，每個 case 從 props 抽出需做白名單比對的字串。**必須**有 `default: return assertNever(scene)` 防止 future Scene 類型被忘記 — 否則 switch 會 fall-through 回 `undefined`，呼叫端的 `for (const raw of collectSceneTexts(scene))` 在 prod 拋 `is not a function or its return value is not iterable`，整個 storyboard generation 失敗。2026-04-27 新增 DeviceMockup 時就因為漏這道而出 prod 事件。`assertNever` 把 runtime 失敗轉成編譯期錯誤。

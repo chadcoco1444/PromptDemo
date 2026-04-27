@@ -57,7 +57,19 @@ export function collectSceneTexts(scene: Scene): string[] {
       return scene.props.label ? [scene.props.label] : [];
     case 'CodeToUI':
       return scene.props.label ? [scene.props.label] : [];
+    case 'DeviceMockup':
+      return [scene.props.headline, ...(scene.props.subtitle ? [scene.props.subtitle] : [])];
+    default:
+      // Exhaustiveness guard: adding a new Scene variant must add a case
+      // above. Without this, a missing case silently returned `undefined`
+      // and the caller's `for...of` threw at runtime (prod incident
+      // 2026-04-27 with DeviceMockup). Compile-time error > prod 500.
+      return assertNever(scene);
   }
+}
+
+function assertNever(value: never): never {
+  throw new Error(`extractiveCheck: unhandled scene type ${(value as { type?: string })?.type}`);
 }
 
 export type ExtractiveViolation = {

@@ -99,9 +99,11 @@ Monorepo 結構：
 
 ### 新增 Remotion 場景的正確順序
 
-1. `packages/schema` — 定義 Zod Schema + 導出類型
-2. `packages/remotion` — 實作 React 元件 + 加入 `resolveScene.tsx`
-3. `workers/storyboard` — 在 prompt 加入場景描述與資料門控條件
+1. `packages/schema` — 定義 Zod Schema + 導出類型 + 加入 `SCENE_TYPES` 陣列
+2. `packages/remotion/src/resolveScene.tsx` — 加入 `case 'NewScene'`（switch 是 exhaustive，TS 會擋）
+3. `workers/storyboard/src/validation/extractiveCheck.ts` — 加入 `case 'NewScene'` 回傳 props 中需做 extractive 檢查的字串。**漏這步 = prod 拋 `for...of undefined`**（2026-04-27 DeviceMockup 事件）
+4. `workers/storyboard/src/prompts/systemPrompt.ts` — 加入場景描述與資料門控條件
+5. **必跑** `pnpm typecheck`（workspace 層級，不只動到的套件）— `extractiveCheck` 用 `assertNever` 守 exhaustiveness，漏 case 會在編譯期爆炸而不是 prod
 
 ### 信用點數
 
