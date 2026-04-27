@@ -40,6 +40,7 @@ graph LR
 - **Watermark** — `<Watermark />` 元件在 `showWatermark=true` 時疊加在每個場景右下角，由 `MainComposition` 統一控制，場景元件本身無感知
 - **PromoComposition** — 固定劇本的行銷示範影片，包含所有場景類型的精選展示，由 `pnpm lume render:promo` 獨立渲染
 - **primitives/** — 共享的動畫 primitive：`SpringFade`、`SlideIn`、`deriveTheme`（品牌色計算，必須 `useMemo`）
+- **視覺 regression smoke (`tests/visual/`)** — `pnpm test:visual` 用 `@remotion/renderer` 的 `renderStill` 抽 PromoComposition 7 個 scene 的中段穩定幀，跟 `tests/visual/baselines/` 的 PNG 用 `pixelmatch` 比對（0.5% 像素差容忍）。任何 layout 結構崩壞（例如 2026-04-27 的 Scene 2/7 漏寫 `flexDirection` 造成右半邊全黑）會直接 fail。自動接進 `pnpm test` 主鏈條 — CI 必經。視覺刻意改動時走「`test:visual` 產 actuals → 眼確認 → `test:visual:baseline` 升級」流程
 
 ---
 

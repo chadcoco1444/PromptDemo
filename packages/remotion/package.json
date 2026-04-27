@@ -9,6 +9,8 @@
     "render:10s": "remotion render src/Root.tsx MainComposition out.mp4",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:visual": "vitest run tests/visual",
+    "test:visual:baseline": "node tests/visual/update-baseline.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -26,9 +28,12 @@
   "devDependencies": {
     "@testing-library/react": "16.0.1",
     "@types/node": "20.14.10",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "18.3.11",
     "@types/react-dom": "18.3.0",
     "jsdom": "25.0.1",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
     "typescript": "5.5.4",
     "vitest": "2.1.1"
   }
