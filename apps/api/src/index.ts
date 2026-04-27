@@ -15,6 +15,7 @@ import { startPgBackfillWorker } from './cron/pgBackfill.js';
 
 const cfg = loadConfig();
 const redis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
+const queues = makeQueueBundle(redis);
 
 // Job store selection:
 //   - AUTH_ENABLED=true + DATABASE_URL present → Redis (primary) + Postgres
@@ -49,7 +50,11 @@ if (authEnabled) {
   const redisStore = makeJobStore(redis);
   redisStoreForBackfill = redisStore;
   pgStoreForBackfill = pgStore;
-  store = makeDualWriteJobStore({ primary: redisStore, mirror: pgStore });
+  store = makeDualWriteJobStore({
+    primary: redisStore,
+    mirror: pgStore,
+    pgBackfillQueue: queues.pgBackfill,
+  });
   console.log('[apps/api] AUTH_ENABLED + DATABASE_URL present → DualWriteJobStore active');
   if (pricingEnabled) {
     console.log('[apps/api] PRICING_ENABLED=true → credit gate + concurrency cap active on POST /api/jobs');
@@ -59,7 +64,6 @@ if (authEnabled) {
   console.log('[apps/api] AUTH_ENABLED=false → Redis-only job store');
 }
 
-const queues = makeQueueBundle(redis);
 const subRedis = new Redis(cfg.REDIS_URL, { maxRetriesPerRequest: null });
 const { broker, close: closeBroker } = makeRedisBroker({ publisher: redis, subscriber: subRedis });
 

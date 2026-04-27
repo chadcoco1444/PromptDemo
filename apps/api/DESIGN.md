@@ -154,3 +154,6 @@ BullMQ 在高並發下事件順序無法保證。在 `stateMachine.ts` 中應用
 把 stale `current` 餵給 `reduceEvent('storyboard:failed')` 會匹配不到 `VALID_EVENTS['crawling']` → 回 null → 後面的 `applyPatch(null)` 變成 no-op，job 就永遠卡在中間狀態。
 
 **規則：** 若 catch 之前可能已經套過 patch，catch 內必須先 `const post = await cfg.store.get(jobId)` 再用 `post`、`post.status` 來算下一個 patch。
+
+### 9. 對 PG mirror 失敗用 fire-and-forget log-and-continue
+Pre-Spec(#2 fix) 寫法 `try { await mirror.write(); } catch { console.warn(); }` 是 phantom job 災難的源頭：使用者付了錢、影片真的跑出來，但 history vault 永遠看不到。**任何 mirror 寫入失敗必須丟進 `pg-backfill` retry queue**（BullMQ + 5 attempts exponential + dedup by jobId），絕不可純 log 後 continue。Worker 透過讀 Redis 當下狀態 + PG upsert 達成最終一致性，避開 create-vs-patch 順序競爭。

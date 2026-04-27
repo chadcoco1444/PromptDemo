@@ -1,54 +1,68 @@
+import type { Queue } from 'bullmq';
 import type { JobStore } from './jobStore.js';
 import type { Job } from './model/job.js';
 
 /**
- * DualWriteJobStore — mirrors every write to both Redis and Postgres,
- * reads from Redis (progress + hot path). Feature 4 transition strategy
- * per v2.0 spec Part 2 Section 2:
+ * DualWriteJobStore — primary (Redis) is source of truth, mirror (Postgres) is
+ * eventual-consistency target. When the mirror write fails, we enqueue a
+ * reconciliation job to `pg-backfill` instead of swallowing the error. The
+ * worker (cron/pgBackfill.ts) reads current Redis state and upserts to PG.
  *
- *   Phase 1 (now): dual-write, reads from Redis. Postgres backfilled
- *   asynchronously for listings.
- *   Phase 2 (future): cutover reads to Postgres for history/listing queries,
- *   keep Redis reads only for live progress.
- *   Phase 3: Redis drops job:<id> hashes entirely; only progress:<id> stays.
- *
- * Writes to Postgres are fire-and-forget from the caller's POV — failures
- * are logged but don't block the Redis write, so a Postgres outage can't
- * take down the primary job-submission flow. Postgres will backfill from
- * Redis once it recovers (via an operator-run backfill script; not yet
- * built — tracked in the followup guide).
+ * Why required, not optional: prior to Spec #2 fix, the queue was an
+ * optional onMirrorError callback that no caller wired up — silent log-and-
+ * continue was the source of phantom jobs. Making the queue a required ctor
+ * dep fails fast at startup if it isn't plumbed through.
  */
 export interface DualWriteOptions {
-  primary: JobStore; // Redis — source of truth during transition
-  mirror: JobStore; // Postgres — best-effort secondary
-  onMirrorError?: (err: unknown, op: 'create' | 'patch', jobId: string) => void;
+  primary: JobStore;
+  mirror: JobStore;
+  pgBackfillQueue: Queue;
 }
 
+const RETRY_CONFIG = {
+  attempts: 5,
+  backoff: { type: 'exponential' as const, delay: 5_000 },
+  removeOnComplete: { count: 100 },
+  removeOnFail: { count: 50 },
+};
+
 export function makeDualWriteJobStore(opts: DualWriteOptions): JobStore {
-  const { primary, mirror, onMirrorError } = opts;
-  const handleMirrorErr = (err: unknown, op: 'create' | 'patch', jobId: string) => {
-    if (onMirrorError) onMirrorError(err, op, jobId);
-    else console.warn(`[jobStoreDual] ${op} mirror failed for ${jobId}:`, (err as Error)?.message ?? err);
+  const { primary, mirror, pgBackfillQueue } = opts;
+
+  const enqueueRetry = (op: 'create' | 'patch', jobId: string, err: unknown) => {
+    console.warn(
+      `[jobStoreDual] ${op} mirror failed for ${jobId}; enqueued retry:`,
+      (err as Error)?.message ?? err,
+    );
+    void pgBackfillQueue
+      .add('reconcile', { jobId }, { jobId, ...RETRY_CONFIG })
+      .catch((enqueueErr) => {
+        // Pathological case: the Redis backing BullMQ is also down.
+        console.error(
+          `[jobStoreDual] ${op} retry-enqueue ALSO failed for ${jobId}:`,
+          enqueueErr,
+        );
+      });
   };
 
   return {
     async create(job: Job) {
-      await primary.create(job); // Redis — must succeed
+      await primary.create(job);
       try {
-        await mirror.create(job); // Postgres — fire-and-forget
+        await mirror.create(job);
       } catch (err) {
-        handleMirrorErr(err, 'create', job.jobId);
+        enqueueRetry('create', job.jobId, err);
       }
     },
     async get(jobId: string) {
-      return primary.get(jobId); // Redis is authoritative during transition
+      return primary.get(jobId);
     },
     async patch(jobId, patch, updatedAt, expectedStatus?) {
-      await primary.patch(jobId, patch, updatedAt, expectedStatus); // Redis — must succeed
+      await primary.patch(jobId, patch, updatedAt, expectedStatus);
       try {
-        await mirror.patch(jobId, patch, updatedAt, expectedStatus); // Postgres — fire-and-forget
+        await mirror.patch(jobId, patch, updatedAt, expectedStatus);
       } catch (err) {
-        handleMirrorErr(err, 'patch', jobId);
+        enqueueRetry('patch', jobId, err);
       }
     },
   };

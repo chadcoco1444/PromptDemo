@@ -29,7 +29,15 @@ export function makeQueueBundle(connection: Redis): QueueBundle {
     storyboard: new Queue('storyboard', opts),
     render: new Queue('render', opts),
     retention: new Queue('retention', { connection: connection as any }),
-    pgBackfill: new Queue('pg-backfill', { connection: connection as any }),
+    pgBackfill: new Queue('pg-backfill', {
+      connection: connection as any,
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: { type: 'exponential' as const, delay: 5_000 },
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 50 },
+      },
+    }),
     crawlEvents: new QueueEvents('crawl', { connection: connection as any }),
     storyboardEvents: new QueueEvents('storyboard', { connection: connection as any }),
     renderEvents: new QueueEvents('render', { connection: connection as any }),
