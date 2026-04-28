@@ -28,7 +28,8 @@ describe('extractSourceTexts', () => {
   it('pulls H1-H3 text normalized', () => {
     const texts = extractSourceTexts(html);
     expect(texts).toContain('automate your stack');
-    expect(texts).toContain('fast & reliable');
+    // normalizeText folds " & " → " and " so source pool and Claude rewrites collide.
+    expect(texts).toContain('fast and reliable');
   });
 
   it('pulls strong text', () => {

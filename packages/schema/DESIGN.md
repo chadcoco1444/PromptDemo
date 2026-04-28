@@ -41,6 +41,7 @@ graph LR
 - **場景 Schema（discriminated union）** — 目前支援：`FeatureCallout`、`HeroRealShot`、`BentoGrid`、`StatsCounter`、`ReviewMarquee`、`LogoCloud`、`CodeToUI`、`DeviceMockup`；新增場景類型**必須在此先定義 Zod Schema**，再到 `packages/remotion` 實作 React 元件
   - **DeviceMockup** — hero-opener scene wrapping a viewport screenshot in a dark laptop shell with cinematic Pan/Zoom motion. Schema reserves `device: 'laptop' | 'phone'` for future phone-viewport crawler capture.
 - **共享工具類型** — `S3Uri`、`Tier`、`CircuitState` 等跨模組使用的基礎類型
+- **`normalizeText`（文本歸一化）** — 唯一規範化處所，被 crawler `extractSourceTexts`（建 source pool）跟 storyboard `extractiveCheck`（驗 scene text）**雙向**使用。對稱原則：任何 fold 規則改一處、兩邊自動對齊、無 drift 風險。當前 fold：HTML entities、NFKC、ZW/BOM 移除、控制字元剝離、smart quote → ASCII、`& → and`、whitespace 收斂、CJK 邊界空白移除、lowercase。Fold 加減**必須**保持對稱（不可只在 source 或只在 LLM 輸出側做），否則 extractive check 會失誤。**`& → and` regression 來源**：2026-04-28 burton.com tech intent 撞 `Step On® Boots & Bindings` (source) vs `step on® boots and bindings` (Claude rewrite)；fold 後兩側字面對齊。
 
 ---
 

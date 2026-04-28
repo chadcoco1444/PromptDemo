@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { normalizeText } from '../src/normalizeText.js';
 
 describe('normalizeText', () => {
-  it('decodes HTML entities', () => {
-    expect(normalizeText('Build &amp; ship')).toBe('build & ship');
+  it('decodes HTML entities (and folds the resulting "&" to "and")', () => {
+    expect(normalizeText('Build &amp; ship')).toBe('build and ship');
   });
 
   it('collapses whitespace including tabs and newlines', () => {
@@ -11,7 +11,7 @@ describe('normalizeText', () => {
   });
 
   it('strips zero-width and BOM characters', () => {
-    expect(normalizeText('hel\u200Blo\uFEFF')).toBe('hello');
+    expect(normalizeText('hel​lo﻿')).toBe('hello');
   });
 
   it('lowercases ASCII', () => {
@@ -35,7 +35,7 @@ describe('normalizeText', () => {
   });
 
   it('converts fullwidth space to removed when between CJK chars', () => {
-    expect(normalizeText('自\u3000動化')).toBe('自動化');
+    expect(normalizeText('自　動化')).toBe('自動化');
   });
 
   it('handles empty string', () => {
@@ -59,6 +59,28 @@ describe('normalizeText', () => {
   });
 
   it('strips control chars but keeps printable punctuation', () => {
-    expect(normalizeText('hello\u0001, world!')).toBe('hello, world!');
+    expect(normalizeText('hello, world!')).toBe('hello, world!');
+  });
+
+  // Regression: 2026-04-28 burton.com tech intent failed extractive check
+  // because source had "Step On® Boots & Bindings" while the LLM emitted
+  // "step on® boots and bindings". Source pool and scene texts must
+  // normalize identically — folding "&" → "and" symmetrically achieves that.
+  describe('ampersand folding (& → and)', () => {
+    it('folds " & " between words to " and "', () => {
+      expect(normalizeText('Boots & Bindings')).toBe('boots and bindings');
+    });
+
+    it('makes "&" and "and" forms equivalent for downstream matching', () => {
+      expect(normalizeText('Park & Freestyle')).toBe(normalizeText('park and freestyle'));
+      expect(normalizeText('Step On® Boots & Bindings')).toBe(
+        normalizeText('step on® boots and bindings'),
+      );
+    });
+
+    it('also folds tight "&" with no surrounding whitespace (e.g. brand names)', () => {
+      // Symmetric: source "AT&T" and Claude rewrite "AT and T" both end up the same.
+      expect(normalizeText('AT&T')).toBe(normalizeText('AT and T'));
+    });
   });
 });

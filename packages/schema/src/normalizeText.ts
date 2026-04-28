@@ -51,6 +51,14 @@ export function normalizeText(input: string): string {
   out = out.replace(SMART_DOUBLE_QUOTES, '"');
   out = out.replace(WHITESPACE, ' ').trim();
   out = out.toLowerCase();
+  // Fold "&" to "and" — Claude routinely rewrites ampersands as "and" when
+  // extracting phrases from source pages (e.g., source "Boots & Bindings"
+  // → output "boots and bindings"). Without this fold, downstream extractive
+  // check sees the strings as different. Applied symmetrically to source pool
+  // and scene texts, so legitimate brand names like "AT&T" → "at and t" on
+  // both sides remain consistent.
+  out = out.replace(/\s*&\s*/g, ' and ');
+  out = out.replace(WHITESPACE, ' ').trim();
   // Tighten CJK: drop any whitespace between adjacent CJK chars. Run twice to catch overlapping matches.
   out = out.replace(WS_BETWEEN_CJK, '$1$2').replace(WS_BETWEEN_CJK, '$1$2');
   return out;
