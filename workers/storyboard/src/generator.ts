@@ -6,6 +6,7 @@ import { parseJson } from './validation/parseJson.js';
 import { zodValidate } from './validation/zodValidate.js';
 import { extractiveCheck } from './validation/extractiveCheck.js';
 import { formatExtractiveFeedback } from './validation/extractiveFeedback.js';
+import { semanticJudge } from './validation/semanticJudge.js';
 import { adjustDuration, adjustStoryboardDuration } from './validation/durationAdjust.js';
 import { clampPacing } from './validation/pacingClamp.js';
 import { selectVariants } from './variantSelection.js';
@@ -162,6 +163,8 @@ export interface GenerateInput {
   previousStoryboard?: Storyboard;
   /** Baked into videoConfig by enrichFromCrawlResult — never set by Claude. */
   showWatermark: boolean;
+  /** Optional — used in semantic-judge telemetry log lines for prod correlation. */
+  jobId?: string;
 }
 
 export async function generateStoryboard(input: GenerateInput): Promise<GenerateResult> {
@@ -302,13 +305,38 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
 
     const extractive = extractiveCheck(validated.storyboard);
     if (extractive.kind === 'error') {
-      feedback = formatExtractiveFeedback(
+      // E3 — semantic appeal court. Strict extractive caught violations;
+      // ask Claude judge whether each is a faithful paraphrase or actual
+      // fabrication. Approved paraphrases re-enter the success path
+      // (storyboard ships with paraphrase intact). Rejected ones go to
+      // feedback for retry. Safety contract: judge API failure → REJECT
+      // (never silently approve).
+      const judged = await semanticJudge(
         extractive.violations,
         validated.storyboard.assets.sourceTexts,
-        previousExtractiveFeedback,
+        input.claude,
       );
-      previousExtractiveFeedback = feedback;
-      continue;
+      // Sanity log so we can post-hoc inspect approval rate vs rejection rate.
+      console.log(
+        `[storyboard-semantic] jobId=${input.jobId ?? 'unknown'} attempt=${attempt} ` +
+          `approved=${judged.approved.length}/${extractive.violations.length} ` +
+          `rejected=${judged.stillRejected.length}`,
+      );
+      if (judged.stillRejected.length === 0 && judged.approved.length > 0) {
+        // All violations were judged faithful paraphrases — bypass the retry
+        // and continue to success path with the original validated storyboard.
+        // The text fields stay as Claude wrote them; the contract relaxation
+        // is "extractive substring OR semantic paraphrase".
+        // Fall through to adjustStoryboardDuration check below.
+      } else {
+        feedback = formatExtractiveFeedback(
+          judged.stillRejected,
+          validated.storyboard.assets.sourceTexts,
+          previousExtractiveFeedback,
+        );
+        previousExtractiveFeedback = feedback;
+        continue;
+      }
     }
 
     const adjusted = adjustStoryboardDuration(validated.storyboard);

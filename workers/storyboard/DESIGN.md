@@ -127,13 +127,23 @@ Layer 5: 文字白名單過濾 (只保留來自爬蟲的原始文字)
            per-violation top-3 closest sourceText candidates (Fuse-ranked
            + substring-priority) + explicit (a) replace verbatim / (b)
            change scene type / (c) remove scene resolution menu + ★
-           verbatim suggestion when best candidate score < 0.4. Previous
+           verbatim suggestion when best candidate score < 0.4 + ⚠ length
+           disparity warning when rejected text is >2× longest candidate
+           (E1: Stripe testimonial-fabrication regression — verbatim
+           substitution can't fix synthesis, push to (b)/(c)). Previous
            extractive feedback is ACCUMULATED across MAX_ATTEMPTS retries
            ("do NOT repeat these errors") so Claude doesn't re-paraphrase
-           into the same fabrication class. Stripe regression 2026-04-28
-           (job 2Pyf__xPHzOq6HAoxYzdA) burned all 3 attempts on the same
-           Pattern-4 marketing-synthesis fabrications because old flat-list
-           feedback gave no resolution guidance.
+           into the same fabrication class.
+         — Layer-5 SEMANTIC APPEAL COURT (E3, `validation/semanticJudge.ts`):
+           when strict extractive rejects, asks Claude (Haiku) whether each
+           violation is a faithful PARAPHRASE (factual claims preserved)
+           vs FABRICATION (new claims). PARAPHRASE → re-enter success path
+           with the paraphrased text intact (contract relaxation:
+           "extractive substring OR semantic paraphrase"). FABRICATION →
+           remain in failure pipeline, feed back to Claude for retry.
+           SAFETY: API failure / unrecognizable response → REJECT (never
+           silently approve). Telemetry: `[storyboard-semantic] jobId=...
+           approved=N/M rejected=N` log line per cycle.
 Layer 6: Logo 資料門控 (logos 欄位需有真實 S3 URI 才能使用 LogoCloud 場景)
 Layer 7: showWatermark 強制注入 (依 payload 覆蓋，不信任 LLM 輸出)
 ```

@@ -65,6 +65,7 @@ const worker = new Worker<JobPayload>(
         intent: payload.intent,
         duration: payload.duration,
         showWatermark: payload.showWatermark,
+        jobId: payload.jobId,
         ...(payload.hint ? { hint: payload.hint } : {}),
         ...(previous ? { previousStoryboard: previous } : {}),
       });
