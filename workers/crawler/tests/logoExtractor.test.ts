@@ -90,4 +90,27 @@ describe('extractLogos', () => {
     expect(result[0]!.name).toBe('acme corp');
     expect(result[0]!.srcUrl).toBe('https://example.com/logos/acme-corp.svg');
   });
+
+  // Regression: 2026-04-28 stripe.com job i-GTw9pwtpmUhfXBLPw7e — Stripe's
+  // customer-stories section contained marketing photos with descriptive a11y
+  // alt text (>100 chars) like "Aerial view of a street intersection where the
+  // crosswalks form a slanted parallelogram...". The class signal `customer*`
+  // matched the section, every img's alt exceeded PartnerLogoSchema's
+  // .max(100), and the ENTIRE crawl was rejected by Zod. Fix at extractor:
+  // discard alt > 100 chars and fall back to filename-derived name (existing
+  // fallback path for empty alt).
+  it('falls back to nameFromSrc when alt > 100 chars (Stripe customer-photos regression)', () => {
+    const longAlt =
+      'Aerial view of a street intersection where the crosswalks form a slanted parallelogram, imitating the Stripe logo.';
+    expect(longAlt.length).toBeGreaterThan(100);
+    const html = `<html><body>
+      <div class="customer-stories">
+        <img src="https://images.example.com/road-stripe.jpg" alt="${longAlt}">
+      </div>
+    </body></html>`;
+    const result = extractLogos(html, BASE);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.name).toBe('road stripe');
+    expect(result[0]!.name.length).toBeLessThanOrEqual(100);
+  });
 });

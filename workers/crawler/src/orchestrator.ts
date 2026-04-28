@@ -1,4 +1,4 @@
-import { CrawlResultSchema, type CrawlResult, type S3Uri, type ExtractedReview, type PartnerLogo } from '@lumespec/schema';
+import { CrawlResultSchema, PartnerLogoSchema, type CrawlResult, type S3Uri, type ExtractedReview, type PartnerLogo } from '@lumespec/schema';
 import type { PlaywrightTrackResult } from './tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from './tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from './tracks/cheerioTrack.js';
@@ -175,7 +175,19 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
     if (!bytes) continue;
     const ext = candidate.srcUrl.split('.').pop()?.split('?')[0]?.toLowerCase() ?? 'png';
     const s3Uri = await input.uploader(bytes, `logo-partner-${logos.length}.${ext}`);
-    logos.push({ name: candidate.name, s3Uri });
+    // Per-item safe-parse — a single bad logo (e.g. extractor mis-classified
+    // a customer-photo section as logo cloud, alt text >100 chars) must NOT
+    // cascade into total CrawlResultSchema rejection. logos is .default([])
+    // in schema, so silently dropping invalid entries is the correct semantic.
+    // Stripe regression 2026-04-28 (job i-GTw9pwtpmUhfXBLPw7e).
+    const parsed = PartnerLogoSchema.safeParse({ name: candidate.name, s3Uri });
+    if (!parsed.success) {
+      console.warn(
+        `[crawler] logo dropped (schema fail): ${parsed.error.issues[0]?.message ?? 'unknown'} jobId=${input.jobId} src=${candidate.srcUrl}`,
+      );
+      continue;
+    }
+    logos.push(parsed.data);
   }
 
   const tier: CrawlResult['tier'] = fallbacks.length === 0 ? 'A' : 'B';

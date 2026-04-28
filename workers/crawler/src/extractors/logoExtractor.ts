@@ -62,7 +62,12 @@ function collectImgs(
     if (!rawSrc) return;
     const srcUrl = resolveUrl(rawSrc, baseUrl);
     if (!srcUrl) return;
-    const alt = $(img).attr('alt')?.trim() ?? '';
+    // PartnerLogoSchema enforces name.max(100). Discard alt that exceeds
+    // the limit (typically a11y descriptions in customer-stories sections that
+    // got mis-classified as logo cloud — Stripe regression 2026-04-28). Falls
+    // through to nameFromSrc, which derives a short name from the filename.
+    const altRaw = $(img).attr('alt')?.trim() ?? '';
+    const alt = altRaw.length <= 100 ? altRaw : '';
     const name = alt || nameFromSrc(srcUrl);
     const nameKey = name.toLowerCase();
     if (seen.has(srcUrl) || seen.has(nameKey)) return;

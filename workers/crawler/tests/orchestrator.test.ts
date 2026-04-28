@@ -171,6 +171,87 @@ describe('runCrawl', () => {
     expect(uploadedFilenames).toContain('logo-partner-0.svg');
   });
 
+  // Regression: 2026-04-28 stripe.com job i-GTw9pwtpmUhfXBLPw7e — Stripe's
+  // customer-stories section had 4 imgs with descriptive alt text >100 chars,
+  // which propagated through extractLogos → orchestrator → CrawlResultSchema
+  // .parse() and rejected the ENTIRE crawl with 4 too_big errors. Architectural
+  // fix: orchestrator validates each logo per PartnerLogoSchema before pushing,
+  // silently drops invalid ones (graceful — partial-failure should NOT cascade
+  // to total-failure when the field is .default([]) anyway).
+  it('drops logos that fail PartnerLogoSchema validation (does not crash whole crawl)', async () => {
+    const longName =
+      'Aerial view of a street intersection where the crosswalks form a slanted parallelogram, imitating the Stripe logo.';
+    expect(longName.length).toBeGreaterThan(100);
+
+    const pw: PlaywrightTrackResult = {
+      kind: 'ok',
+      html: '<html></html>',
+      sourceTexts: ['hello world'],
+      features: [],
+      reviews: [],
+      viewportScreenshot: Buffer.from([1]),
+      fullPageScreenshot: Buffer.from([2]),
+      logoCandidate: null,
+      colors: {},
+      logoSrcCandidates: [
+        { name: longName, srcUrl: 'https://example.com/photo1.jpg' },
+        { name: longName + ' B', srcUrl: 'https://example.com/photo2.jpg' },
+        { name: longName + ' C', srcUrl: 'https://example.com/photo3.jpg' },
+        { name: longName + ' D', srcUrl: 'https://example.com/photo4.jpg' },
+      ],
+      codeSnippets: [],
+    };
+
+    const result = await runCrawl({
+      url: 'https://x.com',
+      jobId: 'j',
+      rescueEnabled: true,
+      runPlaywright: async () => pw,
+      runScreenshotOne: async () => ({ kind: 'error', message: 'unused' }) as ScreenshotOneTrackResult,
+      runCheerio: async () => ({ kind: 'error', message: 'unused' }) as CheerioTrackResult,
+      uploader: async (_buf, filename) => toS3Uri('fake', `jobs/j/${filename}`),
+      downloadLogo: async () => Buffer.from([42]),
+    });
+
+    expect(result.logos).toEqual([]);
+    expect(result.sourceTexts).toEqual(['hello world']); // other crawl data intact
+  });
+
+  it('keeps valid logos and drops invalid ones (mixed batch)', async () => {
+    const longName = 'x'.repeat(150);
+    const pw: PlaywrightTrackResult = {
+      kind: 'ok',
+      html: '<html></html>',
+      sourceTexts: ['hello world'],
+      features: [],
+      reviews: [],
+      viewportScreenshot: Buffer.from([1]),
+      fullPageScreenshot: Buffer.from([2]),
+      logoCandidate: null,
+      colors: {},
+      logoSrcCandidates: [
+        { name: 'GoodOne', srcUrl: 'https://example.com/good1.svg' },
+        { name: longName, srcUrl: 'https://example.com/bad1.jpg' },
+        { name: 'GoodTwo', srcUrl: 'https://example.com/good2.svg' },
+      ],
+      codeSnippets: [],
+    };
+
+    const result = await runCrawl({
+      url: 'https://x.com',
+      jobId: 'j',
+      rescueEnabled: true,
+      runPlaywright: async () => pw,
+      runScreenshotOne: async () => ({ kind: 'error', message: 'unused' }) as ScreenshotOneTrackResult,
+      runCheerio: async () => ({ kind: 'error', message: 'unused' }) as CheerioTrackResult,
+      uploader: async (_buf, filename) => toS3Uri('fake', `jobs/j/${filename}`),
+      downloadLogo: async () => Buffer.from([42]),
+    });
+
+    expect(result.logos).toHaveLength(2);
+    expect(result.logos.map((l) => l.name)).toEqual(['GoodOne', 'GoodTwo']);
+  });
+
   describe('brand color tier chain', () => {
     function makeOpts(overrides: {
       domColor?: string;
