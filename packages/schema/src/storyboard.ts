@@ -142,6 +142,29 @@ const TextPunchSchema = z.object({
   props: z.object({
     text: z.string().min(1),
     emphasis: z.enum(['primary', 'secondary', 'neutral']),
+    // v1.7 visual-diversity variants. Backward-compat: existing storyboards
+    // without `variant` default to 'default', renders identically to v1.6.
+    // Renderer (packages/remotion) branches on this prop:
+    //   default        → solid color block + AnimatedText fade (legacy)
+    //   photoBackdrop  → source-page screenshot bg, dark overlay, shadow text, Ken Burns
+    //   slideBlock     → colored block slides in from right, holds, slides out left
+    variant: z.enum(['default', 'photoBackdrop', 'slideBlock']).default('default'),
+  }),
+});
+
+// v1.7 — single cinematic pull-quote with author. Replaces TextPunch in the
+// "one dramatic line of customer voice" niche with a visually richer alternative.
+// All three text fields must appear in sourceTexts (extractive check enforces).
+// Quote can span multiple sourceTexts entries — extractive check's joinedPool
+// fast-path (added 2026-04-28) handles cross-entry matches.
+const QuoteHeroSchema = z.object({
+  ...sceneBase,
+  type: z.literal('QuoteHero'),
+  props: z.object({
+    quote: z.string().min(10).max(280),
+    author: z.string().min(2).max(80),
+    attribution: z.string().min(2).max(120).optional(),
+    backgroundHint: z.enum(['gradient', 'screenshot']).optional().default('gradient'),
   }),
 });
 
@@ -236,6 +259,7 @@ export const SceneSchema = z.discriminatedUnion('type', [
   StatsBandSchema,
   BentoGridSchema,
   TextPunchSchema,
+  QuoteHeroSchema,
   CTASchema,
   StatsCounterSchema,
   ReviewMarqueeSchema,
@@ -254,6 +278,7 @@ export const SCENE_TYPES = [
   'StatsBand',
   'BentoGrid',
   'TextPunch',
+  'QuoteHero',
   'CTA',
   'StatsCounter',
   'ReviewMarquee',

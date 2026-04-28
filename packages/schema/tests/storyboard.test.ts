@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { StoryboardSchema, SceneSchema } from '../src/storyboard.js';
+import { StoryboardSchema, SceneSchema, SCENE_TYPES } from '../src/storyboard.js';
 
 const minimalValid = {
   videoConfig: {
@@ -252,6 +252,130 @@ describe('FeatureCalloutSchema variant', () => {
     ).toThrow();
   });
 });
+
+  describe('TextPunch variant field (v1.7)', () => {
+    it('accepts variant: "default" explicitly', () => {
+      const result = SceneSchema.safeParse({
+        type: 'TextPunch',
+        sceneId: 1,
+        durationInFrames: 90,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { text: 'Ship faster.', emphasis: 'primary', variant: 'default' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts variant: "photoBackdrop"', () => {
+      const result = SceneSchema.safeParse({
+        type: 'TextPunch',
+        sceneId: 1,
+        durationInFrames: 90,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { text: 'Ship faster.', emphasis: 'primary', variant: 'photoBackdrop' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts variant: "slideBlock"', () => {
+      const result = SceneSchema.safeParse({
+        type: 'TextPunch',
+        sceneId: 1,
+        durationInFrames: 90,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { text: 'Ship faster.', emphasis: 'primary', variant: 'slideBlock' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('defaults variant to "default" when omitted (backward-compat)', () => {
+      const result = SceneSchema.safeParse({
+        type: 'TextPunch',
+        sceneId: 1,
+        durationInFrames: 90,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { text: 'Ship faster.', emphasis: 'primary' },
+      });
+      expect(result.success).toBe(true);
+      if (result.success && result.data.type === 'TextPunch') {
+        expect(result.data.props.variant).toBe('default');
+      }
+    });
+
+    it('rejects unknown variant value', () => {
+      const result = SceneSchema.safeParse({
+        type: 'TextPunch',
+        sceneId: 1,
+        durationInFrames: 90,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { text: 'Ship faster.', emphasis: 'primary', variant: 'tilted' },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('QuoteHero scene (v1.7)', () => {
+    const validQuoteHero = {
+      type: 'QuoteHero' as const,
+      sceneId: 2,
+      durationInFrames: 180,
+      entryAnimation: 'fade' as const,
+      exitAnimation: 'fade' as const,
+      props: {
+        quote: 'We replaced 3 days of Figma with one paste-and-wait.',
+        author: 'Sarah Chen',
+        attribution: 'Founder, Acme Inc.',
+      },
+    };
+
+    it('accepts a minimal QuoteHero (no attribution, no backgroundHint)', () => {
+      const result = SceneSchema.safeParse({
+        ...validQuoteHero,
+        props: { quote: validQuoteHero.props.quote, author: validQuoteHero.props.author },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts a full QuoteHero with attribution + backgroundHint', () => {
+      const result = SceneSchema.safeParse({
+        ...validQuoteHero,
+        props: { ...validQuoteHero.props, backgroundHint: 'screenshot' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('defaults backgroundHint to "gradient" when omitted', () => {
+      const result = SceneSchema.safeParse(validQuoteHero);
+      expect(result.success).toBe(true);
+      if (result.success && result.data.type === 'QuoteHero') {
+        expect(result.data.props.backgroundHint).toBe('gradient');
+      }
+    });
+
+    it('rejects quote shorter than 10 characters', () => {
+      const result = SceneSchema.safeParse({
+        ...validQuoteHero,
+        props: { ...validQuoteHero.props, quote: 'tiny' },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects quote longer than 280 characters', () => {
+      const result = SceneSchema.safeParse({
+        ...validQuoteHero,
+        props: { ...validQuoteHero.props, quote: 'x'.repeat(281) },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('SCENE_TYPES array includes "QuoteHero"', () => {
+      expect(SCENE_TYPES).toContain('QuoteHero');
+    });
+  });
 
 describe('VideoConfigSchema — showWatermark', () => {
   it('parses a storyboard without showWatermark field and defaults to false', () => {
