@@ -545,6 +545,80 @@ describe('DeviceMockupSchema (via SceneSchema)', () => {
   });
 });
 
+describe('VersusSplit scene (Phase 2)', () => {
+  const validVS = {
+    type: 'VersusSplit' as const,
+    sceneId: 1,
+    durationInFrames: 120,
+    entryAnimation: 'fade' as const,
+    exitAnimation: 'fade' as const,
+    props: {
+      compareFraming: 'before-after' as const,
+      left: { label: 'Before', value: '3 days in Figma', iconHint: '🐌' },
+      right: { label: 'After', value: '60 seconds with LumeSpec', iconHint: '⚡' },
+    },
+  };
+
+  it('accepts a minimal VersusSplit (no headline, no iconHints)', () => {
+    const r = SceneSchema.safeParse({
+      ...validVS,
+      props: {
+        compareFraming: 'them-us',
+        left: { label: 'Them', value: 'their value' },
+        right: { label: 'Us', value: 'our value' },
+      },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('accepts a full VersusSplit with headline + iconHints', () => {
+    const r = SceneSchema.safeParse({
+      ...validVS,
+      props: { ...validVS.props, headline: 'Old way vs new way' },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it.each(['before-after', 'them-us', 'old-new', 'slow-fast'] as const)(
+    'accepts compareFraming: %s',
+    (framing) => {
+      const r = SceneSchema.safeParse({
+        ...validVS,
+        props: { ...validVS.props, compareFraming: framing },
+      });
+      expect(r.success).toBe(true);
+    },
+  );
+
+  it('rejects unknown compareFraming', () => {
+    const r = SceneSchema.safeParse({
+      ...validVS,
+      props: { ...validVS.props, compareFraming: 'us-vs-them' },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects headline shorter than 3 chars', () => {
+    const r = SceneSchema.safeParse({
+      ...validVS,
+      props: { ...validVS.props, headline: 'hi' },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects left.value longer than 80 chars', () => {
+    const r = SceneSchema.safeParse({
+      ...validVS,
+      props: { ...validVS.props, left: { label: 'Before', value: 'x'.repeat(81) } },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('SCENE_TYPES array includes "VersusSplit"', () => {
+    expect(SCENE_TYPES).toContain('VersusSplit');
+  });
+});
+
 // helper: fabricate a minimal scene of any type that fills duration 900
 function makeScene(type: string) {
   const base = {

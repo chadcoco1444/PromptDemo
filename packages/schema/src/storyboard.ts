@@ -168,6 +168,28 @@ const QuoteHeroSchema = z.object({
   }),
 });
 
+// Phase 2 — side-by-side comparison scene (before/after, them/us, old/new,
+// slow/fast). Both .value fields must be in sourceTexts (extractive enforces).
+// .label is framing word (Before/After/etc.) — UI text, not extractive-checked.
+const VersusSplitSchema = z.object({
+  ...sceneBase,
+  type: z.literal('VersusSplit'),
+  props: z.object({
+    headline: z.string().min(3).max(60).optional(),
+    compareFraming: z.enum(['before-after', 'them-us', 'old-new', 'slow-fast']),
+    left: z.object({
+      label: z.string().min(2).max(30),
+      value: z.string().min(1).max(80),
+      iconHint: z.string().min(1).max(4).optional(),
+    }),
+    right: z.object({
+      label: z.string().min(2).max(30),
+      value: z.string().min(1).max(80),
+      iconHint: z.string().min(1).max(4).optional(),
+    }),
+  }),
+});
+
 const CTASchema = z.object({
   ...sceneBase,
   type: z.literal('CTA'),
@@ -260,6 +282,7 @@ export const SceneSchema = z.discriminatedUnion('type', [
   BentoGridSchema,
   TextPunchSchema,
   QuoteHeroSchema,
+  VersusSplitSchema,
   CTASchema,
   StatsCounterSchema,
   ReviewMarqueeSchema,
@@ -279,6 +302,7 @@ export const SCENE_TYPES = [
   'BentoGrid',
   'TextPunch',
   'QuoteHero',
+  'VersusSplit',
   'CTA',
   'StatsCounter',
   'ReviewMarquee',

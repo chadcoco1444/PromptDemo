@@ -38,11 +38,12 @@ graph LR
 
 - **BullMQ Payload Schema** — 定義三個 Worker 的任務輸入格式：`CrawlJobPayload`、`StoryboardJobPayload`、`RenderJobPayload`；Orchestrator 使用這些類型建立任務，Worker 使用 `.parse()` 驗證輸入
 - **Storyboard/Video Schema** — 核心的 `VideoConfigSchema`（含 `showWatermark`、`fps`、`scenes`）以及所有場景類型的 discriminated union，是 Claude 輸出驗證的 Zod 防火牆
-- **場景 Schema（discriminated union）** — 目前支援：`FeatureCallout`、`HeroRealShot`、`BentoGrid`、`StatsCounter`、`ReviewMarquee`、`LogoCloud`、`CodeToUI`、`DeviceMockup`、`QuoteHero`；新增場景類型**必須在此先定義 Zod Schema**，再到 `packages/remotion` 實作 React 元件
+- **場景 Schema（discriminated union）** — 目前支援：`FeatureCallout`、`HeroRealShot`、`BentoGrid`、`StatsCounter`、`ReviewMarquee`、`LogoCloud`、`CodeToUI`、`DeviceMockup`、`QuoteHero`、`VersusSplit`；新增場景類型**必須在此先定義 Zod Schema**，再到 `packages/remotion` 實作 React 元件
   - **DeviceMockup** — hero-opener scene wrapping a viewport screenshot in a dark laptop shell with cinematic Pan/Zoom motion. Schema reserves `device: 'laptop' | 'phone'` for future phone-viewport crawler capture.
 - **共享工具類型** — `S3Uri`、`Tier`、`CircuitState` 等跨模組使用的基礎類型
 - **`TextPunchSchema.props.variant`（v1.7）** — 'default' | 'photoBackdrop' | 'slideBlock'。Backward-compat：未帶 variant 欄位的舊 storyboard 自動 default。Renderer 端 (packages/remotion) branch 渲染。
 - **`QuoteHeroSchema`（v1.7）** — 新 scene type、單則 pull-quote (10-280 char) + author (2-80 char) + 可選 attribution + 可選 backgroundHint('gradient'|'screenshot')。所有 text 欄位都受 extractive check 約束（見 workers/storyboard/DESIGN.md）。Quote 可跨 sourceTexts entries — joinedPool fast-path tolerates。
+- **`VersusSplitSchema`（Phase 2）** — 對比型 scene、`{ headline?, compareFraming: enum, left: {label, value, iconHint?}, right: {label, value, iconHint?} }`。雙邊 value 都必須 in sourceTexts（extractive check 強制）；label 是 framing word (Before/After/Them/Us…)、UI 用、不 extractive 檢查。`compareFraming` 4 值閉合：'before-after'|'them-us'|'old-new'|'slow-fast'。
 - **`normalizeText`（文本歸一化）** — 唯一規範化處所，被 crawler `extractSourceTexts`（建 source pool）跟 storyboard `extractiveCheck`（驗 scene text）**雙向**使用。對稱原則：任何 fold 規則改一處、兩邊自動對齊、無 drift 風險。當前 fold：HTML entities、NFKC、ZW/BOM 移除、控制字元剝離、smart quote → ASCII、`& → and`、whitespace 收斂、CJK 邊界空白移除、lowercase。Fold 加減**必須**保持對稱（不可只在 source 或只在 LLM 輸出側做），否則 extractive check 會失誤。**`& → and` regression 來源**：2026-04-28 burton.com tech intent 撞 `Step On® Boots & Bindings` (source) vs `step on® boots and bindings` (Claude rewrite)；fold 後兩側字面對齊。
 
 ---
