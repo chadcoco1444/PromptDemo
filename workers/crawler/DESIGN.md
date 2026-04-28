@@ -47,7 +47,7 @@ graph LR
 - **彈窗遮蔽 (`overlayBlocker`)** — 在截圖前注入 CSS，隱藏 GDPR 彈窗、客服 Widget、Cookie Banner 等干擾元素（支援 OneTrust、Intercom、Zendesk 等 20+ 平台）
 - **Domain Circuit Breaker (`domainCircuit`)** — Redis 記錄每個 domain 的連續失敗次數；3 次失敗開啟熔斷（30 分鐘冷卻），避免無效 Playwright 任務浪費資源和 IP
 - **品牌資產提取** — 從 CSS 變數、Open Graph 標籤、`<link rel="icon">` 提取次色、字型、Logo candidates
-- **Brand color tier chain** — primary brand color is resolved by a 3-tier fallback in `orchestrator.ts`: (Tier 0) DOM `background-color` sampling via `colorSampler.pickDominantFromFrequencies` with soft-neutral preference; (Tier 1) `<meta name="theme-color">` extraction via `extractThemeColorFromHtml` on whichever track produced the HTML; (Tier 2) Sharp `.stats().dominant` on the downloaded logo buffer via `extractDominantColorFromImage`; (Tier 3) `DEFAULT_BRAND_COLOR` constant. Per-tier source name is logged to worker stdout (`[crawler] brand color tier=X value=Y jobId=Z`) for grep-able prod observability.
+- **Brand color tier chain** — primary brand color is resolved by a 4-tier fallback in `orchestrator.ts`: (Tier 0) DOM `background-color` sampling via `colorSampler.pickDominantFromFrequencies` with soft-neutral preference; (Tier 1) `<meta name="theme-color">` extraction via `extractThemeColorFromHtml`; (Tier 2) Sharp `.stats().dominant` on the downloaded logo via `extractDominantColorFromImage` — runs when upstream is empty OR returned a neutral (overrides the neutral if Tier 2 finds non-neutral, source=`logo-pixel-override`); (Tier 3) `DEFAULT_BRAND_COLOR`. Per-tier source name logged to worker stdout (`[crawler] brand color tier=X value=Y jobId=Z`) for grep-able prod observability.
 - **S3 上傳** — `viewport.jpg`、`fullpage.jpg`、Logo SVG/PNG、`crawlResult.json` 均上傳至同一 `jobs/{jobId}/` 前綴下
 
 ---

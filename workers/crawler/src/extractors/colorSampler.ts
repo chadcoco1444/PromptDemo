@@ -13,7 +13,7 @@ function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function isNeutral(hex: string): boolean {
+export function isNeutral(hex: string): boolean {
   const lum = luminance(hex);
   return lum >= NEUTRAL_LUMINANCE_HI || lum <= NEUTRAL_LUMINANCE_LO;
 }

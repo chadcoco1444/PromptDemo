@@ -243,5 +243,34 @@ describe('runCrawl', () => {
       expect(result.brand.primaryColor).toBe('#000000');
       expect(result.brand.primaryColor).not.toBe('#1a1a1a');
     });
+
+    it('tier 2 OVERRIDES when DOM returns neutral and logo has non-neutral (logo-pixel-override)', async () => {
+      // Duolingo case: DOM sampling returns black (gradient CTAs return rgba(0,0,0,0)
+      // so soft-neutral preference picks up neutral header/nav). Logo SVG is green.
+      // Override should kick in: tier 2 wins, source = logo-pixel-override.
+      const sharp = (await import('sharp')).default;
+      const greenLogo = await sharp({
+        create: { width: 64, height: 64, channels: 3, background: { r: 88, g: 204, b: 2 } },
+      }).png().toBuffer();
+      const result = await runCrawl(makeOpts({ domColor: '#000000', logoBuf: greenLogo }));
+      expect(result.brand.primaryColor).toBeDefined();
+      // Sharp returns ~#58cc02 within ±8; should NOT be the input #000000
+      expect(result.brand.primaryColor).not.toBe('#000000');
+      const r = parseInt(result.brand.primaryColor!.slice(1, 3), 16);
+      const g = parseInt(result.brand.primaryColor!.slice(3, 5), 16);
+      expect(g).toBeGreaterThan(r); // green > red dominant
+    });
+
+    it('tier 2 escalation keeps upstream neutral when logo is also neutral (YAGNI guard for black-logo brands)', async () => {
+      // Vercel-equivalent extreme case: DOM returned black, logo is also black.
+      // No non-neutral signal anywhere — keep the upstream neutral, do NOT
+      // override with tier 2's neutral (no value in swapping one neutral for another).
+      const sharp = (await import('sharp')).default;
+      const blackLogo = await sharp({
+        create: { width: 64, height: 64, channels: 3, background: { r: 0, g: 0, b: 0 } },
+      }).png().toBuffer();
+      const result = await runCrawl(makeOpts({ domColor: '#171717', logoBuf: blackLogo }));
+      expect(result.brand.primaryColor).toBe('#171717'); // upstream preserved
+    });
   });
 });

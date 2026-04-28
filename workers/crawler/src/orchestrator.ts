@@ -3,6 +3,7 @@ import type { PlaywrightTrackResult } from './tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from './tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from './tracks/cheerioTrack.js';
 import { isGoogleFontSupported } from './extractors/fontDetector.js';
+import { isNeutral } from './extractors/colorSampler.js';
 import { extractThemeColorFromHtml } from './extractors/themeColorFromHtml.js';
 import { extractDominantColorFromImage } from './extractors/colorFromImage.js';
 import type { ExtractedLogoCandidate } from './extractors/logoExtractor.js';
@@ -98,11 +99,24 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
       primarySource = 'meta-theme-color';
     }
   }
-  if (!primaryColor && logoBuf) {
+  // Tier 2: runs when (a) no upstream color OR (b) upstream color is neutral.
+  // Case (a) — primary signal path → 'logo-pixel-analysis'.
+  // Case (b) — Tier 2 may OVERRIDE upstream IF it finds a non-neutral; else keep
+  // upstream neutral (YAGNI: don't compare which neutral is "better"; covers
+  // Duolingo-class brands whose green lives only in the logo SVG, not in any
+  // element backgroundColor that DOM sampling can see).
+  const upstreamWasNeutral = primaryColor !== undefined && isNeutral(primaryColor);
+  if ((!primaryColor || upstreamWasNeutral) && logoBuf) {
     const fromImg = await extractDominantColorFromImage(logoBuf);
     if (fromImg) {
-      primaryColor = fromImg;
-      primarySource = 'logo-pixel-analysis';
+      if (!primaryColor) {
+        primaryColor = fromImg;
+        primarySource = 'logo-pixel-analysis';
+      } else if (!isNeutral(fromImg)) {
+        primaryColor = fromImg;
+        primarySource = 'logo-pixel-override';
+      }
+      // else: tier 2 also neutral → keep upstream (no source change)
     }
   }
   if (!primaryColor) {
