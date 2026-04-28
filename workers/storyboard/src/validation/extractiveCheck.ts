@@ -94,6 +94,7 @@ function phraseMatches(
   n: string,
   pool: string[],
   cjkPoolJoined: string,
+  joinedPool: string,
   fuse: Fuse<string>
 ): boolean {
   if (!n) return true;
@@ -114,6 +115,11 @@ function phraseMatches(
   // 0.3 threshold (distance dominated by surrounding noise) — most often
   // triggered by hardsell intent's "Short punchy" guidance.
   if (pool.some((p) => p.includes(n))) return true;
+  // joinedPool fast-path — catches phrases that legitimately span multiple
+  // sourceTexts entries (Claude joins testimonial header + body + author,
+  // or promo headline + product list, etc.). Symmetric for all scene types.
+  // Regression source: 2026-04-28 Burton tech "save up to 40% off select boards..."
+  if (joinedPool.includes(n)) return true;
   const best = fuse.search(n)[0];
   return !!best && best.score !== undefined && best.score <= FUSE_THRESHOLD;
 }
@@ -136,6 +142,7 @@ function allSegmentsMatch(
   separator: RegExp,
   pool: string[],
   cjkPoolJoined: string,
+  joinedPool: string,
   fuse: Fuse<string>
 ): boolean {
   const segments = n
@@ -143,13 +150,14 @@ function allSegmentsMatch(
     .map(normalizeSegment)
     .filter((s) => s.length >= MIN_SEGMENT_LEN);
   if (segments.length < 2) return false;
-  return segments.every((seg) => phraseMatches(seg, pool, cjkPoolJoined, fuse));
+  return segments.every((seg) => phraseMatches(seg, pool, cjkPoolJoined, joinedPool, fuse));
 }
 
 export function extractiveCheck(sb: Storyboard): ExtractiveResult {
   const pool = sb.assets.sourceTexts.map(normalizeText);
   const fuse = new Fuse(pool, { threshold: FUSE_THRESHOLD, includeScore: true });
   const cjkPoolJoined = pool.join(' | ');
+  const joinedPool = pool.join(' ');
 
   const violations: ExtractiveViolation[] = [];
 
@@ -159,18 +167,18 @@ export function extractiveCheck(sb: Storyboard): ExtractiveResult {
       if (!n) continue;
 
       // Pass 1: whole phrase match (preserves v1 behavior for single phrases).
-      let matched = phraseMatches(n, pool, cjkPoolJoined, fuse);
+      let matched = phraseMatches(n, pool, cjkPoolJoined, joinedPool, fuse);
 
       // Pass 2: strong separators (·, •, |, space-padded / or —).
       if (!matched && STRONG_SEPARATORS.test(n)) {
-        matched = allSegmentsMatch(n, STRONG_SEPARATORS, pool, cjkPoolJoined, fuse);
+        matched = allSegmentsMatch(n, STRONG_SEPARATORS, pool, cjkPoolJoined, joinedPool, fuse);
       }
 
       // Pass 3: comma separators (with leading-conjunction + trailing-punct
       // segment normalization). Comma lists are common in Claude's natural
       // prose — safe because each segment must independently match the pool.
       if (!matched && COMMA_SEPARATOR.test(n)) {
-        matched = allSegmentsMatch(n, COMMA_SEPARATOR, pool, cjkPoolJoined, fuse);
+        matched = allSegmentsMatch(n, COMMA_SEPARATOR, pool, cjkPoolJoined, joinedPool, fuse);
       }
 
       // Pass 4: sentence-level split (period + whitespace + lowercase letter).
@@ -178,7 +186,7 @@ export function extractiveCheck(sb: Storyboard): ExtractiveResult {
       // multiple source-page clauses with full stops. Lookahead [a-z] avoids
       // splitting on decimals ("3.5x"), abbreviations, and URLs.
       if (!matched && SENTENCE_SEPARATOR.test(n)) {
-        matched = allSegmentsMatch(n, SENTENCE_SEPARATOR, pool, cjkPoolJoined, fuse);
+        matched = allSegmentsMatch(n, SENTENCE_SEPARATOR, pool, cjkPoolJoined, joinedPool, fuse);
       }
 
       if (!matched) {

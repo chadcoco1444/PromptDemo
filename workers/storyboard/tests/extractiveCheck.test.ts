@@ -143,6 +143,35 @@ describe('extractiveCheck (Latin)', () => {
     ];
     expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
   });
+
+  // Regression: 2026-04-28 Burton tech intent — Claude legitimately joined
+  // promo phrases that lived in separate sourceTexts entries. Substring
+  // against any single pool entry failed; fuzzy distance was over threshold
+  // because the joined string was much longer than any individual entry.
+  // Fix: also try substring inclusion against the full pool joined with " ".
+  it('matches phrases that span multiple sourceTexts entries (joinedPool fast-path)', () => {
+    const board: Storyboard = {
+      videoConfig: { durationInFrames: 300, fps: 30, brandColor: '#111111', bgm: 'none', showWatermark: false },
+      assets: {
+        screenshots: {},
+        sourceTexts: ['Save up to 40% off', 'select boards, boots, outerwear, and more'],
+      },
+      scenes: [
+        {
+          sceneId: 1,
+          type: 'TextPunch',
+          durationInFrames: 300,
+          entryAnimation: 'fade',
+          exitAnimation: 'fade',
+          props: {
+            text: 'save up to 40% off select boards, boots, outerwear, and more',
+            emphasis: 'primary',
+          },
+        },
+      ],
+    };
+    expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
+  });
 });
 
 describe('extractiveCheck (CJK)', () => {
