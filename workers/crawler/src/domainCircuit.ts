@@ -86,3 +86,37 @@ export async function recordSuccess(redis: Redis, hostname: string): Promise<voi
     key(hostname, 'open'),
   );
 }
+
+/**
+ * Result type for evaluateCircuit. Distinguishes "go ahead with playwright"
+ * (with wasProbe flag for recordFailure attribution) from "playwright is
+ * gated by circuit state, surface this as a track-blocked signal".
+ */
+export type CircuitGateResult =
+  | { kind: 'allow'; wasProbe: boolean }
+  | { kind: 'blocked'; reason: 'CIRCUIT_OPEN' | 'CIRCUIT_HALF_OPEN' };
+
+/**
+ * Translate a circuit state into a structured gate decision for the
+ * Playwright track. Encapsulates the 3-state mapping so the orchestrator's
+ * runPlaywright lambda doesn't have to repeat the switch.
+ *
+ * Pre-2026-04-28: the worker handler called checkCircuit() at the top level
+ * and threw UnrecoverableError on 'open' / 'half-open-probe-in-flight',
+ * killing the entire job. That bypassed the orchestrator's pickTrack
+ * fallback chain (playwright → ScreenshotOne → cheerio) — defeating the
+ * whole point of having alternate tracks. Bug #3 Sub C moved the check
+ * inside the runPlaywright lambda and converts blocking states into
+ * `{ kind: 'blocked' }` results — pickTrack handles the rest.
+ */
+export async function evaluateCircuit(
+  redis: Redis,
+  hostname: string
+): Promise<CircuitGateResult> {
+  const state = await checkCircuit(redis, hostname);
+  if (state === 'open') return { kind: 'blocked', reason: 'CIRCUIT_OPEN' };
+  if (state === 'half-open-probe-in-flight') {
+    return { kind: 'blocked', reason: 'CIRCUIT_HALF_OPEN' };
+  }
+  return { kind: 'allow', wasProbe: state === 'half-open-probe-claimed' };
+}

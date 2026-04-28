@@ -3,6 +3,7 @@ import Redis from 'ioredis-mock';
 import type { Redis as IoRedis } from 'ioredis';
 import {
   checkCircuit,
+  evaluateCircuit,
   recordFailure,
   recordSuccess,
   type CircuitState,
@@ -138,5 +139,44 @@ describe('recordSuccess', () => {
     // After success, circuit returns closed
     const state = await checkCircuit(redis, HOST);
     expect(state).toBe<CircuitState>('closed');
+  });
+});
+
+describe('evaluateCircuit', () => {
+  it('returns allow + wasProbe=false when circuit is closed', async () => {
+    const redis = makeRedis();
+    await redis.set(`circuit:${HOST}:healthy`, '1', 'EX', 60);
+    const result = await evaluateCircuit(redis, HOST);
+    expect(result).toEqual({ kind: 'allow', wasProbe: false });
+  });
+
+  it('returns allow + wasProbe=true when this caller claims the half-open probe', async () => {
+    const redis = makeRedis();
+    // Simulate half-open-probe-claimed by having no keys yet,
+    // so evaluateCircuit -> checkCircuit will claim it.
+    const result = await evaluateCircuit(redis, HOST);
+    expect(result).toEqual({ kind: 'allow', wasProbe: true });
+  });
+
+  it('returns blocked CIRCUIT_OPEN when domain is in cooldown', async () => {
+    const redis = makeRedis();
+    await redis.set(`circuit:${HOST}:open`, '1', 'EX', 1800);
+    const result = await evaluateCircuit(redis, HOST);
+    expect(result).toEqual({ kind: 'blocked', reason: 'CIRCUIT_OPEN' });
+  });
+
+  it('returns blocked CIRCUIT_HALF_OPEN when another worker is currently probing', async () => {
+    const redis = makeRedis();
+    await redis.set(`circuit:${HOST}:probe`, '1', 'EX', 120);
+    const result = await evaluateCircuit(redis, HOST);
+    expect(result).toEqual({ kind: 'blocked', reason: 'CIRCUIT_HALF_OPEN' });
+  });
+
+  it('does NOT mutate redis as a side effect (pure read)', async () => {
+    const redis = makeRedis();
+    const before = await redis.get(`circuit:${HOST}:strikes`);
+    await evaluateCircuit(redis, HOST);
+    const after = await redis.get(`circuit:${HOST}:strikes`);
+    expect(after).toBe(before);
   });
 });

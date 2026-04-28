@@ -1,4 +1,4 @@
-import { Worker, UnrecoverableError, type Job } from 'bullmq';
+import { Worker, type Job } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { z } from 'zod';
 import {
@@ -14,7 +14,7 @@ import { runCheerioTrack } from './tracks/cheerioTrack.js';
 import { downloadLogo } from './logoDownloader.js';
 import { startHealthServer } from './health.js';
 import { makeIntel, type S3Uri } from '@lumespec/schema';
-import { checkCircuit, recordFailure, recordSuccess } from './domainCircuit.js';
+import { evaluateCircuit, recordFailure, recordSuccess } from './domainCircuit.js';
 
 const JobPayload = z.object({ jobId: z.string().min(1), url: z.string().url() });
 type JobPayload = z.infer<typeof JobPayload>;
@@ -37,15 +37,9 @@ const worker = new Worker<JobPayload>(
     const payload = JobPayload.parse(job.data);
 
     const hostname = new URL(payload.url).hostname;
-    const circuitState = await checkCircuit(connection, hostname);
-    const wasProbe = circuitState === 'half-open-probe-claimed';
-
-    if (circuitState === 'open') {
-      throw new UnrecoverableError(`CIRCUIT_OPEN domain=${hostname}`);
-    }
-    if (circuitState === 'half-open-probe-in-flight') {
-      throw new UnrecoverableError(`CIRCUIT_HALF_OPEN domain=${hostname}`);
-    }
+    // Circuit gate moved INTO the runPlaywright lambda below — see Bug #3
+    // Sub C in workers/crawler/DESIGN.md anti-pattern. Top-level throws
+    // killed the whole job and bypassed the orchestrator's fallback chain.
 
     const uploader = async (buf: Buffer, filename: string): Promise<S3Uri> => {
       const key = buildKey(payload.jobId, filename);
@@ -64,6 +58,14 @@ const worker = new Worker<JobPayload>(
       jobId: payload.jobId,
       rescueEnabled,
       runPlaywright: async (url) => {
+        // Bug #3 Sub C: circuit gate runs HERE (per-track precondition),
+        // not at the worker handler. When circuit is OPEN or another worker
+        // holds the probe, return blocked → orchestrator's pickTrack falls
+        // through to ScreenshotOne → cheerio. wasProbe flag is per-call.
+        const gate = await evaluateCircuit(connection, hostname);
+        if (gate.kind === 'blocked') {
+          return { kind: 'blocked', reason: gate.reason };
+        }
         await job.updateProgress(makeIntel('crawl', 'Rendering with Playwright'));
         const pw = await runPlaywrightTrack({ url, timeoutMs: playwrightTimeoutMs });
         if (pw.kind === 'ok') {
@@ -71,7 +73,7 @@ const worker = new Worker<JobPayload>(
             console.warn('[circuit] recordSuccess failed — circuit state may drift', e)
           );
         } else {
-          await recordFailure(connection, hostname, wasProbe).catch((e) =>
+          await recordFailure(connection, hostname, gate.wasProbe).catch((e) =>
             console.warn('[circuit] recordFailure failed — circuit state may drift', e)
           );
         }
