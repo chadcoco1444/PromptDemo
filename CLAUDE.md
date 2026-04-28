@@ -86,6 +86,7 @@ Monorepo 結構：
 - **任何新功能必須先走 `/brainstorming`**，禁止跳過直接實作
 - **main 分支零破燈**（broken window policy）：發現任何測試失敗，必須立即修復才能繼續其他工作
 - Plan 文件的 checkbox 不打勾，以程式碼和測試為完成依據
+- **任何超過一頁的 plan / spec / mini-spec 必須寫成 `.md` 檔案**（存於 `docs/superpowers/plans/` 或 `docs/superpowers/specs/`），不要直接貼在對話視窗。理由：對話視窗會被 compact、檔案會留下且能被 git tracked、reviewer 容易離線審閱、subagent 可被 dispatch 去讀檔。短於一頁的微調（單檔 typo、單行 config）才允許 inline。
 
 ---
 
