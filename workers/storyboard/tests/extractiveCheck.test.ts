@@ -486,3 +486,87 @@ describe('QuoteHero scene (v1.7)', () => {
     expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
   });
 });
+
+describe('VersusSplit scene (Phase 2)', () => {
+  it('passes when headline + both values are in sourceTexts', () => {
+    const board = sb([
+      {
+        type: 'VersusSplit',
+        sceneId: 1,
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          headline: 'old way vs new way',
+          compareFraming: 'before-after',
+          left: { label: 'Before', value: '3 days in figma' },
+          right: { label: 'After', value: '60 seconds with lumespec' },
+        },
+      },
+    ]);
+    board.assets.sourceTexts = [
+      'old way vs new way',
+      '3 days in figma',
+      '60 seconds with lumespec',
+    ];
+    expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
+  });
+
+  it('passes when headline absent and both values in pool', () => {
+    const board = sb([
+      {
+        type: 'VersusSplit',
+        sceneId: 1,
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          compareFraming: 'slow-fast',
+          left: { label: 'Slow', value: 'manual setup' },
+          right: { label: 'Fast', value: 'one-click deploy' },
+        },
+      },
+    ]);
+    board.assets.sourceTexts = ['manual setup', 'one-click deploy'];
+    expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
+  });
+
+  it('rejects when right.value is hallucinated', () => {
+    const board = sb([
+      {
+        type: 'VersusSplit',
+        sceneId: 1,
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          compareFraming: 'them-us',
+          left: { label: 'Them', value: 'manual setup' },
+          right: { label: 'Us', value: 'fabricated marketing claim' },
+        },
+      },
+    ]);
+    board.assets.sourceTexts = ['manual setup'];
+    const r = extractiveCheck(board);
+    expect(r.kind).toBe('error');
+  });
+
+  it('does NOT extractive-check label fields (Before/After/etc are UI framing)', () => {
+    const board = sb([
+      {
+        type: 'VersusSplit',
+        sceneId: 1,
+        durationInFrames: 120,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          compareFraming: 'before-after',
+          left: { label: 'Yesterday', value: 'manual setup' },
+          right: { label: 'Today', value: 'one-click deploy' },
+        },
+      },
+    ]);
+    board.assets.sourceTexts = ['manual setup', 'one-click deploy'];
+    expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
+  });
+});

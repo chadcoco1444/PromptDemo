@@ -53,6 +53,14 @@ export function collectSceneTexts(scene: Scene): string[] {
         scene.props.author,
         ...(scene.props.attribution ? [scene.props.attribution] : []),
       ];
+    case 'VersusSplit':
+      return [
+        ...(scene.props.headline ? [scene.props.headline] : []),
+        scene.props.left.value,
+        scene.props.right.value,
+        // label fields are UI framing words (Before/After/etc.), not content;
+        // intentionally NOT extractive-checked. Same approach as iconHint.
+      ];
     case 'CTA':
       return [scene.props.headline];
     case 'StatsCounter':

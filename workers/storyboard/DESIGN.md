@@ -114,6 +114,10 @@ Layer 5: 文字白名單過濾 (只保留來自爬蟲的原始文字)
            `[quote, author, attribution]` (attribution included only if
            present). Quote may span multiple sourceTexts entries; relies on
            Pass 1 joinedPool fast-path for cross-entry tolerance.
+         — `collectSceneTexts` handles `case 'VersusSplit'` (Phase 2) —
+           returns `[headline?, left.value, right.value]`. label fields
+           are UI framing (Before/After/Them/Us), intentionally NOT
+           extractive-checked — same approach as iconHint.
 Layer 6: Logo 資料門控 (logos 欄位需有真實 S3 URI 才能使用 LogoCloud 場景)
 Layer 7: showWatermark 強制注入 (依 payload 覆蓋，不信任 LLM 輸出)
 ```
