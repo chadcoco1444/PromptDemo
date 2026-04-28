@@ -51,6 +51,7 @@ const ALL_URLS = [
   { id: 'duolingo',  label: 'Duolingo (digital learning)', url: 'https://www.duolingo.com' },
   { id: 'gopro',     label: 'GoPro (extreme sports gear)', url: 'https://gopro.com' },
   { id: 'patagonia', label: 'Patagonia (outdoor gear)',    url: 'https://www.patagonia.com/' },
+  { id: 'burton',    label: 'Burton (snowboard gear)',     url: 'https://www.burton.com/' },
 ];
 
 // Optional INCLUDE_CELLS=url:intent,url:intent filter — runs only the listed
