@@ -106,6 +106,14 @@ function phraseMatches(
     }
     return false;
   }
+  // Substring inclusion fast-path — mirrors the CJK path above. Catches
+  // legitimate sub-phrase extraction from separator-joined source strings
+  // (e.g., Claude pulls "standing sideways since 1977" from source
+  // "burton.com | standing sideways since 1977 | burton snowboards us").
+  // Pre-2026-04-28: short sub-phrases of long pool entries failed Fuse's
+  // 0.3 threshold (distance dominated by surrounding noise) — most often
+  // triggered by hardsell intent's "Short punchy" guidance.
+  if (pool.some((p) => p.includes(n))) return true;
   const best = fuse.search(n)[0];
   return !!best && best.score !== undefined && best.score <= FUSE_THRESHOLD;
 }

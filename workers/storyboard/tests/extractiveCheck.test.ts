@@ -120,6 +120,29 @@ describe('extractiveCheck (Latin)', () => {
       expect(r.violations[0]).toMatchObject({ sceneId: 1 });
     }
   });
+
+  it('matches a sub-phrase of a separator-joined source string (regression: 2026-04-28 hardsell intent)', () => {
+    // Real-world case: Burton's homepage <title> was extracted as the single
+    // source string "burton.com | standing sideways since 1977 | burton snowboards us".
+    // Claude (per hardsell intent's "Short punchy" guidance) extracted the middle
+    // sub-phrase "standing sideways since 1977" for a TextPunch scene.
+    // Pre-fix: fuse-search distance ~0.45 vs threshold 0.3 → rejected.
+    // Post-fix: substring inclusion fast-path matches without fuse.
+    const board = sb([
+      {
+        sceneId: 1,
+        type: 'TextPunch',
+        durationInFrames: 300,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: { text: 'standing sideways since 1977', emphasis: 'primary' },
+      },
+    ]);
+    board.assets.sourceTexts = [
+      'burton.com | standing sideways since 1977 | burton snowboards us',
+    ];
+    expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
+  });
 });
 
 describe('extractiveCheck (CJK)', () => {
