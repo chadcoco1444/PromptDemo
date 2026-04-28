@@ -12,9 +12,14 @@ export interface IntentMatrixCell {
   notes: string;
 }
 
-// Data sourced from docs/dev-notes/intent-spectrum-2026-04-28-supplement-1777342871972.md
-// (Day 2 9-cell verification, vercel + duolingo cells = 6/6 real-world success).
-// Burton row deferred until Anthropic credit re-tops + remaining 2 cells re-run.
+// Vercel cells: from docs/dev-notes/intent-spectrum-2026-04-28-supplement-1777342871972.md
+//   (Day 2 9-cell verification, vercel + duolingo cells = 6/6 real-world success).
+// Burton cells: extracted from the v1.6 showcase storyboards we generated on
+//   2026-04-28 PM (jobs Z8NlUcwAXkbrwpmbRlJKV / nzXT4CIfOF1QefPnvCyQj /
+//   THpg8QHCVc8qzowUafY-- — same MP4s rendered into apps/landing/public/showcase/).
+//   Aligns matrix with the showcase above (both display vercel + burton).
+// Duolingo cells previously here (commit before c64324a) — superseded by burton row
+//   to match what visitors actually see playing in the showcase.
 export const INTENT_MATRIX: IntentMatrixCell[] = [
   {
     url: 'https://vercel.com',
@@ -50,36 +55,36 @@ export const INTENT_MATRIX: IntentMatrixCell[] = [
     notes: 'Cinematic pacing, emphasis on aspiration over implementation',
   },
   {
-    url: 'https://www.duolingo.com',
-    brandName: 'Duolingo',
+    url: 'https://www.burton.com/',
+    brandName: 'Burton',
     intent: 'hardsell',
     intentLabel: 'Hard-sell',
     intentEmoji: '🔥',
-    sceneSequence: ['TextPunch', 'DeviceMockup', 'TextPunch', 'BentoGrid', 'TextPunch', 'SmoothScroll', 'TextPunch', 'CTA'],
-    sceneCount: 8,
-    avgPaceSec: 3.8,
-    notes: 'SmoothScroll appears (consumer-app coded) — 4× TextPunch chain',
+    sceneSequence: ['TextPunch', 'DeviceMockup', 'TextPunch', 'FeatureCallout', 'TextPunch', 'BentoGrid', 'SmoothScroll', 'TextPunch', 'CTA'],
+    sceneCount: 9,
+    avgPaceSec: 3.3,
+    notes: 'Same 9-scene cadence as vercel hardsell despite totally different industry — pacing pattern is intent-driven, not URL-driven',
   },
   {
-    url: 'https://www.duolingo.com',
-    brandName: 'Duolingo',
+    url: 'https://www.burton.com/',
+    brandName: 'Burton',
     intent: 'tech',
     intentLabel: 'Tech deep-dive',
     intentEmoji: '🔬',
-    sceneSequence: ['DeviceMockup', 'TextPunch', 'BentoGrid', 'TextPunch', 'CTA'],
-    sceneCount: 5,
-    avgPaceSec: 6.0,
-    notes: 'Minimal scene set, longest avg pace — methodical walkthrough',
+    sceneSequence: ['DeviceMockup', 'TextPunch', 'FeatureCallout', 'BentoGrid', 'SmoothScroll', 'CTA'],
+    sceneCount: 6,
+    avgPaceSec: 5.0,
+    notes: 'Adds SmoothScroll (consumer ecommerce signal) vs vercel tech, otherwise similar feature-list shape',
   },
   {
-    url: 'https://www.duolingo.com',
-    brandName: 'Duolingo',
+    url: 'https://www.burton.com/',
+    brandName: 'Burton',
     intent: 'emotional',
     intentLabel: 'Emotional brand',
     intentEmoji: '💫',
-    sceneSequence: ['TextPunch', 'DeviceMockup', 'TextPunch', 'BentoGrid', 'CTA'],
-    sceneCount: 5,
-    avgPaceSec: 6.0,
-    notes: 'Opens with TextPunch hook (lifestyle aspiration before product reveal)',
+    sceneSequence: ['TextPunch', 'DeviceMockup', 'TextPunch', 'SmoothScroll', 'TextPunch', 'CTA'],
+    sceneCount: 6,
+    avgPaceSec: 5.0,
+    notes: 'TextPunch-heavy lifestyle build, slightly faster than vercel emotional (mountain energy vs serene infra)',
   },
 ];

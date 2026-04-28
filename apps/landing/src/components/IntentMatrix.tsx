@@ -11,10 +11,10 @@ export function IntentMatrix() {
     <section className="py-24 bg-gray-900 text-white px-6">
       <div className="max-w-7xl mx-auto">
         <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">
-          Same URL. Three intents. Three videos.
+          Behind each video — the storyboard the AI built.
         </h2>
         <p className="text-xl text-gray-400 text-center mb-16 max-w-3xl mx-auto">
-          The AI director adapts pacing, scene types, and copy to your goal. Real outputs from our intent-spectrum evaluation:
+          Same URLs as the showcase above. Different intents pull different scene types, different counts, different pacing.
         </p>
         {Object.entries(byUrl).map(([url, cells]) => (
           <div key={url} className="mb-16">
