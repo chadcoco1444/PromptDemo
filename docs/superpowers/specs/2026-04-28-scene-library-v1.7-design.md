@@ -80,6 +80,28 @@ export const QuoteHeroSchema = z.object({
 - `author` must appear in `sourceTexts` (extractive check enforces)
 - `attribution` must appear in `sourceTexts` if present
 
+**Extractive-check robustness for long quotes (architectural concern flagged 2026-04-28 review):**
+
+A 280-character quote is much more fragile against the existing 4-pass extractive check than the short-phrase scenes that pipeline was tuned for. Two failure modes are likely:
+- **Whitespace + line-break drift**: HTML-extracted quotes often contain `\n`, multiple spaces, or `<br>` artifacts that `normalizeText` collapses to single spaces — but Claude regenerates with its own whitespace cadence. The existing `WHITESPACE` collapse handles this.
+- **Cross-entry joining**: Source pool may have the full quote split across multiple `sourceTexts` entries (testimonial header + body + author rendered as separate DOM elements → separate pool entries). Claude reconstructs the full quote — substring inclusion against any single pool entry fails.
+
+**Phase 1 fix (small additional scope, ~10 lines):** Extend `extractiveCheck.ts` Pass 1 with a joined-pool fast-path:
+
+```ts
+// In addition to: pool.some((p) => p.includes(n))
+// Add: cross-entry concatenation tolerance
+const joinedPool = pool.join(' ');  // computed once per storyboard
+if (joinedPool.includes(n)) return true;
+```
+
+This is symmetric (applied to all scene types, not just QuoteHero) and resolves the "Claude joins phrases across sourceTexts entries" bug class that was deferred from this morning's `save up to 40% off` Burton incident. **In-scope for Phase 1** because (a) QuoteHero won't be reliable without it, (b) the fix is genuinely small, and (c) we already paid the design+review cost for this bug class today.
+
+**Existing protections (no new work needed):**
+- normalizeText fold rules: `& → and`, smart-quotes, NFKC, lowercasing — already symmetric
+- Sentence-level split (Pass 4) — already handles multi-sentence quotes
+- Fuse fuzzy fallback at threshold 0.3 — generous edit budget for 280-char strings (~84 char tolerance)
+
 ### 3.2 TextPunch variant: `photoBackdrop` (V1)
 
 **Purpose:** Break the solid-color-block monotony — same TextPunch text-anchor pattern, but on a faded source-page screenshot instead of a flat color rectangle.
@@ -101,9 +123,17 @@ This is **backward-compatible** — every existing TextPunch storyboard (without
 - Text: same TextPunch sizing/weight as default variant, white with `text-shadow: 0 4px 24px rgba(0,0,0,0.6)` for crisp readability
 - Animation: existing TextPunch fade-in, unchanged. Background gets a slow 1.0 → 1.04 scale Ken Burns over scene.
 
-**Why screenshot data is safe to use:** Crawler already produces screenshot in every successful crawl. Storyboard worker already has the URI in `crawlResult`. The Remotion component only needs the URL passed through `props` or via the existing scene-level brand-color/asset injection pattern (TBD by plan implementer based on actual codebase scaffolding).
+**Why screenshot data is safe to use:** Crawler already produces screenshot in every successful crawl. Storyboard worker already has the URI in `crawlResult`.
 
-**Fallback:** If no screenshot is available (crawl produced text-only result, e.g., legacy fixtures), fall back to default variant rendering. No exception.
+**Critical asset-pipeline requirement (architectural concern flagged 2026-04-28 review):** Render worker is Remotion = headless Chromium. Chromium fetches `<img src="...">` over HTTP at render time. The screenshot URL passed to `TextPunch.tsx` MUST be either:
+- (a) A presigned S3/MinIO URL with sufficient TTL to outlast the render (typically 15+ min for a 30-sec MP4 with cold-start), OR
+- (b) A public URL behind a CDN
+
+Passing a raw `s3://lumespec-dev/...` URI will silently break — Chromium can't fetch it, image fails to load, scene renders with transparent background, no error thrown by Remotion. This is the worst kind of bug: silent visual regression.
+
+**Mitigation (plan-time research required):** The plan implementer MUST first locate how `HeroRealShot` already threads its screenshot URL (it's been working in production) — likely via `packages/remotion/src/s3Resolver.ts` (file confirmed exists). Mirror the EXACT same pattern for `TextPunch.photoBackdrop`. Do NOT invent a new asset-passing convention. If the existing pattern is per-scene presigning at render-worker boot, the same path applies; if it's storyboard-time presigning baked into the JSON, same path applies. Either works as long as we don't fork conventions.
+
+**Fallback:** If no screenshot is available (crawl produced text-only result, e.g., legacy fixtures), OR if the screenshot URL is unresolvable at render time, fall back to default variant rendering. No exception thrown. The plan implementer MUST add this fallback path explicitly — silent missing image is unacceptable.
 
 ### 3.3 TextPunch variant: `slideBlock` (V2)
 
@@ -178,7 +208,8 @@ export function evaluateTextPunchDiscipline(sb: Storyboard): TextPunchDiscipline
 | `packages/remotion/src/scenes/QuoteHero.tsx` | CREATE | New scene component |
 | `packages/remotion/src/scenes/TextPunch.tsx` | MODIFY | Branch on `variant` prop to render default / photoBackdrop / slideBlock |
 | `packages/remotion/src/resolveScene.tsx` | MODIFY | Add `case 'QuoteHero':` (TS exhaustive switch will compile-error otherwise) |
-| `workers/storyboard/src/validation/extractiveCheck.ts` | MODIFY | Add `case 'QuoteHero':` returning `[quote, author, attribution].filter(Boolean)` |
+| `workers/storyboard/src/validation/extractiveCheck.ts` | MODIFY | (1) Add `case 'QuoteHero':` returning `[quote, author, attribution].filter(Boolean)`. (2) Extend Pass 1 with `joinedPool` substring fast-path (see §3.1) — symmetric, applies to all scenes |
+| `workers/storyboard/tests/extractiveCheck.test.ts` | MODIFY | Add tests: QuoteHero scene passes; cross-entry joined quote passes via joinedPool fast-path; QuoteHero with hallucinated author rejected |
 | `workers/storyboard/src/prompts/systemPrompt.ts` | MODIFY | Add SCENE PACING DISCIPLINE block + QuoteHero scene catalog entry + variant usage hint |
 | `workers/storyboard/src/validation/textPunchDiscipline.ts` | CREATE | New soft validator |
 | `workers/storyboard/src/validation/textPunchDiscipline.test.ts` | CREATE | Unit tests for the new validator (3-5 cases: clean / max violation / consec violation / variant rotation) |
@@ -250,8 +281,8 @@ These are NOT in Phase 1. Listed to prevent scope creep:
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Claude ignores SCENE PACING DISCIPLINE prompt | Medium | Low (variants make TextPunch repetition less ugly anyway) | Soft validator gives us telemetry to measure; iterate prompt wording in Phase 1.5 if needed |
-| QuoteHero quotes not extractable from sourceTexts (Claude hallucinates author names) | Medium-High | Storyboard rejected, retry burns cost | Prompt explicitly says quote + author MUST come from sourceTexts; rely on existing extractive check; if rejection rate > 20%, add a per-source-page detection in prompt asking Claude to skip QuoteHero when no testimonial-style content present |
-| TextPunch.photoBackdrop screenshot URL not threaded through to Remotion props | Medium | Visual regression — falls back to default | Plan implementer must verify the screenshot-passing convention in existing scenes (e.g., HeroRealShot likely already does this) and mirror it |
+| QuoteHero 280-char quote fragile against extractive check (whitespace drift, cross-entry joining) | Medium-High | Storyboard rejected, retry burns cost | (1) §3.1 fix: extend Pass 1 with `joinedPool` substring fast-path — solves cross-entry joining, in-scope for Phase 1. (2) Existing normalizeText whitespace collapse handles drift. (3) Prompt explicitly says quote + author MUST come from sourceTexts. (4) If post-ship rejection rate > 20%, add per-source-page detection asking Claude to skip QuoteHero when no testimonial-style content present |
+| TextPunch.photoBackdrop screenshot URL not Chromium-fetchable at render time (silent visual regression) | Medium-High | Image fails to load, transparent background, NO error — worst kind of silent bug | (1) §3.2 mitigation: plan implementer MUST locate existing HeroRealShot screenshot threading via `packages/remotion/src/s3Resolver.ts` and mirror exactly — do NOT invent a new asset-passing convention. (2) Add explicit fallback to default variant if screenshot URL is missing or unresolvable. (3) Add a smoke test that renders TextPunch.photoBackdrop with a real-world (presigned) screenshot URL end-to-end |
 | `variant` field name collides with existing scene-level `variant` discriminator (some scenes use this for sub-types) | Low | TS error at compile time (not prod) | Plan implementer reads existing schema to confirm naming; if collision, use `mode` or `style` as field name |
 | Soft validator log spam (every storyboard logs even when clean) | Low | Log noise, not functional | Log line is single structured row, low volume; can downgrade to debug-level in Phase 5 if noisy |
 | QuoteHero + ReviewMarquee both selected for same quote → visual redundancy | Low | Visual quality regression | Prompt rule explicitly forbids; soft validator can later detect this if it becomes a pattern |
