@@ -98,4 +98,37 @@ describe('formatExtractiveFeedback', () => {
     expect(out).toContain('first attempt rejected phrase');
     expect(out).toContain('another rejected phrase');
   });
+
+  // E1: when Claude's rejected text is much longer than ANY candidate, the
+  // problem isn't word choice — Claude is synthesizing content that doesn't
+  // exist in source. Verbatim substitution can't fix this; we must steer
+  // Claude to options (b) change scene type or (c) remove scene.
+  it('warns about length disparity when rejected text is >2× longest candidate (Stripe testimonial-fabrication regression)', () => {
+    const longRejection =
+      'with stripe, we have a global technology partner to help our customers—from canadian yoga studios to british boxing classes—keep growing and evolving in a new wellness world.';
+    expect(longRejection.length).toBeGreaterThan(100);
+    const violations: ExtractiveViolation[] = [
+      { sceneId: 6, field: 'text', text: longRejection },
+    ];
+    const sourceTexts = ['developers', 'resources', 'see the latest from stripe.', 'choose an integration path.'];
+
+    const out = formatExtractiveFeedback(violations, sourceTexts);
+
+    expect(out).toContain('⚠');
+    expect(out).toContain('length disparity');
+    expect(out.toLowerCase()).toMatch(/option \(b\)|change scene type/);
+    expect(out.toLowerCase()).toMatch(/option \(c\)|remove scene/);
+  });
+
+  it('does NOT warn when rejected text is comparable in length to candidates', () => {
+    const violations: ExtractiveViolation[] = [
+      { sceneId: 1, field: 'text', text: 'embedded payments now' }, // 21 chars
+    ];
+    const sourceTexts = ['embedded payments', 'embedded finance']; // ~17 chars
+
+    const out = formatExtractiveFeedback(violations, sourceTexts);
+
+    expect(out).not.toContain('⚠ length disparity');
+    expect(out).not.toContain("verbatim substitution likely won't fit");
+  });
 });

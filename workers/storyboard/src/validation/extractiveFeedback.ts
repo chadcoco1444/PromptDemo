@@ -26,6 +26,11 @@ const TOP_K_CANDIDATES = 3;
 // ★ verbatim suggestion. 0 = perfect match, 1 = no match. 0.4 keeps
 // suggestion noise low — only suggest when we're confident.
 const STRONG_MATCH_SCORE = 0.4;
+// E1: ratio above which rejected text is "much longer" than the longest
+// candidate — implies Claude is synthesizing content not present in source
+// (Stripe testimonial-fabrication regression 2026-04-28). Verbatim
+// substitution can't fix this; we must steer Claude to options (b)/(c).
+const LENGTH_DISPARITY_RATIO = 2;
 
 interface Candidate {
   item: string;
@@ -86,6 +91,16 @@ export function formatExtractiveFeedback(
       lines.push('  closest sourceTexts:');
       for (const c of candidates) {
         lines.push(`    - "${c.item}"`);
+      }
+      // E1: detect length disparity — if Claude's rejection is much longer
+      // than any candidate, no verbatim substitution can satisfy the scene
+      // structure. Push hard toward (b) change scene type / (c) remove scene
+      // before suggesting a too-short candidate that won't fit.
+      const longestCandidate = Math.max(...candidates.map((c) => c.item.length));
+      if (v.text.length > longestCandidate * LENGTH_DISPARITY_RATIO) {
+        lines.push(
+          `  ⚠ length disparity: your phrase is ${v.text.length} chars but longest candidate is only ${longestCandidate} chars — verbatim substitution likely won't fit. Strongly recommend option (b) change scene type or (c) remove scene.`,
+        );
       }
       const best = candidates[0];
       if (best && best.score < STRONG_MATCH_SCORE) {
