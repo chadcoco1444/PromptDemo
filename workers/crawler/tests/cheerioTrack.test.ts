@@ -23,7 +23,11 @@ describe('runCheerioTrack', () => {
     if (r.kind !== 'ok') return;
     expect(r.sourceTexts).toContain('docs');
     expect(r.sourceTexts).toContain('quickstart');
-    expect(r.colors.primary).toBe('#123456');
+    // Note: theme-color extraction was moved out of cheerioTrack into the
+    // orchestrator's brand-color tier 1 (extractors/themeColorFromHtml.ts).
+    // The HTML still has <meta name="theme-color"> in the fixture for
+    // completeness — that signal now flows through the orchestrator chain
+    // rather than the per-track result.
     expect(r.ogImageUrl).toBe('https://cdn.example.com/og.png');
   });
 

@@ -15,7 +15,6 @@ export type CheerioTrackResult =
       reviews: ExtractedReview[];
       logoSrcCandidates: ExtractedLogoCandidate[];
       codeSnippets: ExtractedCodeSnippet[];
-      colors: { primary?: string };
       ogImageUrl?: string;
       faviconUrl?: string;
     }
@@ -48,9 +47,10 @@ export async function runCheerioTrack(input: {
     if (waf.blocked) return { kind: 'blocked', reason: waf.reason };
 
     const $ = load(html);
-    const themeColor = $('meta[name="theme-color"]').attr('content');
-    const primary = themeColor && /^#[0-9a-f]{6}$/i.test(themeColor) ? themeColor : undefined;
-
+    // theme-color extraction was moved to extractors/themeColorFromHtml.ts +
+    // wired in orchestrator.ts as Tier 1 of the brand-color fallback chain.
+    // Doing it here was dead code on the happy path because pickTrack is a
+    // fallback chain (playwright wins → cheerio's colors never read).
     const result: CheerioTrackResult = {
       kind: 'ok',
       html,
@@ -59,7 +59,6 @@ export async function runCheerioTrack(input: {
       reviews: extractReviews(html),
       logoSrcCandidates: extractLogos(html, input.url),
       codeSnippets: extractCodeSnippets(html),
-      colors: primary ? { primary } : {},
     };
     const ogImg = $('meta[property="og:image"]').attr('content');
     if (ogImg) result.ogImageUrl = ogImg;

@@ -3,6 +3,8 @@ import type { PlaywrightTrackResult } from './tracks/playwrightTrack.js';
 import type { ScreenshotOneTrackResult } from './tracks/screenshotOneTrack.js';
 import type { CheerioTrackResult } from './tracks/cheerioTrack.js';
 import { isGoogleFontSupported } from './extractors/fontDetector.js';
+import { extractThemeColorFromHtml } from './extractors/themeColorFromHtml.js';
+import { extractDominantColorFromImage } from './extractors/colorFromImage.js';
 import type { ExtractedLogoCandidate } from './extractors/logoExtractor.js';
 import type { ExtractedCodeSnippet } from './extractors/codeExtractor.js';
 
@@ -44,6 +46,22 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
     throw new Error('tier-C: no source text extracted from any track');
   }
 
+  // Hoist: download the brand logo up-front (used by both the brand-color
+  // tier 2 chain below AND the existing logo upload step). Single download.
+  // downloadLogo returns Promise<Buffer | null>; null means HTTP succeeded
+  // but body was empty. Coerce null → undefined for cleaner downstream
+  // checks. Network errors are caught and treated as null (non-fatal — tier 2
+  // skips and falls through; logo-upload pushes its own fallback below).
+  let logoBuf: Buffer | undefined;
+  if (intermediate.logo) {
+    try {
+      const result = await input.downloadLogo(intermediate.logo.src);
+      logoBuf = result ?? undefined;
+    } catch {
+      logoBuf = undefined;
+    }
+  }
+
   const screenshots: { viewport?: S3Uri; fullPage?: S3Uri } = {};
   if (intermediate.viewportBuf) {
     screenshots.viewport = await input.uploader(intermediate.viewportBuf, 'viewport.jpg');
@@ -66,16 +84,39 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
     fontFamily?: string;
     fontFamilySupported?: boolean;
   } = {};
-  if (intermediate.colors.primary) {
-    brand.primaryColor = intermediate.colors.primary;
-  } else {
-    brand.primaryColor = DEFAULT_BRAND_COLOR;
+
+  // Brand color 3-tier fallback chain. Each tier stops the chain on first
+  // hit. Per-tier source name is logged at the end for grep-able prod
+  // observability — operators can answer "which tier produced this color
+  // in prod?" by greping worker stdout for the jobId.
+  let primaryColor: string | undefined = intermediate.colors.primary;
+  let primarySource: string = primaryColor ? 'dom-sampling' : 'none';
+  if (!primaryColor && intermediate.html) {
+    const fromMeta = extractThemeColorFromHtml(intermediate.html);
+    if (fromMeta) {
+      primaryColor = fromMeta;
+      primarySource = 'meta-theme-color';
+    }
+  }
+  if (!primaryColor && logoBuf) {
+    const fromImg = await extractDominantColorFromImage(logoBuf);
+    if (fromImg) {
+      primaryColor = fromImg;
+      primarySource = 'logo-pixel-analysis';
+    }
+  }
+  if (!primaryColor) {
+    primaryColor = DEFAULT_BRAND_COLOR;
+    primarySource = 'default-fallback';
     fallbacks.push({
       field: 'primaryColor',
-      reason: 'not detected',
+      reason: 'not detected by any tier (dom / meta / logo)',
       replacedWith: DEFAULT_BRAND_COLOR,
     });
   }
+  brand.primaryColor = primaryColor;
+  console.log(`[crawler] brand color tier=${primarySource} value=${primaryColor} jobId=${input.jobId}`);
+
   if (intermediate.colors.secondary) brand.secondaryColor = intermediate.colors.secondary;
   if (intermediate.fontFamily) {
     brand.fontFamily = intermediate.fontFamily;
@@ -90,10 +131,14 @@ export async function runCrawl(input: CrawlRunnerInput): Promise<CrawlResult> {
   } else {
     fallbacks.push({ field: 'fontFamily', reason: 'not detected', replacedWith: 'Inter (default)' });
   }
+
+  // Logo upload — uses the hoisted logoBuf instead of re-downloading.
+  // Preserves the same 2 fallbacks.push semantics as pre-T4: download-failed
+  // vs no-candidate are still distinguishable in fallback signal so the
+  // storyboard worker's downstream consumers don't miss either signal.
   if (intermediate.logo) {
-    const bytes = await input.downloadLogo(intermediate.logo.src);
-    if (bytes) {
-      brand.logoUrl = await input.uploader(bytes, 'logo.img');
+    if (logoBuf) {
+      brand.logoUrl = await input.uploader(logoBuf, 'logo.img');
     } else {
       fallbacks.push({
         field: 'logoUrl',
@@ -199,7 +244,9 @@ async function pickTrack(
       sourceTexts: ch.sourceTexts,
       features: ch.features,
       reviews: ch.reviews,
-      colors: ch.colors,
+      // Brand color extraction now happens in runCrawl's tier chain via
+      // extractThemeColorFromHtml(intermediate.html) — no per-track work.
+      colors: {},
       trackUsed: 'cheerio',
       logoSrcCandidates: ch.logoSrcCandidates,
       codeSnippets: ch.codeSnippets,

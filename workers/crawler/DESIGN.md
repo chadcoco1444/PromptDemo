@@ -46,7 +46,8 @@ graph LR
 - **三軌降級爬蟲 (`runCrawl`)** — Playwright 為主軌，WAF 封鎖時降級至 ScreenshotOne，完全無法截圖時降級至 Cheerio 純文字提取
 - **彈窗遮蔽 (`overlayBlocker`)** — 在截圖前注入 CSS，隱藏 GDPR 彈窗、客服 Widget、Cookie Banner 等干擾元素（支援 OneTrust、Intercom、Zendesk 等 20+ 平台）
 - **Domain Circuit Breaker (`domainCircuit`)** — Redis 記錄每個 domain 的連續失敗次數；3 次失敗開啟熔斷（30 分鐘冷卻），避免無效 Playwright 任務浪費資源和 IP
-- **品牌資產提取** — 從 CSS 變數、Open Graph 標籤、`<link rel="icon">` 提取主色、次色、字型、Logo candidates
+- **品牌資產提取** — 從 CSS 變數、Open Graph 標籤、`<link rel="icon">` 提取次色、字型、Logo candidates
+- **Brand color tier chain** — primary brand color is resolved by a 3-tier fallback in `orchestrator.ts`: (Tier 0) DOM `background-color` sampling via `colorSampler.pickDominantFromFrequencies` with soft-neutral preference; (Tier 1) `<meta name="theme-color">` extraction via `extractThemeColorFromHtml` on whichever track produced the HTML; (Tier 2) Sharp `.stats().dominant` on the downloaded logo buffer via `extractDominantColorFromImage`; (Tier 3) `DEFAULT_BRAND_COLOR` constant. Per-tier source name is logged to worker stdout (`[crawler] brand color tier=X value=Y jobId=Z`) for grep-able prod observability.
 - **S3 上傳** — `viewport.jpg`、`fullpage.jpg`、Logo SVG/PNG、`crawlResult.json` 均上傳至同一 `jobs/{jobId}/` 前綴下
 
 ---
@@ -122,3 +123,6 @@ Playwright 的 Browser instance 必須在任務完成（成功或失敗）後明
 
 ### 5. 直接連接 PostgreSQL
 Crawler worker **不持有任何 DB 連線**。所有任務狀態更新透過 BullMQ 事件通知 Orchestrator 處理。若需要用戶資訊（如 tier），由 Orchestrator 在任務建立時注入 payload，不在此 worker 查詢。
+
+### 6. 在 track 層做跨 track 共通的 brand-color 推導
+Tracks (`playwrightTrack`, `cheerioTrack`, `screenshotOneTrack`) should produce raw observations from one data source each. Cross-cutting "synthesize a brand color from any signal" logic belongs in the orchestrator, where the tier chain composes them. Putting `<meta theme-color>` extraction in `cheerioTrack` (the pre-2026-04-28 design) made it dead code on the happy path because `pickTrack` is a fallback chain, not a merge — playwright always wins, cheerio never runs. The orchestrator-level chain runs against `intermediate.html` regardless of which track produced it.

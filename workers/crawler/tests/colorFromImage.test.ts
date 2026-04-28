@@ -14,7 +14,9 @@ const fixture = (name: string) =>
 // we don't want this test to flake on a Sharp version bump or platform
 // differences in PNG codec behavior.)
 function approxEqHex(actual: string, expected: string, tolerance = 8): boolean {
-  const parse = (h: string) => [
+  // Tuple return so destructured channels are `number`, not `number | undefined`
+  // (matters under tsconfig's noUncheckedIndexedAccess / strict tuple narrowing).
+  const parse = (h: string): [number, number, number] => [
     parseInt(h.slice(1, 3), 16),
     parseInt(h.slice(3, 5), 16),
     parseInt(h.slice(5, 7), 16),
