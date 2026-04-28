@@ -6,6 +6,11 @@
 
 *Stop spending 3 days in Figma. Paste a URL, hit enter, ship.*
 
+### 🚀 [See it live → chadcoco1444.github.io/LumeSpec](https://chadcoco1444.github.io/LumeSpec/)
+
+*Same URL, three intents, three different videos. Watch the showcase autoplay as you scroll.*
+
+[![Live demo](https://img.shields.io/badge/Demo-Live-22c55e?logo=github)](https://chadcoco1444.github.io/LumeSpec/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node 20+](https://img.shields.io/badge/Node-20%2B-6366f1)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-2563eb)](https://www.typescriptlang.org)
