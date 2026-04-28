@@ -57,7 +57,17 @@ function mintJwt(sub, ttlSec = 3600) {
 const token = mintJwt(userId);
 const auth = { Authorization: `Bearer ${token}` };
 
-const URL_TARGET = 'https://vercel.com';
+// CLI args:  node scripts/render-showcase-videos.mjs <url> <filename-prefix>
+// Examples:
+//   node scripts/render-showcase-videos.mjs https://vercel.com vercel
+//   node scripts/render-showcase-videos.mjs https://www.burton.com/ burton
+const URL_TARGET = process.argv[2];
+const FILENAME_PREFIX = process.argv[3];
+if (!URL_TARGET || !FILENAME_PREFIX) {
+  console.error('Usage: node scripts/render-showcase-videos.mjs <url> <filename-prefix>');
+  process.exit(1);
+}
+
 const INTENTS = [
   { id: 'hardsell',  text: 'High-energy promotional spot. Short punchy scene durations. Emphasize speed, results, and aesthetic. Use a single powerful tagline. Tone: energetic, modern.' },
   { id: 'tech',      text: 'Calm, methodical product walkthrough for technical buyers. Show concrete features and capabilities in sequence. Highlight what the product actually does, not why it matters emotionally. Tone: confident, precise, no marketing fluff.' },
@@ -103,7 +113,7 @@ async function downloadMp4(s3Uri, intentId) {
   const [, bucket, key] = m;
   const res = await fetch(`${minioBase}/${bucket}/${key}`);
   if (!res.ok) throw new Error(`MinIO GET failed: ${res.status}`);
-  const dest = resolve(OUT_DIR, `vercel-${intentId}.mp4`);
+  const dest = resolve(OUT_DIR, `${FILENAME_PREFIX}-${intentId}.mp4`);
   await pipeline(res.body, createWriteStream(dest));
   const sizeMb = (Number(res.headers.get('content-length') ?? 0) / 1024 / 1024).toFixed(2);
   console.log(`  ✓ saved ${dest} (${sizeMb} MB)`);
