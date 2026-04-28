@@ -242,14 +242,21 @@ for (const u of URLS) md += `- **${u.id}** — ${u.label}: ${u.url}\n`;
 md += `\n## Intents (X axis)\n\n`;
 for (const i of INTENTS) md += `- **${i.id}** — ${i.label}\n  > ${i.text}\n`;
 
+// Cell-level renderer guards against missing cells (INCLUDE_CELLS subset
+// runs leave matrix[url][intent] undefined for filtered-out combos).
+function renderCell(u, i, fmt) {
+  const cell = matrix[u.id]?.[i.id];
+  if (!cell) return '—'; // not requested in this run
+  const s = summarize(cell);
+  if (s.error) return `❌ ${formatErr(s.error).slice(0, 60)}`;
+  return fmt(s);
+}
+
 md += `\n## Matrix 1: Scene Type Sequence\n\n`;
 md += `| URL ↓ / Intent → | hardsell 🔥 | tech 🔬 | emotional 💫 |\n`;
 md += `|---|---|---|---|\n`;
 for (const u of URLS) {
-  const cells = INTENTS.map((i) => {
-    const s = summarize(matrix[u.id][i.id]);
-    return s.error ? `❌ ${formatErr(s.error).slice(0, 60)}` : s.sceneTypes.join(' → ');
-  });
+  const cells = INTENTS.map((i) => renderCell(u, i, (s) => s.sceneTypes.join(' → ')));
   md += `| **${u.id}** | ${cells.join(' | ')} |\n`;
 }
 
@@ -257,10 +264,7 @@ md += `\n## Matrix 2: Scene Count + Avg Pace\n\n`;
 md += `| URL ↓ / Intent → | hardsell | tech | emotional |\n`;
 md += `|---|---|---|---|\n`;
 for (const u of URLS) {
-  const cells = INTENTS.map((i) => {
-    const s = summarize(matrix[u.id][i.id]);
-    return s.error ? '❌' : `${s.sceneCount} scenes / avg ${s.avgSceneDurSec}s`;
-  });
+  const cells = INTENTS.map((i) => renderCell(u, i, (s) => `${s.sceneCount} scenes / avg ${s.avgSceneDurSec}s`));
   md += `| **${u.id}** | ${cells.join(' | ')} |\n`;
 }
 
@@ -268,17 +272,15 @@ md += `\n## Matrix 3: Brand Colour\n\n`;
 md += `| URL ↓ / Intent → | hardsell | tech | emotional |\n`;
 md += `|---|---|---|---|\n`;
 for (const u of URLS) {
-  const cells = INTENTS.map((i) => {
-    const s = summarize(matrix[u.id][i.id]);
-    return s.error ? '❌' : (s.brandColor ?? '—');
-  });
+  const cells = INTENTS.map((i) => renderCell(u, i, (s) => s.brandColor ?? '—'));
   md += `| **${u.id}** | ${cells.join(' | ')} |\n`;
 }
 
 md += `\n## Per-Job Detail\n\n`;
 for (const u of URLS) {
   for (const i of INTENTS) {
-    const cell = matrix[u.id][i.id];
+    const cell = matrix[u.id]?.[i.id];
+    if (!cell) continue; // not requested in this run — skip the section entirely
     md += `### ${u.id} × ${i.id}\n\n`;
     md += `- jobId: \`${cell.jobId}\`\n`;
     if (cell.error) {
@@ -307,7 +309,9 @@ console.log(header);
 console.log('-'.repeat(header.length));
 for (const u of URLS) {
   const cells = INTENTS.map((i) => {
-    const s = summarize(matrix[u.id][i.id]);
+    const cell = matrix[u.id]?.[i.id];
+    if (!cell) return '—'.padEnd(colWidth);
+    const s = summarize(cell);
     return (s.error ? `❌ ${formatErr(s.error).slice(0, 30)}` : s.sceneTypes.join('→')).slice(0, colWidth).padEnd(colWidth);
   });
   console.log(`${u.id.padEnd(17)} | ${cells.join(' | ')} |`);
