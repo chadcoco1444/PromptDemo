@@ -107,6 +107,17 @@ Layer 6: Logo 資料門控 (logos 欄位需有真實 S3 URI 才能使用 LogoClo
 Layer 7: showWatermark 強制注入 (依 payload 覆蓋，不信任 LLM 輸出)
 ```
 
+### Soft validators (post-pipeline telemetry)
+
+- **`textPunchDiscipline` (v1.7 soft validator)** — analyzes the post-validate
+  storyboard for TextPunch usage discipline (max 2 per storyboard, never
+  consecutive). Always returns a report; never throws or rejects. Caller in
+  `index.ts` logs a structured single-line summary
+  (`[storyboard-discipline] jobId=... textPunchTotal=... consecutive=...
+  violatesMax=... violatesConsec=... variants=...`) for prod telemetry.
+  Phase 5+ may decide to upgrade to hard Zod refinement once we accumulate
+  ~50+ prod log lines showing Claude's actual compliance pattern.
+
 ### storyboard.json 關鍵欄位
 
 ```typescript

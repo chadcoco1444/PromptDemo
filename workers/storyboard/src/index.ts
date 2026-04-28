@@ -8,6 +8,7 @@ import { generateStoryboard } from './generator.js';
 import { createClaudeClient } from './claude/claudeClient.js';
 import { loadMockStoryboard } from './mockMode.js';
 import { startHealthServer } from './health.js';
+import { evaluateTextPunchDiscipline } from './validation/textPunchDiscipline.js';
 
 const JobPayload = z.object({
   jobId: z.string().min(1),
@@ -74,6 +75,16 @@ const worker = new Worker<JobPayload>(
         makeIntel('storyboard', `Got ${storyboard.scenes.length} scenes from Claude`),
       );
     }
+
+    // v1.7 soft telemetry — log TextPunch discipline. Does NOT reject.
+    // Phase 5+ may decide to upgrade to hard refinement based on accumulated data.
+    const discipline = evaluateTextPunchDiscipline(storyboard);
+    console.log(
+      `[storyboard-discipline] jobId=${payload.jobId} ` +
+      `textPunchTotal=${discipline.total} consecutive=${discipline.consecutive} ` +
+      `violatesMax=${discipline.violatesMaxCount} violatesConsec=${discipline.violatesNoConsecutive} ` +
+      `variants=${JSON.stringify(discipline.variantCounts)}`,
+    );
 
     await job.updateProgress(makeIntel('storyboard', 'Uploading the storyboard'));
     const storyboardKey = buildKey(payload.jobId, 'storyboard.json');
