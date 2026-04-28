@@ -3,6 +3,7 @@ import type { Scene, Storyboard } from '@lumespec/schema';
 import { HeroRealShot } from './scenes/HeroRealShot';
 import { FeatureCallout } from './scenes/FeatureCallout';
 import { TextPunch } from './scenes/TextPunch';
+import { QuoteHero } from './scenes/QuoteHero';
 import { SmoothScroll } from './scenes/SmoothScroll';
 import { CTA } from './scenes/CTA';
 import { BentoGrid } from './scenes/BentoGrid';
@@ -72,6 +73,24 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
           variant={scene.props.variant}
           theme={theme}
           {...(screenshotUrl ? { screenshotUrl } : {})}
+        />
+      );
+    }
+    case 'QuoteHero': {
+      // backgroundHint='screenshot' only thread the URL when the source has
+      // viewport screenshot — otherwise the component falls back to gradient
+      // (silent transparent-image bug avoidance). Same resolver pipeline
+      // as HeroRealShot, CursorDemo, SmoothScroll, TextPunch.
+      const screenshotUrl =
+        scene.props.backgroundHint === 'screenshot' ? resolver(assets.screenshots.viewport) : undefined;
+      return (
+        <QuoteHero
+          quote={scene.props.quote}
+          author={scene.props.author}
+          {...(scene.props.attribution ? { attribution: scene.props.attribution } : {})}
+          backgroundHint={scene.props.backgroundHint}
+          {...(screenshotUrl ? { screenshotUrl } : {})}
+          theme={theme}
         />
       );
     }

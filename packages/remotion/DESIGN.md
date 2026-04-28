@@ -46,6 +46,15 @@ graph LR
   - `photoBackdrop`：source-page screenshot 22% opacity + 3px blur + Ken Burns 1.0→1.04 + 暗向下漸層 overlay 增加文字可讀性 + drop-shadow 白字。`screenshotUrl` 缺失時自動 fallback 到 default（graceful、不 throw — 避免 silent transparent-image bug）
   - `slideBlock`：純色塊 spring (mass 1, damping 18, stiffness 80) 從右滑入 100%→0%、停留、最後 8 frames 滑出 0%→-100%；文字在色塊停穩 4 frames 後 fade-in
   Screenshot URL 透過 `resolveScene` 的 `resolver(assets.screenshots.viewport)` 既有 pattern 解析（與 `HeroRealShot` / `CursorDemo` / `SmoothScroll` 同條 pipeline、產 CDN-fetchable URL）
+- **`QuoteHero` (v1.7)** — 單則 cinematic pull-quote + 作者 attribution。
+  Background：gradient (default — `linear-gradient(135deg, theme.primaryDark, #0d0d1a)`)
+  OR faded screenshot at 8% opacity (when `backgroundHint === 'screenshot'`
+  AND `screenshotUrl` provided). Both modes apply slow Ken Burns 1.0→1.05.
+  巨大 Georgia serif 開引號 (280px, 70% brand color opacity) 在左上裝飾。
+  Quote body 56px serif，最大 1300px 寬，6→22 frames 上滑+淡入；author block
+  18→32 frames 較晚淡入製造 cinematic settle。Brand-color 140px×3px underline
+  在 author 上。`resolveScene` 只在 `backgroundHint='screenshot'` 時才呼叫
+  `resolver(assets.screenshots.viewport)` — 避免 gradient mode 浪費 fetch。
 
 ---
 
