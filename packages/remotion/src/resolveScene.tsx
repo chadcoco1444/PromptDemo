@@ -59,8 +59,22 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
         />
       );
     }
-    case 'TextPunch':
-      return <TextPunch text={scene.props.text} emphasis={scene.props.emphasis} theme={theme} />;
+    case 'TextPunch': {
+      // v1.7: thread screenshot for photoBackdrop variant. Mirrors the
+      // HeroRealShot + CursorDemo pattern of resolving s3://... → CDN URL
+      // via the resolver function. If viewport screenshot missing,
+      // TextPunch component falls back to default variant render.
+      const screenshotUrl = resolver(assets.screenshots.viewport);
+      return (
+        <TextPunch
+          text={scene.props.text}
+          emphasis={scene.props.emphasis}
+          variant={scene.props.variant}
+          theme={theme}
+          {...(screenshotUrl ? { screenshotUrl } : {})}
+        />
+      );
+    }
     case 'SmoothScroll': {
       const screenshotUrl = resolver(assets.screenshots.fullPage);
       if (!screenshotUrl) throw new Error('SmoothScroll requires assets.screenshots.fullPage');

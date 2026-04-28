@@ -41,6 +41,11 @@ graph LR
 - **PromoComposition** — 固定劇本的行銷示範影片，包含所有場景類型的精選展示，由 `pnpm lume render:promo` 獨立渲染
 - **primitives/** — 共享的動畫 primitive：`SpringFade`、`SlideIn`、`deriveTheme`（品牌色計算，必須 `useMemo`）
 - **視覺 regression smoke (`tests/visual/`)** — `pnpm test:visual` 用 `@remotion/renderer` 的 `renderStill` 抽 PromoComposition 7 個 scene 的中段穩定幀，跟 `tests/visual/baselines/` 的 PNG 用 `pixelmatch` 比對（0.5% 像素差容忍）。任何 layout 結構崩壞（例如 2026-04-27 的 Scene 2/7 漏寫 `flexDirection` 造成右半邊全黑）會直接 fail。自動接進 `pnpm test` 主鏈條 — CI 必經。視覺刻意改動時走「`test:visual` 產 actuals → 眼確認 → `test:visual:baseline` 升級」流程
+- **`TextPunch`（v1.7 multi-variant）** — 單一 component、依 `variant` prop 分支三種視覺：
+  - `default`：legacy 純色塊 + AnimatedText fade（v1.6 原行為，bit-identical）
+  - `photoBackdrop`：source-page screenshot 22% opacity + 3px blur + Ken Burns 1.0→1.04 + 暗向下漸層 overlay 增加文字可讀性 + drop-shadow 白字。`screenshotUrl` 缺失時自動 fallback 到 default（graceful、不 throw — 避免 silent transparent-image bug）
+  - `slideBlock`：純色塊 spring (mass 1, damping 18, stiffness 80) 從右滑入 100%→0%、停留、最後 8 frames 滑出 0%→-100%；文字在色塊停穩 4 frames 後 fade-in
+  Screenshot URL 透過 `resolveScene` 的 `resolver(assets.screenshots.viewport)` 既有 pattern 解析（與 `HeroRealShot` / `CursorDemo` / `SmoothScroll` 同條 pipeline、產 CDN-fetchable URL）
 
 ---
 
