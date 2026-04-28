@@ -1,18 +1,18 @@
-# LumeSpec — Handover & Operations Runbook
+# LumeSpec — 接手與運維手冊 (Handover & Operations Runbook)
 
-> **Audience:** future-you returning after a break, OR an AI agent (Claude / Codex / etc.) picking up the project. Both groups need the same thing: orient fast, find the right deep doc, run the right verification.
+> **目標讀者 (Audience):** 未來的你（休假回來接手），或是 AI agent (Claude / Codex / etc.) 接手專案。兩者需求一致：快速定位、找到對的深度文件、跑對的驗證指令。
 >
-> **What this doc IS:** a map and a runbook. Architecture, navigation, ops-level verification commands.
+> **這份文件 IS:** 一張地圖 + 一份 runbook。涵蓋架構導覽、文件索引、ops-level 驗證指令。
 >
-> **What this doc is NOT:** a substitute for the 80+ existing docs (per-module DESIGN.md, specs, plans). It points to them — read those for depth.
+> **這份文件 IS NOT:** 80+ 既有文件的替代品（per-module DESIGN.md、specs、plans）。它只是指路 — 深度細節去看那些文件。
 >
-> **Last refresh:** 2026-04-28 after Day 2 of Brand Color sprint (5 bugs shipped, full intent-spectrum verification).
+> **最後更新 (Last refresh):** 2026-04-28，Brand Color sprint Day 2 結束（5 個 bug shipped、完整 intent-spectrum verification）。
 
 ---
 
-## 1. What This Is (one paragraph + diagram)
+## 1. 這是什麼 (What This Is)
 
-LumeSpec is an AI-driven demo video generator. Input a product URL + intent ("hardsell" / "tech walkthrough" / "emotional brand story"), the pipeline crawls the page, asks Claude to compose a Remotion storyboard, renders an MP4. Monorepo with pnpm workspaces.
+LumeSpec 是 **AI 驅動的 demo 影片生成器**。輸入產品 URL + intent（"hardsell" / "tech walkthrough" / "emotional brand story"），pipeline 會：爬蟲抓取網頁 → 請 Claude 生成 Remotion storyboard → 渲染 MP4。Monorepo 用 pnpm workspaces。
 
 ```mermaid
 flowchart LR
@@ -30,73 +30,73 @@ flowchart LR
     Render --> User
 ```
 
-**Core invariants** (also enforced by `CLAUDE.md` pre-commit hook):
-- Workers (crawler / storyboard / render) NEVER touch PostgreSQL — DB writes go via `apps/api` orchestrator
-- Live progress lives in Redis only, NEVER in DB — broadcast via SSE
-- Browser NEVER calls `apps/api` directly — always via `apps/web` BFF proxy
-- Adding a Remotion scene type touches FOUR places in order: `packages/schema` → `packages/remotion/resolveScene.tsx` → `workers/storyboard/extractiveCheck.ts` → `workers/storyboard/systemPrompt.ts` (last one was historically forgotten and caused the 2026-04-27 DeviceMockup prod incident)
+**核心鐵律 (Core Invariants)** — 由 `CLAUDE.md` 的 pre-commit hook 強制執行：
+- Workers (crawler / storyboard / render) **絕不直連 PostgreSQL** — DB 寫入一律走 `apps/api` orchestrator
+- 即時進度只存 Redis，**絕不寫入 DB** — 透過 SSE 廣播
+- 瀏覽器**絕不直接呼叫 `apps/api`** — 一律透過 `apps/web` 的 BFF proxy
+- 新增 Remotion scene type 必須照順序動 4 個地方：`packages/schema` → `packages/remotion/resolveScene.tsx` → `workers/storyboard/extractiveCheck.ts` → `workers/storyboard/systemPrompt.ts`（最後一個歷史上被忘記過、造成 2026-04-27 DeviceMockup prod incident）
 
 ---
 
-## 2. Doc Navigation — "I want to know X, read Y"
+## 2. 文件導覽 (Doc Navigation) — 「想知道 X、看 Y」
 
-### Project-level (read first if you're new)
+### Project-level（剛接手時先看這幾個）
 
-| Want to know | Read |
+| 想知道 | 看哪份文件 |
 |---|---|
-| Project rules (commit conventions, module boundaries, hook behavior) | [CLAUDE.md](../CLAUDE.md) |
-| Public-facing pitch + tech stack + roadmap | [README.md](../README.md) |
-| **THIS document** — handover + ops runbook | docs/HANDOVER.md (you're here) |
+| 專案規則（commit 慣例、模組邊界、hook 行為） | [CLAUDE.md](../CLAUDE.md) |
+| 對外 PR 文 + tech stack + roadmap | [README.md](../README.md) |
+| **這份文件** — 接手手冊 + ops runbook | docs/HANDOVER.md（你正在看）|
 
-### Per-module DESIGN docs (deep architecture per worker / app / package)
+### Per-module DESIGN.md（每個 worker / app / package 的深度架構）
 
-| Module | DESIGN doc | What it covers |
+| 模組 | DESIGN doc | 涵蓋範圍 |
 |---|---|---|
-| Fastify API + orchestrator | [apps/api/DESIGN.md](../apps/api/DESIGN.md) | Job lifecycle, credit gate, SSE, anti-pattern about fire-and-forget mirror failures (#9) |
-| Next.js web BFF | [apps/web/DESIGN.md](../apps/web/DESIGN.md) | NextAuth, BFF proxy, History Vault, internal token minting |
-| Crawler worker | [workers/crawler/DESIGN.md](../workers/crawler/DESIGN.md) | 3-track fallback (Playwright / ScreenshotOne / Cheerio), circuit breaker, brand color 4-tier chain, region-pinning |
-| Storyboard worker | [workers/storyboard/DESIGN.md](../workers/storyboard/DESIGN.md) | 7-layer Claude defense, extractive check (incl. assertNever exhaustiveness #7), spend guard |
-| Render worker | [workers/render/DESIGN.md](../workers/render/DESIGN.md) | Remotion CLI invocation, MP4 + WebP thumbnail, S3 upload |
-| Remotion scenes | [packages/remotion/DESIGN.md](../packages/remotion/DESIGN.md) | 9 scene types, MainComposition, PromoComposition, visual regression |
-| Zod schema (truth source) | [packages/schema/DESIGN.md](../packages/schema/DESIGN.md) | Storyboard / CrawlResult / VideoConfig types, normalizeText |
-| PostgreSQL schema | [db/DESIGN.md](../db/DESIGN.md) | Tables, migrations, credit ledger transaction pattern |
+| Fastify API + orchestrator | [apps/api/DESIGN.md](../apps/api/DESIGN.md) | Job 生命週期、credit gate、SSE、anti-pattern #9（fire-and-forget mirror failures）|
+| Next.js web BFF | [apps/web/DESIGN.md](../apps/web/DESIGN.md) | NextAuth、BFF proxy、History Vault、internal token 簽發 |
+| Crawler worker | [workers/crawler/DESIGN.md](../workers/crawler/DESIGN.md) | 3-track fallback (Playwright / ScreenshotOne / Cheerio)、circuit breaker、brand color 4-tier chain、region-pinning |
+| Storyboard worker | [workers/storyboard/DESIGN.md](../workers/storyboard/DESIGN.md) | 7-layer Claude defense、extractive check（含 anti-pattern #7 assertNever exhaustiveness）、spend guard |
+| Render worker | [workers/render/DESIGN.md](../workers/render/DESIGN.md) | Remotion CLI 呼叫、MP4 + WebP thumbnail、S3 上傳 |
+| Remotion scenes | [packages/remotion/DESIGN.md](../packages/remotion/DESIGN.md) | 9 種 scene types、MainComposition、PromoComposition、視覺 regression |
+| Zod schema (truth source) | [packages/schema/DESIGN.md](../packages/schema/DESIGN.md) | Storyboard / CrawlResult / VideoConfig types、normalizeText |
+| PostgreSQL schema | [db/DESIGN.md](../db/DESIGN.md) | Tables、migrations、credit ledger 交易模式 |
 
-### Specs and plans (full audit trail of every architectural decision)
+### Specs 與 Plans（每個架構決策的完整 audit trail）
 
-- `docs/superpowers/specs/YYYY-MM-DD-{topic}-design.md` — design specs approved before implementation
-- `docs/superpowers/plans/YYYY-MM-DD-{topic}.md` — TDD task plans executed via subagent flow
-- `docs/superpowers/followups/` — post-implementation notes
-- `docs/dev-notes/` — empirical experiments (e.g., intent-spectrum eval reports)
+- `docs/superpowers/specs/YYYY-MM-DD-{topic}-design.md` — 實作前批准過的設計 spec
+- `docs/superpowers/plans/YYYY-MM-DD-{topic}.md` — 透過 subagent 流程執行過的 TDD 任務計畫
+- `docs/superpowers/followups/` — 實作後的補充紀錄
+- `docs/dev-notes/` — 經驗實驗（例如 intent-spectrum eval 報告）
 
-To find the spec/plan for a specific feature, grep by topic word, e.g.:
+要找特定 feature 的 spec / plan，按 topic 字眼 grep：
 ```bash
 ls docs/superpowers/specs/ | grep -i circuit
 ```
 
-### Operational docs
+### 運維文件 (Operational docs)
 
-- [db/README.md](../db/README.md) — migration runbook, idempotency rules, CI db:migrate integration
-- [deploy/DEPLOYMENT.md](../deploy/DEPLOYMENT.md) — GCP setup (currently DEFERRED per user 2026-04-27, will likely switch to Railway+Supabase for prod)
+- [db/README.md](../db/README.md) — migration runbook、idempotency 規則、CI db:migrate 整合
+- [deploy/DEPLOYMENT.md](../deploy/DEPLOYMENT.md) — GCP setup（目前 DEFERRED 2026-04-27、user 表態未來偏好換 Railway+Supabase）
 
 ---
 
-## 3. Ops-Level Verification Runbook
+## 3. Ops-Level 驗證手冊 (Verification Runbook)
 
-This section answers: **"how do I verify the system actually works"** — both during development and in (eventual) production.
+這個 section 回答：**「我怎麼確認系統真的有在 work」** — 開發中跟（未來的）prod 都適用。
 
-### 3.1 Am I alive? Quick health checks
+### 3.1 系統還活著嗎？快速健康檢查
 
-**During local dev:**
+**本地 dev 環境：**
 ```bash
 pnpm lume status
 ```
-Expected: Postgres UP + 5 services UP (crawler, storyboard, render, api, web) + service health checks pass.
+預期看到：Postgres UP + 5 個 service UP（crawler / storyboard / render / api / web）+ service health checks 都通過。
 
-**API healthz endpoint** (works locally + in prod):
+**API healthz endpoint**（local + prod 都適用）：
 ```bash
 curl -sf http://localhost:3000/healthz | jq
 ```
-Expected response shape (since 2026-04-27 PG-Backfill ship):
+預期回傳形狀（自 2026-04-27 PG-Backfill ship 後）：
 ```json
 {
   "ok": true,
@@ -108,121 +108,121 @@ Expected response shape (since 2026-04-27 PG-Backfill ship):
 }
 ```
 
-**`pgBackfill.failed > 0`** = a Redis→Postgres mirror reconciliation has exhausted retries. Investigate via the dlq log line:
+**`pgBackfill.failed > 0`** = Redis→Postgres mirror reconciliation 重試耗盡。查 dlq log line：
 ```bash
 grep "CRITICAL.*pg-backfill DLQ" .tmp/demo/logs/api.log
 ```
 
-**`pgBackfill.delayed > 0`** = transient PG mirror failures, retries scheduled. Self-heals.
+**`pgBackfill.delayed > 0`** = 短暫的 PG mirror 失敗、有排程在 retry，會自我修復。
 
-### 3.2 Per-job traceability (correlate logs by jobId)
+### 3.2 單一 job 全程追蹤（用 jobId 串 log）
 
-Every worker log line includes the `jobId` for the job being processed. To trace one job end-to-end:
+每個 worker log line 都包含**正在處理的 jobId**。要追一個 job 從頭到尾：
 ```bash
 JOB_ID=zh87AWQRTc0PW1RveNiuW
 grep -E "$JOB_ID" .tmp/demo/logs/{api,crawler,storyboard,render}.log
 ```
 
-The crawler also emits a per-tier brand color decision per job:
+Crawler 還會每個 job 印一行**brand color tier 決策 log**：
 ```
 [crawler] brand color tier=dom-sampling value=#171717 jobId=zh87AWQRTc0PW1RveNiuW
 ```
 
-→ See section 3.3.
+→ 詳見 §3.3。
 
-### 3.3 Per-tier observability (brand color tier chain)
+### 3.3 Per-tier 觀察性 (brand color tier chain)
 
-Since 2026-04-28 (Bug #1 / #1.5 ship), every crawler emits one log line per job documenting which tier produced the brand color:
+自 2026-04-28 (Bug #1 / #1.5 ship) 起，每個 crawl 都會印一行 log 紀錄是哪一 tier 產生 brand color：
 
 ```bash
 grep "brand color tier" .tmp/demo/logs/crawler.log | tail -20
 ```
 
-Possible `tier=` values:
-- `dom-sampling` — Tier 0 (DOM background-color of buttons/headers/CTAs, with soft-neutral preference)
-- `meta-theme-color` — Tier 1 (HTML `<meta name="theme-color">`)
-- `logo-pixel-analysis` — Tier 2 primary (Sharp `.stats().dominant` on logo when no upstream)
-- `logo-pixel-override` — Tier 2 escalation (Bug #1.5 — when upstream returned neutral and logo provides a non-neutral)
-- `default-fallback` — Tier 3 (`#1a1a1a`, all upstream tiers failed)
+可能的 `tier=` 值：
+- `dom-sampling` — Tier 0（DOM 取樣 buttons / headers / CTAs 的 background-color、含 soft-neutral preference）
+- `meta-theme-color` — Tier 1（HTML `<meta name="theme-color">`）
+- `logo-pixel-analysis` — Tier 2 主路徑（upstream 沒拿到時、Sharp `.stats().dominant` on logo）
+- `logo-pixel-override` — Tier 2 翻盤路徑（Bug #1.5 — upstream 拿到中性、logo 拿到非中性 → 用 logo 的）
+- `default-fallback` — Tier 3（`#1a1a1a`、所有 upstream tier 都沒拿到）
 
-**Distribution analysis** (helps triage future "video doesn't look like our brand" reports):
+**分布分析**（未來「影片不像我們品牌」的 triage 訊號源）：
 ```bash
 grep "brand color tier" .tmp/demo/logs/crawler.log | awk '{for(i=1;i<=NF;i++) if($i ~ /^tier=/) print $i}' | sort | uniq -c
 ```
 
-If `default-fallback` ratio creeps above ~20%, that's the empirical trigger to brainstorm VLM Tier 4 (per `project_brand_color_vlm_tier4_backlog.md` memory).
+如果 `default-fallback` 比例**爬到 ~20% 以上**，就是 `project_brand_color_vlm_tier4_backlog.md` memory 約定的「啟動 VLM Tier 4 brainstorm」門檻。
 
-### 3.4 BullMQ queue inspection
+### 3.4 BullMQ 佇列檢查
 
-5 queues exist (`crawl`, `storyboard`, `render`, `retention`, `pg-backfill`). To inspect any of them:
+5 個 queue（`crawl`、`storyboard`、`render`、`retention`、`pg-backfill`）。檢查任一個：
 
 ```bash
-# Queue depths via Redis CLI
+# 查 queue 深度，透過 Redis CLI
 docker exec lumespec-redis-1 redis-cli LLEN bull:crawl:wait
 docker exec lumespec-redis-1 redis-cli LLEN bull:storyboard:wait
 docker exec lumespec-redis-1 redis-cli LLEN bull:render:wait
 docker exec lumespec-redis-1 redis-cli LLEN bull:pg-backfill:wait
 ```
 
-For `pg-backfill` specifically, the `/healthz` endpoint exposes counts (see section 3.1).
+`pg-backfill` 額外有 `/healthz` 端點曝露計數（見 §3.1）。
 
-### 3.5 Circuit breaker state (Redis)
+### 3.5 Circuit Breaker 狀態檢查（Redis）
 
-Per-domain circuit breaker (in workers/crawler):
+Per-domain circuit breaker（在 workers/crawler）：
 ```bash
-# List all currently-tracked domains
+# 列出所有目前在追蹤的 domain
 docker exec lumespec-redis-1 redis-cli --scan --pattern "circuit:*"
 ```
 
-Possible keys per `<domain>`:
-- `circuit:<domain>:strikes` — failure counter (3 strikes within 10 min trips circuit)
-- `circuit:<domain>:open` — domain in 30-min cooldown
-- `circuit:<domain>:probe` — another worker is currently probing recovery (2-min lock)
-- `circuit:<domain>:healthy` — fresh-success marker (1-min TTL)
+每個 `<domain>` 可能有的 keys：
+- `circuit:<domain>:strikes` — 失敗計數器（10 分鐘窗口內 3 次失敗 → 觸發熔斷）
+- `circuit:<domain>:open` — domain 在 30 分鐘冷卻中
+- `circuit:<domain>:probe` — 另一個 worker 正在試探恢復（2 分鐘鎖）
+- `circuit:<domain>:healthy` — 新鮮成功標記（1 分鐘 TTL）
 
-**Manually clear a stuck circuit** (e.g., after a transient WAF blip):
+**手動清掉卡死的 circuit**（例如 WAF 短暫抽風）：
 ```bash
 docker exec lumespec-redis-1 redis-cli DEL circuit:gopro.com:open circuit:gopro.com:strikes circuit:gopro.com:probe
 ```
 
-**Manually open a circuit** (e.g., to test the Bug #3 Sub C fallback path):
+**手動打開 circuit**（測試 Bug #3 Sub C fallback path）：
 ```bash
 docker exec lumespec-redis-1 redis-cli SET circuit:vercel.com:open 1 EX 600
-# Submit a vercel job, observe crawler log shows it falls through to cheerio
+# Submit 一個 vercel job、看 crawler log 確認它 fall through 到 cheerio
 # Cleanup:
 docker exec lumespec-redis-1 redis-cli DEL circuit:vercel.com:open
 ```
 
-Since Bug #3 Sub C (commit `bee9c81`), `evaluateCircuit()` is called inside the `runPlaywright` lambda (NOT at worker handler top). Open circuit → returns `{ kind: 'blocked', reason: 'CIRCUIT_OPEN' }` → `pickTrack` falls through to ScreenshotOne (if `CRAWLER_RESCUE_ENABLED=true`) → cheerio. **Job no longer dies on circuit open.**
+自 Bug #3 Sub C (commit `bee9c81`) 起，`evaluateCircuit()` 是在 `runPlaywright` lambda 內呼叫（**不是** worker handler 頂層）。Open circuit → 回 `{ kind: 'blocked', reason: 'CIRCUIT_OPEN' }` → `pickTrack` fall through 到 ScreenshotOne（如果 `CRAWLER_RESCUE_ENABLED=true`）→ cheerio。**Job 不再因為 circuit open 而死。**
 
-### 3.6 Storyboard quality regression (intent-spectrum-eval)
+### 3.6 Storyboard 品質回歸 (intent-spectrum-eval)
 
-The semantic-quality regression tool. Runs N URLs × M intents, captures storyboard.json the moment it lands in S3 (skips render to be cheap), writes a markdown matrix report.
+語意品質 regression 工具。跑 N URLs × M intents、第一時間從 S3 抓 storyboard.json（跳過 render 省成本）、寫成 markdown matrix 報告。
 
-**Default behavior** (3 URLs × 3 intents = 9 jobs, ~3-5 min wall time, ~$1.50 Anthropic spend):
+**預設行為**（3 URLs × 3 intents = 9 jobs、~3-5 分鐘 wall time、~$1.50 Anthropic 費用）：
 ```bash
 DOGFOOD_USER_ID=28 node scripts/intent-spectrum-eval.mjs
 ```
 
-**Filtered subset** (e.g., verify Bug #4 fix on hardsell intent only):
+**過濾子集**（例如驗證 Bug #4 修復、只跑 hardsell intent）：
 ```bash
 DOGFOOD_USER_ID=28 INCLUDE_CELLS=vercel:hardsell,burton:hardsell node scripts/intent-spectrum-eval.mjs
 ```
 
-**URL menu** (in `scripts/intent-spectrum-eval.mjs:ALL_URLS`):
-- `vercel` — infra SaaS, minimalist black/white brand
-- `duolingo` — consumer learning app
-- `gopro` — extreme sports, **Cloudflare-blocked** (still in CIRCUIT_OPEN territory; needs Bug #3 Sub A/B for SaaS fallback)
-- `patagonia` — outdoor brand, **IP-routed gateway** (returns 6-line splash page; needs L4 datacenter US proxy)
-- `burton` — snowboard brand, fully-functional Bug #2 verification target
+**URL 選單**（在 `scripts/intent-spectrum-eval.mjs:ALL_URLS`）：
+- `vercel` — infra SaaS、極簡黑白 brand
+- `duolingo` — 消費者學習 app
+- `gopro` — 極限運動、**Cloudflare 阻擋**（仍卡 CIRCUIT_OPEN、需 Bug #3 Sub A/B SaaS fallback）
+- `patagonia` — 戶外品牌、**IP-routed gateway**（回 6 行 splash page、需 L4 datacenter US proxy）
+- `burton` — snowboard 品牌、Bug #2 完整驗證 target
 
-Reports go to `docs/dev-notes/intent-spectrum-{date}{-supplement-N}.md`.
+報告寫到 `docs/dev-notes/intent-spectrum-{date}{-supplement-N}.md`。
 
-**Cost discipline** (`project_anthropic_credit_budget_signal.md`): each storyboard call ~$0.10-0.18. A 9-cell run is ~$1.50. Don't add to PR-level CI; weekly cadence or post-architectural-ship is fine.
+**成本紀律**（`project_anthropic_credit_budget_signal.md`）：每個 storyboard call ~$0.10-0.18。9-cell 跑一次 ~$1.50。**不要加進 PR-level CI**；每週 cadence 或 ship 完架構性改動後跑 OK。
 
-### 3.7 Database state checks
+### 3.7 資料庫狀態檢查
 
-Quick credit balance + tier check for a user:
+某 user 的 credit balance + tier 快查：
 ```bash
 node -e "
 import('./apps/api/node_modules/pg/lib/index.js').then(async ({ default: pg }) => {
@@ -240,7 +240,7 @@ import('./apps/api/node_modules/pg/lib/index.js').then(async ({ default: pg }) =
 "
 ```
 
-Recent failed jobs + error codes:
+最近失敗的 jobs + error code：
 ```bash
 node -e "
 import('./apps/api/node_modules/pg/lib/index.js').then(async ({ default: pg }) => {
@@ -256,109 +256,109 @@ import('./apps/api/node_modules/pg/lib/index.js').then(async ({ default: pg }) =
 "
 ```
 
-Migration state:
+Migration 狀態：
 ```bash
 docker exec lumespec-postgres-1 psql -U lumespec -d lumespec -c "SELECT name, run_on FROM pgmigrations ORDER BY name;"
 ```
 
-### 3.8 Test verification
+### 3.8 測試驗證
 
 ```bash
-pnpm test          # all 814 tests across 8 packages
-pnpm typecheck     # workspace-level typecheck (REQUIRED — per-package alone misses cross-cutting Scene additions)
+pnpm test          # 全 814 個測試跨 8 個 package
+pnpm typecheck     # workspace 層級 typecheck（必跑 — 個別 package 跑會漏掉跨切的 Scene 加法）
 ```
 
-**Lesson learned 2026-04-27**: workspace-level typecheck is mandatory after any change to a discriminated union (e.g., Scene types). Per-package typecheck missed the DeviceMockup-not-in-extractiveCheck case → prod incident. CLAUDE.md Step 5 in the "新增 Remotion 場景的正確順序" section enforces this.
+**2026-04-27 學到的教訓**：workspace 層級 typecheck 在動到 discriminated union（例如 Scene types）後**必跑**。Per-package typecheck 漏抓 DeviceMockup-not-in-extractiveCheck → prod incident。CLAUDE.md「新增 Remotion 場景的正確順序」第 5 步強制執行這條。
 
-### 3.9 Post-deploy verification (when GCP/Railway is wired)
+### 3.9 Post-deploy 驗證（待 deploy 接好時）
 
-When prod deploy is wired (currently NOT — see `project_gcp_deploy_deferred.md` memory), verify:
-1. `curl -sf https://<api-public-url>/healthz` returns ok
-2. Submit a test job, watch worker logs for `tier=` line + storyboard generation success
-3. Check `pg-backfill` queue depth — should be 0
+當 prod deploy 接好（**目前還沒** — 見 `project_gcp_deploy_deferred.md` memory），驗證：
+1. `curl -sf https://<api-public-url>/healthz` 回 ok
+2. Submit 一個測試 job、看 worker log 是否有 `tier=` 行 + storyboard 生成成功
+3. 看 `pg-backfill` queue 深度 — 應該是 0
 
-For Railway/Supabase migration (the user's stated preference), see future spec when prioritized.
+要切 Railway/Supabase（user 表態的偏好），等優先排定後寫專屬 spec。
 
 ---
 
-## 4. Current State Snapshot — 2026-04-28
+## 4. 當前狀態快照 — 2026-04-28
 
-### Recently shipped (last 3 days, in chronological order)
+### 最近 ship（過去 3 天，按時間順序）
 
-| Date | Feature / fix | Commits |
+| 日期 | 功能 / 修復 | Commit 範圍 |
 |---|---|---|
 | 2026-04-26 | State machine correctness (R1) | various |
 | 2026-04-26 | Spec 3 architecture boundary (R2 + R6 + R7) | various |
-| 2026-04-27 | DeviceMockup hero opener scene (9th scene type) | 8bc82ed → 1a56bee |
-| 2026-04-27 | PG Backfill eventual consistency (#2 phantom job blocker) | ca871ff → c3d37e3 |
-| 2026-04-27 | Migration runner CI gate (#3 release blocker) | a7e7e84 → 31be45b |
-| 2026-04-27 | DeviceMockup P0 hot-fix (collectSceneTexts missing case) | 1a185ba |
-| 2026-04-27 | Visual regression smoke for PromoComposition | 73f6998 |
-| 2026-04-27 | smart-quote folding in normalizeText (Bug #4 of intent-spectrum-eval) | 39ca103 |
-| 2026-04-28 | Brand color 4-tier chain (Bug #1 + Bug #1.5 follow-up) | 7a215f9 → 9cfcdc5 |
-| 2026-04-28 | US-pinned BrowserContext (Bug #2) | 07d65a0 |
-| 2026-04-28 | Extractive check substring fast-path (hardsell flake fix) | c8a183b |
-| 2026-04-28 | Circuit gate moved into runPlaywright lambda (Bug #3 Sub C) | bee9c81 |
+| 2026-04-27 | DeviceMockup hero opener scene（第 9 種 scene type）| 8bc82ed → 1a56bee |
+| 2026-04-27 | PG Backfill eventual consistency（#2 phantom job blocker）| ca871ff → c3d37e3 |
+| 2026-04-27 | Migration runner CI gate（#3 release blocker）| a7e7e84 → 31be45b |
+| 2026-04-27 | DeviceMockup P0 hot-fix（collectSceneTexts 漏 case）| 1a185ba |
+| 2026-04-27 | PromoComposition 視覺 regression smoke | 73f6998 |
+| 2026-04-27 | normalizeText smart-quote folding（intent-spectrum-eval Bug #4）| 39ca103 |
+| 2026-04-28 | Brand color 4-tier chain（Bug #1 + Bug #1.5 follow-up）| 7a215f9 → 9cfcdc5 |
+| 2026-04-28 | US-pinned BrowserContext（Bug #2）| 07d65a0 |
+| 2026-04-28 | Extractive check substring fast-path（hardsell flake fix）| c8a183b |
+| 2026-04-28 | Circuit gate 搬進 runPlaywright lambda（Bug #3 Sub C）| bee9c81 |
 
-Test count grew from ~700 → 814.
+測試數從 ~700 → 814。
 
-### Backlog — what's actually open
+### Backlog — 真實還開的項目
 
-| Item | Status | Blocker |
+| 項目 | 狀態 | 卡關原因 |
 |---|---|---|
-| Bug #3 Sub A/B (anti-bot vendor) | OPEN | USER $ budget decision (ScreenshotOne SaaS / datacenter proxy / residential proxy) |
-| L4 datacenter US proxy (for Patagonia-class IP-routed sites) | OPEN | Same vendor / budget bucket as Sub A/B |
-| VLM Tier 4 (brand color VLM-on-screenshot escalation) | OPEN | Empirical trigger: prod log >20% `tier=default-fallback` rate. Not measurable until real traffic. |
-| Cross-service correlation log (workers on pino + jobId child logger) | DEFERRED 2026-04-27 | Self-deferred as YAGNI. Existing `[worker] ... jobId=X` console pattern adequate for now. |
-| NextAuth 5.0.0-beta.31 → stable | BLOCKED | Upstream — beta.31 is currently latest npm release; no stable yet. |
-| GCP deploy infra | DEFERRED 2026-04-27 | User decided current GCP deploy.yaml setup is over-engineered for pre-prod. Future: Railway + Supabase. |
+| Bug #3 Sub A/B（anti-bot vendor）| OPEN | USER $ 預算決策（ScreenshotOne SaaS / datacenter proxy / residential proxy）|
+| L4 datacenter US proxy（給 Patagonia 類 IP-routed 網站）| OPEN | 跟 Sub A/B 同 vendor / budget bucket |
+| VLM Tier 4（brand color VLM-on-screenshot 升級）| OPEN | Empirical trigger：prod log >20% `tier=default-fallback` rate。沒真實流量前無從衡量 |
+| Cross-service correlation log（workers 上 pino + jobId child logger）| DEFERRED 2026-04-27 | 自己 defer 為 YAGNI。現有 `[worker] ... jobId=X` console pattern 暫時夠用 |
+| NextAuth 5.0.0-beta.31 → stable | BLOCKED | 上游 — beta.31 仍是 npm 最新版、stable 沒釋出 |
+| GCP deploy infra | DEFERRED 2026-04-27 | User 判斷現有 GCP deploy.yaml 對 pre-prod 階段過度設計、未來改 Railway + Supabase |
 
-### Known unsolved cases (NOT blockers — empirical findings)
+### 已知未解 case（**不是** blocker — 是經驗發現）
 
-- **GoPro and similar Cloudflare-protected brands** → permanent CIRCUIT_OPEN. Bug #3 Sub C unblocked the architecture; needs Sub A/B vendor wiring to be useful.
-- **Patagonia and similar IP-routed ecommerce** → CDN edge IP geo-routing bypasses our L1+L2 fix. Needs L4 proxy.
-- **Duolingo "true brand color" extraction** → wordmark IS black, green only in mascot/CTAs. All 3 traditional source layers (DOM/meta/logo) legitimately return neutral. VLM Tier 4 territory.
+- **GoPro 等 Cloudflare 保護 brand** → 永久 CIRCUIT_OPEN。Bug #3 Sub C 已解封架構；需 Sub A/B 接 vendor 才能 useful
+- **Patagonia 等 IP-routed ecommerce** → CDN edge IP geo-routing bypass 我們的 L1+L2 修復。需 L4 proxy
+- **Duolingo「真實 brand color」抽取** → wordmark IS 黑、綠只在 mascot/CTAs。3 個傳統 source 層（DOM / meta / logo）都合法回 neutral。VLM Tier 4 才能解
 
-### Memory system (for AI agents)
+### Memory 系統（給 AI agent 用）
 
-The agent's persistent memory lives at `C:\Users\88698\.claude\projects\c--Users-88698-Desktop-Workspace-LumeSpec\memory\`. Index in `MEMORY.md`. Key files relevant to current state:
+Agent 的持久化 memory 在 `C:\Users\88698\.claude\projects\c--Users-88698-Desktop-Workspace-LumeSpec\memory\`。索引在 `MEMORY.md`。當前狀態相關的關鍵 file：
 
-- `project_intent_spectrum_eval_2026_04_27.md` — original 4-bug discovery report + Day 2 closure
-- `project_brand_color_vlm_tier4_backlog.md` — VLM trigger criteria
-- `project_l4_datacenter_proxy_backlog.md` — combined Bug #2-hard + Bug #3 vendor decisions
-- `project_anthropic_credit_budget_signal.md` — operational cost notes
-- `feedback_workspace_typecheck.md` — the lesson from the DeviceMockup incident
-- `feedback_strict_commit_message_compliance.md` — when plan provides exact HEREDOC, dispatcher must enforce strict compliance
-- `feedback_checklist_reflex_pushback.md` — surface contradictions when user issues actions contradicting their own recent decisions
+- `project_intent_spectrum_eval_2026_04_27.md` — 原始 4-bug 發現報告 + Day 2 closure
+- `project_brand_color_vlm_tier4_backlog.md` — VLM 觸發條件
+- `project_l4_datacenter_proxy_backlog.md` — Bug #2-hard + Bug #3 vendor 決策合併 backlog
+- `project_anthropic_credit_budget_signal.md` — 運維成本提醒
+- `feedback_workspace_typecheck.md` — DeviceMockup incident 學到的教訓
+- `feedback_strict_commit_message_compliance.md` — plan 給 exact HEREDOC 時、dispatcher 必須強制嚴格遵守
+- `feedback_checklist_reflex_pushback.md` — 當 user 下的指令跟自己最近的決定矛盾時、要先指出再執行
 
-### Common gotchas (encountered + documented)
+### Common Gotchas（踩過的坑、入冊）
 
-1. **Anthropic credit balance** can deplete unexpectedly during heavy verification work. Hit 2026-04-28 mid-eval. Top up before sustained eval cadence.
-2. **Worker code changes need full `pnpm lume stop && pnpm lume start`** — workers cache compiled JS; restart picks up changes.
-3. **Workspace `pnpm typecheck` is mandatory** for cross-cutting changes (Scene unions, discriminated unions consumed by multiple packages).
-4. **DESIGN.md sync hook** triggers on touching specific paths — see `scripts/check-design-sync.mjs`. Bypass with `--no-verify` only for genuinely-internal-only changes; document the bypass reason in commit body.
-5. **dev `DOGFOOD_USER_ID` defaults to 1** but DB only has user 28 (chadcoco1444@gmail.com). Override env when running scripts.
-6. **`pickTrack` is a fallback chain, NOT a merge.** Don't put cross-cutting logic (e.g., theme-color extraction) inside individual track files — put it in orchestrator. Anti-pattern #6 in `workers/crawler/DESIGN.md` documents the dead-code hazard.
-7. **Per-domain serial submission** is required for the intent-spectrum-eval script — multiple jobs to the same domain in parallel will trip the circuit breaker before any can complete.
-
----
-
-## 5. Next Sensible Sprint (when ready)
-
-When user returns and wants to plan the next sprint, the natural priorities (in order of ROI):
-
-1. **Bug #3 Sub A/B vendor decision** — bring concrete cost projections + sample success rates for ScreenshotOne / BrightData / etc. Architecture is ready (Sub C done); this is purely a business call. Action: brainstorm session that surfaces 2-3 vendor options with $/mo + estimated coverage rate, let user pick.
-
-2. **First Railway + Supabase deploy attempt** — the user's stated preference for prod over the GCP path. Architecturally simpler than GCP; should require minimal new code (current `apps/api` should work as-is, just need adapter for Supabase Postgres connection). Estimate: 1-day brainstorm + 1-day implementation.
-
-3. **A new product feature** — user explicitly said Day 1 they want to focus on user-facing features after backlog is clean. Now's the time. Likely candidates from README roadmap: Scheduled re-renders / Custom brand kit / 9:16 vertical / Team workspaces / Webhook trigger.
-
-The "fix more bugs" instinct should be resisted for at least one sprint — current bug-discovery rate is artificially high because we just ran a deep eval. Real prod traffic + user feedback will surface different bugs worth prioritizing over speculative ones.
+1. **Anthropic credit balance** 在密集 verification 期間會意外耗盡。2026-04-28 撞到。重啟 sustained eval 前先儲值。
+2. **Worker code 改完必須跑 `pnpm lume stop && pnpm lume start`** — workers 快取編譯後的 JS、restart 才會吃新 code。
+3. **Workspace 層級 `pnpm typecheck` 必跑** — 跨切改動（Scene unions、被多個 package 消費的 discriminated unions）。
+4. **DESIGN.md sync hook** 在動到特定路徑時觸發 — 看 `scripts/check-design-sync.mjs`。bypass 用 `--no-verify` 只在「真的純內部改動」時、commit body 寫清楚 bypass 理由。
+5. **dev `DOGFOOD_USER_ID` 預設 1** 但 DB 只有 user 28（chadcoco1444@gmail.com）。跑 script 時 override env。
+6. **`pickTrack` 是 fallback chain，不是 merge。** 不要把跨切邏輯（例如 theme-color 抽取）放進個別 track 檔案 — 放進 orchestrator。`workers/crawler/DESIGN.md` anti-pattern #6 紀錄這個 dead-code 陷阱。
+7. **同一 domain 多個 job 必須序列 submit**（intent-spectrum-eval script 已實作） — 同 domain 並行 submit 會在任何一個完成前觸發 circuit breaker。
 
 ---
 
-## How to use this document going forward
+## 5. 下個合理 Sprint（時機到時）
 
-- **Refresh when major architectural changes ship** — add a row to section 4's "Recently shipped" table; update section 4 backlog if items move.
-- **Don't bloat** — if a section grows beyond ~50 lines, extract to a dedicated doc and link from here.
-- **The 80+ deep docs are the source of truth** — this doc is the index. When in doubt, point to the deep doc rather than copying its content.
+User 回來規劃下個 sprint 時，按 ROI 順序的自然優先：
+
+1. **Bug #3 Sub A/B vendor 決策** — 帶具體 cost projection + 樣本成功率（ScreenshotOne / BrightData / etc.）。架構已就緒（Sub C 完成）；這是純商業決策。動作：brainstorm 出 2-3 個 vendor option + $/mo + 預估覆蓋率，讓 user 選。
+
+2. **首次 Railway + Supabase deploy 嘗試** — User 表態的 prod 偏好。架構比 GCP path 簡單；應該幾乎不需要新 code（現有 `apps/api` 應可直接用、只需 adapter 接 Supabase Postgres connection）。預估：1 天 brainstorm + 1 天實作。
+
+3. **新 product feature** — User 在 Day 1 明確表態，backlog 清乾淨後想 focus user-facing feature。現在正是時機。README roadmap 候選：Scheduled re-renders / Custom brand kit / 9:16 vertical / Team workspaces / Webhook trigger。
+
+「繼續修 bug」的本能要忍住至少一個 sprint — 目前 bug-discovery rate 偏高是因為剛跑完深度 eval。真實 prod traffic + user feedback 會浮出**不同**、值得**優先**處理的 bug、**比目前推測的更值得做**。
+
+---
+
+## 維護這份文件 (How to maintain)
+
+- **Major 架構改動 ship 後 refresh** — 加一行到 §4 的「最近 ship」表；移動 backlog 項目時更新 §4。
+- **不要膨脹** — 任一 section 超過 ~50 行時、抽出到專屬 doc 並 link 回來。
+- **80+ 深度文件才是 truth source** — 這份文件是索引。猶豫時 link 過去而不是 copy 內容。
