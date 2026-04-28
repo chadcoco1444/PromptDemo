@@ -111,7 +111,7 @@ describe('extractiveCheck (Latin)', () => {
         durationInFrames: 300,
         entryAnimation: 'fade',
         exitAnimation: 'fade',
-        props: { text: 'totally invented marketing claim', emphasis: 'primary' },
+        props: { text: 'totally invented marketing claim', emphasis: 'primary', variant: 'default' },
       },
     ]);
     const r = extractiveCheck(board);
@@ -135,7 +135,7 @@ describe('extractiveCheck (Latin)', () => {
         durationInFrames: 300,
         entryAnimation: 'fade',
         exitAnimation: 'fade',
-        props: { text: 'standing sideways since 1977', emphasis: 'primary' },
+        props: { text: 'standing sideways since 1977', emphasis: 'primary', variant: 'default' },
       },
     ]);
     board.assets.sourceTexts = [
@@ -166,6 +166,7 @@ describe('extractiveCheck (Latin)', () => {
           props: {
             text: 'save up to 40% off select boards, boots, outerwear, and more',
             emphasis: 'primary',
+            variant: 'default',
           },
         },
       ],
@@ -192,7 +193,7 @@ describe('extractiveCheck (CJK)', () => {
           durationInFrames: 300,
           entryAnimation: 'fade',
           exitAnimation: 'fade',
-          props: { text: '自動化未來', emphasis: 'primary' },
+          props: { text: '自動化未來', emphasis: 'primary', variant: 'default' },
         },
       ],
     };
@@ -210,7 +211,7 @@ describe('extractiveCheck (CJK)', () => {
           durationInFrames: 300,
           entryAnimation: 'fade',
           exitAnimation: 'fade',
-          props: { text: '完全不存在的東西', emphasis: 'primary' },
+          props: { text: '完全不存在的東西', emphasis: 'primary', variant: 'default' },
         },
       ],
     };
@@ -243,6 +244,7 @@ describe('extractiveCheck (CJK)', () => {
           props: {
             text: 'protocols & standards · embedded systems · programming & tools · domain knowledge',
             emphasis: 'primary',
+            variant: 'default',
           },
         },
       ],
@@ -257,10 +259,10 @@ describe('extractiveCheck (CJK)', () => {
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
           entryAnimation: 'fade', exitAnimation: 'fade',
-          props: { text: 'alpha | beta | gamma', emphasis: 'primary' } },
+          props: { text: 'alpha | beta | gamma', emphasis: 'primary', variant: 'default' } },
         { sceneId: 2, type: 'TextPunch', durationInFrames: 300,
           entryAnimation: 'fade', exitAnimation: 'fade',
-          props: { text: 'alpha / beta / gamma', emphasis: 'primary' } },
+          props: { text: 'alpha / beta / gamma', emphasis: 'primary', variant: 'default' } },
       ],
     };
     expect(extractiveCheck(board).kind).toBe('ok');
@@ -278,7 +280,7 @@ describe('extractiveCheck (CJK)', () => {
           durationInFrames: 300,
           entryAnimation: 'fade',
           exitAnimation: 'fade',
-          props: { text: 'real a · real b · made up feature', emphasis: 'primary' },
+          props: { text: 'real a · real b · made up feature', emphasis: 'primary', variant: 'default' },
         },
       ],
     };
@@ -292,7 +294,7 @@ describe('extractiveCheck (CJK)', () => {
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
           entryAnimation: 'fade', exitAnimation: 'fade',
-          props: { text: 'AI/ML platform', emphasis: 'primary' } },
+          props: { text: 'AI/ML platform', emphasis: 'primary', variant: 'default' } },
       ],
     };
     expect(extractiveCheck(board).kind).toBe('ok');
@@ -322,6 +324,7 @@ describe('extractiveCheck (CJK)', () => {
           props: {
             text: 'senior firmware engineer specializing in nr/lte cellular protocol stack, embedded systems, and 3gpp rrc/nas protocols.',
             emphasis: 'primary',
+            variant: 'default',
           },
         },
       ],
@@ -336,7 +339,7 @@ describe('extractiveCheck (CJK)', () => {
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
           entryAnimation: 'fade', exitAnimation: 'fade',
-          props: { text: 'fast, reliable, and secure!', emphasis: 'primary' } },
+          props: { text: 'fast, reliable, and secure!', emphasis: 'primary', variant: 'default' } },
       ],
     };
     expect(extractiveCheck(board).kind).toBe('ok');
@@ -349,7 +352,7 @@ describe('extractiveCheck (CJK)', () => {
       scenes: [
         { sceneId: 1, type: 'TextPunch', durationInFrames: 300,
           entryAnimation: 'fade', exitAnimation: 'fade',
-          props: { text: 'fast, reliable, and supercalifragilistic.', emphasis: 'primary' } },
+          props: { text: 'fast, reliable, and supercalifragilistic.', emphasis: 'primary', variant: 'default' } },
       ],
     };
     expect(extractiveCheck(board).kind).toBe('error');
@@ -411,5 +414,75 @@ describe('extractiveCheck (CJK)', () => {
       ],
     };
     expect(extractiveCheck(board).kind).toBe('error');
+  });
+});
+
+describe('QuoteHero scene (v1.7)', () => {
+  it('passes when quote, author, and attribution all appear in sourceTexts', () => {
+    const board = sb([
+      {
+        type: 'QuoteHero',
+        sceneId: 1,
+        durationInFrames: 180,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          quote: 'we replaced 3 days of figma with one paste-and-wait.',
+          author: 'sarah chen',
+          attribution: 'founder, acme inc.',
+          backgroundHint: 'gradient',
+        },
+      },
+    ]);
+    board.assets.sourceTexts = [
+      'we replaced 3 days of figma with one paste-and-wait.',
+      'sarah chen',
+      'founder, acme inc.',
+    ];
+    expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
+  });
+
+  it('rejects when author is hallucinated', () => {
+    const board = sb([
+      {
+        type: 'QuoteHero',
+        sceneId: 1,
+        durationInFrames: 180,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          quote: 'we replaced 3 days of figma with one paste-and-wait.',
+          author: 'made-up person',
+          backgroundHint: 'gradient',
+        },
+      },
+    ]);
+    board.assets.sourceTexts = ['we replaced 3 days of figma with one paste-and-wait.'];
+    const result = extractiveCheck(board);
+    expect(result.kind).toBe('error');
+  });
+
+  it('passes when quote spans multiple sourceTexts entries (uses joinedPool from T1)', () => {
+    const board = sb([
+      {
+        type: 'QuoteHero',
+        sceneId: 1,
+        durationInFrames: 180,
+        entryAnimation: 'fade',
+        exitAnimation: 'fade',
+        props: {
+          quote: 'we replaced 3 days of figma with one paste-and-wait — and never looked back.',
+          author: 'sarah chen',
+          backgroundHint: 'gradient',
+        },
+      },
+    ]);
+    board.assets.sourceTexts = [
+      'we replaced 3 days of figma',
+      'with one paste-and-wait — and never looked back.',
+      'sarah chen',
+      'founder',
+    ];
+    expect(extractiveCheck(board)).toEqual({ kind: 'ok' });
   });
 });

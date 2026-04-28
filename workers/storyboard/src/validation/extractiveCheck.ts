@@ -47,6 +47,12 @@ export function collectSceneTexts(scene: Scene): string[] {
       return scene.props.items.flatMap((i) => [i.title, ...(i.description ? [i.description] : [])]);
     case 'TextPunch':
       return [scene.props.text];
+    case 'QuoteHero':
+      return [
+        scene.props.quote,
+        scene.props.author,
+        ...(scene.props.attribution ? [scene.props.attribution] : []),
+      ];
     case 'CTA':
       return [scene.props.headline];
     case 'StatsCounter':
