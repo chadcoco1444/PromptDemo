@@ -32,13 +32,14 @@ export const QuoteHero: React.FC<QuoteHeroProps> = ({
 
   const authorOpacity = interpolate(frame, [18, 32], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
-  const useScreenshot = backgroundHint === 'screenshot' && !!screenshotUrl;
-
   return (
     <AbsoluteFill style={{ background: '#0d0d1a' }}>
-      {useScreenshot ? (
+      {/* Inline narrowing keeps screenshotUrl's non-null type within the
+          branch — mirrors T6 TextPunch pattern. Falls back to gradient if
+          screenshot mode requested but URL missing (graceful, no exception). */}
+      {backgroundHint === 'screenshot' && screenshotUrl ? (
         <AbsoluteFill style={{ transform: `scale(${bgScale})`, opacity: 0.08 }}>
-          <Img src={screenshotUrl!} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <Img src={screenshotUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </AbsoluteFill>
       ) : (
         <AbsoluteFill
@@ -55,7 +56,7 @@ export const QuoteHero: React.FC<QuoteHeroProps> = ({
           top: 60,
           left: 80,
           fontSize: 280,
-          fontFamily: 'Georgia, serif',
+          fontFamily: 'Georgia, "Times New Roman", serif',
           color: theme.primary,
           opacity: 0.7,
           lineHeight: 1,
@@ -74,7 +75,7 @@ export const QuoteHero: React.FC<QuoteHeroProps> = ({
         >
           <div
             style={{
-              fontFamily: 'Georgia, serif',
+              fontFamily: 'Georgia, "Times New Roman", serif',
               fontSize: 56,
               fontWeight: 500,
               lineHeight: 1.3,
@@ -91,7 +92,7 @@ export const QuoteHero: React.FC<QuoteHeroProps> = ({
                 fontFamily: 'Inter, system-ui, sans-serif',
                 fontSize: 22,
                 fontWeight: 600,
-                color: '#e5e5e5',
+                color: theme.textOn,
               }}
             >
               {author}
