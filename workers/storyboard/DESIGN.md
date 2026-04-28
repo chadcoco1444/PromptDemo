@@ -56,6 +56,17 @@ graph LR
 - **重試策略** — 最多 `MAX_ATTEMPTS` 次重試（預設 3），每次重試前記錄失敗原因，避免無限重試抽乾 Token 配額
 - **S3 讀寫** — 下載 `crawlResult.json`（輸入），上傳 `storyboard.json`（輸出）
 - **開場場景偏好策略** — system prompt 預設使用 `DeviceMockup` 作為第一個場景（當 `viewport` screenshot 存在時），`HeroRealShot` 退化為 fallback。實作於 `sceneTypeCatalog.ts`（catalog 描述）+ `systemPrompt.ts`（CREATIVITY_DIRECTIVE bullet + HARD RULE #9 禁止 `device='phone'`）。
+- **`SCENE_PACING_DISCIPLINE` (v1.7)** — new prompt block enforcing soft
+  rules: TextPunch ≤ 2 per storyboard, never consecutive, prefer QuoteHero
+  for testimonial/customer-voice moments, alternate TextPunch variants for
+  visual variety. Soft enforcement only — `textPunchDiscipline` validator
+  measures compliance via log telemetry; no hard rejection in Phase 1.
+  Wired into `buildSystemPrompt()` immediately after `CREATIVITY_DIRECTIVE`.
+- **`SCENE_CATALOG.QuoteHero` (v1.7)** — describes the new scene type with
+  explicit data requirements (quote + author both from sourceTexts) and
+  discrimination from ReviewMarquee (1 dramatic quote vs 3+ endorsements).
+- **`V1_IMPLEMENTED_SCENE_TYPES`** — now includes 'QuoteHero'. Claude is
+  told this is in the allowed type list.
 
 ---
 

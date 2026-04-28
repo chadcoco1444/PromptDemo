@@ -33,6 +33,16 @@ Director's code:
 The viewer should know what category this product belongs to by frame 3. Generic is failure.
 `.trim();
 
+const SCENE_PACING_DISCIPLINE = `
+SCENE PACING DISCIPLINE (v1.7):
+
+- TextPunch is for short single-line emphasis. Do NOT use it more than 2 times in a single storyboard.
+- NEVER place TextPunch scenes consecutively. If you have two punctuation beats in a row, the second MUST be a different scene type (BentoGrid, FeatureCallout, QuoteHero, etc.) or you must merge them.
+- If you want a dramatic single quote with attribution (testimonial, press quote, customer voice), use QuoteHero instead of TextPunch. QuoteHero is visually richer and the right tool for that moment.
+- When TextPunch appears more than once in the storyboard, alternate the \`variant\` field between 'photoBackdrop' (source-page screenshot bg) and 'slideBlock' (sliding color block) to maintain visual variety. Avoid 'default' more than once unless variant data is unavailable.
+- QuoteHero requires testimonial-shape source content (a quote + an author name). If sourceTexts has neither, use TextPunch (with non-default variant) for that beat instead.
+`.trim();
+
 const RHYTHM_TEMPLATES_BY_INDUSTRY: Record<IndustryCategory, string> = {
   developer_tool: `
 RHYTHM TEMPLATES — developer tool (technical audience, show the workflow, skip the fluff):
@@ -145,6 +155,8 @@ ${AVAILABLE_SCENES_PROMPT}
 ${HARD_RULES}
 
 ${CREATIVITY_DIRECTIVE}
+
+${SCENE_PACING_DISCIPLINE}
 
 ${rhythmBlock}${pacingBlock}${localeBlock}
 

@@ -18,7 +18,9 @@ export const SCENE_CATALOG: Record<(typeof SCENE_TYPES)[number], string> = {
   BentoGrid:
     "Dense feature grid (3-6 items) — shows multiple features in one scene instead of separate FeatureCallouts. Props: { items: [{title, description?, iconHint? (one emoji character, e.g. \"📊\", \"💬\", \"🎨\" — NOT an icon library name like \"database\")}] }. Ideal for 30s/60s videos when 3+ small features would otherwise create scene bloat.",
   TextPunch:
-    'Full-screen text beat for pacing. Props: { text, emphasis: "primary"|"secondary"|"neutral" }. Use to break up rhythm between feature scenes.',
+    'Full-screen text beat for pacing. Props: { text, emphasis: "primary"|"secondary"|"neutral", variant?: "default"|"photoBackdrop"|"slideBlock" — default "default" }. Use to break up rhythm between feature scenes. Visual variants: "default" = solid color block (legacy), "photoBackdrop" = source-page screenshot background with dark overlay, "slideBlock" = colored block slides in/out horizontally. When using TextPunch more than once in a storyboard, alternate variants for visual variety. For dramatic single-line customer voice, use QuoteHero instead.',
+  QuoteHero:
+    'Single cinematic pull-quote with author attribution — visually richer alternative to TextPunch for "one dramatic line of customer voice" moments. Props: { quote (10-280 chars, must be substring of sourceTexts; cross-entry tolerance handled by extractive joinedPool), author (must appear in sourceTexts), attribution? (role + company, also from sourceTexts), backgroundHint?: "gradient" | "screenshot" — default "gradient" for soft fallback, "screenshot" enables source-page bg with Ken Burns }. Use INSTEAD OF TextPunch when source contains testimonial / press quote / customer voice content. Do NOT pair with ReviewMarquee on the same quote pool — choose one based on count: 1 dramatic quote → QuoteHero, 3+ short endorsements → ReviewMarquee.',
   CTA:
     'Closing scene. Props: { headline, url }. Always required as the last scene.',
   StatsCounter:
@@ -38,6 +40,7 @@ export const V1_IMPLEMENTED_SCENE_TYPES = [
   'HeroRealShot',
   'FeatureCallout',
   'TextPunch',
+  'QuoteHero',
   'SmoothScroll',
   'CTA',
   'BentoGrid',
