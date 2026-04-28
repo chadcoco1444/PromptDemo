@@ -67,6 +67,10 @@ graph LR
   discrimination from ReviewMarquee (1 dramatic quote vs 3+ endorsements).
 - **`V1_IMPLEMENTED_SCENE_TYPES`** — now includes 'QuoteHero'. Claude is
   told this is in the allowed type list.
+- **`SCENE_CATALOG.VersusSplit` (Phase 2)** — describes the new scene with
+  closed `compareFraming` enum (4 values), explicit data requirements
+  (both .value fields from sourceTexts), and explicit anti-fabrication
+  warning. `V1_IMPLEMENTED_SCENE_TYPES` extended to 14 entries.
 
 ---
 
