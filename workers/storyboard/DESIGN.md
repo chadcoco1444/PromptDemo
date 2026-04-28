@@ -122,6 +122,18 @@ Layer 5: 文字白名單過濾 (只保留來自爬蟲的原始文字)
            returns `[headline?, left.value, right.value]`. label fields
            are UI framing (Before/After/Them/Us), intentionally NOT
            extractive-checked — same approach as iconHint.
+         — Layer-5 failure feedback to Claude (retry loop in generator.ts)
+           uses `formatExtractiveFeedback` (`validation/extractiveFeedback.ts`):
+           per-violation top-3 closest sourceText candidates (Fuse-ranked
+           + substring-priority) + explicit (a) replace verbatim / (b)
+           change scene type / (c) remove scene resolution menu + ★
+           verbatim suggestion when best candidate score < 0.4. Previous
+           extractive feedback is ACCUMULATED across MAX_ATTEMPTS retries
+           ("do NOT repeat these errors") so Claude doesn't re-paraphrase
+           into the same fabrication class. Stripe regression 2026-04-28
+           (job 2Pyf__xPHzOq6HAoxYzdA) burned all 3 attempts on the same
+           Pattern-4 marketing-synthesis fabrications because old flat-list
+           feedback gave no resolution guidance.
 Layer 6: Logo 資料門控 (logos 欄位需有真實 S3 URI 才能使用 LogoCloud 場景)
 Layer 7: showWatermark 強制注入 (依 payload 覆蓋，不信任 LLM 輸出)
 ```

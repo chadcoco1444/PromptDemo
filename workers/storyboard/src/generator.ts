@@ -5,6 +5,7 @@ import { detectPacingProfile } from './prompts/pacingProfiles.js';
 import { parseJson } from './validation/parseJson.js';
 import { zodValidate } from './validation/zodValidate.js';
 import { extractiveCheck } from './validation/extractiveCheck.js';
+import { formatExtractiveFeedback } from './validation/extractiveFeedback.js';
 import { adjustDuration, adjustStoryboardDuration } from './validation/durationAdjust.js';
 import { clampPacing } from './validation/pacingClamp.js';
 import { selectVariants } from './variantSelection.js';
@@ -180,6 +181,14 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
       : {}),
   });
   let feedback = '';
+  // Accumulated extractive feedback across attempts. Only extractive
+  // failures get history retention — other failure modes (parse, zod,
+  // duration) are usually transient and don't benefit from "don't repeat
+  // these errors" framing. Stripe regression 2026-04-28 (job
+  // 2Pyf__xPHzOq6HAoxYzdA) burned all 3 attempts on the same Pattern-4
+  // marketing-synthesis fabrications because Claude saw no continuity
+  // signal between attempts.
+  let previousExtractiveFeedback: string | undefined = undefined;
   let accUsage: ClaudeUsage = { input_tokens: 0, output_tokens: 0 };
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -293,9 +302,12 @@ export async function generateStoryboard(input: GenerateInput): Promise<Generate
 
     const extractive = extractiveCheck(validated.storyboard);
     if (extractive.kind === 'error') {
-      feedback = `Extractive check failed — these phrases are not in sourceTexts:\n${extractive.violations
-        .map((v) => ` scene ${v.sceneId}: "${v.text}"`)
-        .join('\n')}`;
+      feedback = formatExtractiveFeedback(
+        extractive.violations,
+        validated.storyboard.assets.sourceTexts,
+        previousExtractiveFeedback,
+      );
+      previousExtractiveFeedback = feedback;
       continue;
     }
 
