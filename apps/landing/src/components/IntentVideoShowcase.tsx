@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { INTENT_VIDEOS, type IntentVideo } from '../data/intentVideos';
+import { INTENT_VIDEO_GROUPS, type IntentVideo, type IntentVideoGroup } from '../data/intentVideos';
 
 function VideoCard({ video }: { video: IntentVideo }) {
   const ref = useRef<HTMLVideoElement>(null);
@@ -51,21 +51,36 @@ function VideoCard({ video }: { video: IntentVideo }) {
   );
 }
 
-export function IntentVideoShowcase() {
+function VideoGroup({ group }: { group: IntentVideoGroup }) {
   return (
-    <section className="py-16 px-6 max-w-6xl mx-auto">
-      <header className="text-center mb-10">
-        <h2 className="text-3xl md:text-4xl font-bold">Same URL. Three intents. Three videos.</h2>
-        <p className="mt-3 text-gray-400">
-          We crawled <code className="text-purple-400">vercel.com</code> once, then steered the storyboard
-          AI three different ways. Scroll each card — it autoplays in view.
-        </p>
-      </header>
+    <div className="mb-16 last:mb-0">
+      <div className="mb-6">
+        <h3 className="text-2xl font-bold">
+          <code className="text-purple-400">{group.brandUrl}</code>
+        </h3>
+        <p className="mt-2 text-gray-400">{group.brandTagline}</p>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {INTENT_VIDEOS.map((v) => (
+        {group.videos.map((v) => (
           <VideoCard key={v.intent} video={v} />
         ))}
       </div>
+    </div>
+  );
+}
+
+export function IntentVideoShowcase() {
+  return (
+    <section className="py-16 px-6 max-w-6xl mx-auto">
+      <header className="text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold">Two URLs. Six videos. The intent does the steering.</h2>
+        <p className="mt-3 text-gray-400">
+          Each URL crawled once, then steered three different ways. Scroll each card — it autoplays in view.
+        </p>
+      </header>
+      {INTENT_VIDEO_GROUPS.map((g) => (
+        <VideoGroup key={g.brandName} group={g} />
+      ))}
     </section>
   );
 }
