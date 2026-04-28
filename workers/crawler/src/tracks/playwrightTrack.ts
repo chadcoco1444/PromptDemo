@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 import { chromium, type Browser } from 'playwright';
+import { getUSPinnedContextOptions } from '../regionContext.js';
 import { detectWafBlock } from '../wafDetect.js';
 import { COOKIE_BANNER_SELECTORS } from '../cookieBanner.js';
 import { extractSourceTexts } from '../extractors/textExtractor.js';
@@ -57,7 +58,7 @@ export async function runPlaywrightTrack(input: {
   timeoutMs: number;
 }): Promise<PlaywrightTrackResult> {
   const browser = await getBrowser();
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const ctx = await browser.newContext(getUSPinnedContextOptions());
   const page = await ctx.newPage();
   try {
     const resp = await page.goto(input.url, { waitUntil: 'domcontentloaded', timeout: input.timeoutMs });

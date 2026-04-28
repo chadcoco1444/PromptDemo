@@ -45,6 +45,7 @@ graph LR
 
 - **三軌降級爬蟲 (`runCrawl`)** — Playwright 為主軌，WAF 封鎖時降級至 ScreenshotOne，完全無法截圖時降級至 Cheerio 純文字提取
 - **彈窗遮蔽 (`overlayBlocker`)** — 在截圖前注入 CSS，隱藏 GDPR 彈窗、客服 Widget、Cookie Banner 等干擾元素（支援 OneTrust、Intercom、Zendesk 等 20+ 平台）
+- **Region-pinned BrowserContext** — `regionContext.ts` exports `getUSPinnedContextOptions()` which `playwrightTrack` uses to create every browser context. Pins locale=`en-US`, timezone=`America/New_York`, geolocation=NY coordinates, and `Accept-Language` header — eliminates the regional-splash-page trap on global ecommerce (Patagonia, Nike, Adidas, etc.) where non-US visitors otherwise get a country-redirect gateway with no real content.
 - **Domain Circuit Breaker (`domainCircuit`)** — Redis 記錄每個 domain 的連續失敗次數；3 次失敗開啟熔斷（30 分鐘冷卻），避免無效 Playwright 任務浪費資源和 IP
 - **品牌資產提取** — 從 CSS 變數、Open Graph 標籤、`<link rel="icon">` 提取次色、字型、Logo candidates
 - **Brand color tier chain** — primary brand color is resolved by a 4-tier fallback in `orchestrator.ts`: (Tier 0) DOM `background-color` sampling via `colorSampler.pickDominantFromFrequencies` with soft-neutral preference; (Tier 1) `<meta name="theme-color">` extraction via `extractThemeColorFromHtml`; (Tier 2) Sharp `.stats().dominant` on the downloaded logo via `extractDominantColorFromImage` — runs when upstream is empty OR returned a neutral (overrides the neutral if Tier 2 finds non-neutral, source=`logo-pixel-override`); (Tier 3) `DEFAULT_BRAND_COLOR`. Per-tier source name logged to worker stdout (`[crawler] brand color tier=X value=Y jobId=Z`) for grep-able prod observability.

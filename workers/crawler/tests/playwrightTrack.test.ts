@@ -52,4 +52,24 @@ describe('runPlaywrightTrack', () => {
     const result = await runPlaywrightTrack({ url, timeoutMs: 10_000 });
     expect(result.kind).toBe('blocked');
   }, 30_000);
+
+  it('US-pinned context yields navigator.language === en-US and timezone === America/New_York (smoke against real chromium)', async () => {
+    const { chromium } = await import('playwright');
+    const { getUSPinnedContextOptions } = await import('../src/regionContext.js');
+    const browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+    });
+    try {
+      const ctx = await browser.newContext(getUSPinnedContextOptions());
+      const page = await ctx.newPage();
+      await page.goto('about:blank');
+      const lang = await page.evaluate(() => navigator.language);
+      const tz = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+      expect(lang).toBe('en-US');
+      expect(tz).toBe('America/New_York');
+    } finally {
+      await browser.close();
+    }
+  }, 30_000);
 });
