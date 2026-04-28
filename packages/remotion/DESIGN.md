@@ -55,6 +55,13 @@ graph LR
   18→32 frames 較晚淡入製造 cinematic settle。Brand-color 140px×3px underline
   在 author 上。`resolveScene` 只在 `backgroundHint='screenshot'` 時才呼叫
   `resolver(assets.screenshots.viewport)` — 避免 gradient mode 浪費 fetch。
+- **`VersusSplit` (Phase 2)** — 對比型 scene、左右分屏展示。Left 側 desaturated dark
+  gray gradient + 灰色 label/icon/value；right 側 brand-color gradient + theme.textOn
+  label/icon/value。Center 4px brand-color vertical divider 70% opacity。
+  Diagonal-progression 入場：left 比 right 早 4 frames 動畫，呼應 LTR 閱讀預期。
+  整體 Ken Burns 1.0→1.02 cinematic settle。Optional headline 90px from top centered。
+  Icon 是 single emoji — left 加 grayscale filter，right 全色。不使用 screenshots —
+  `resolveScene` 不呼叫 resolver。
 
 ---
 

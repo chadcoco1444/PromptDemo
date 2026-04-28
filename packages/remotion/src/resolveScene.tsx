@@ -4,6 +4,7 @@ import { HeroRealShot } from './scenes/HeroRealShot';
 import { FeatureCallout } from './scenes/FeatureCallout';
 import { TextPunch } from './scenes/TextPunch';
 import { QuoteHero } from './scenes/QuoteHero';
+import { VersusSplit } from './scenes/VersusSplit';
 import { SmoothScroll } from './scenes/SmoothScroll';
 import { CTA } from './scenes/CTA';
 import { BentoGrid } from './scenes/BentoGrid';
@@ -94,6 +95,16 @@ export function resolveScene(input: ResolveSceneInput): React.ReactElement {
         />
       );
     }
+    case 'VersusSplit':
+      return (
+        <VersusSplit
+          {...(scene.props.headline ? { headline: scene.props.headline } : {})}
+          compareFraming={scene.props.compareFraming}
+          left={scene.props.left}
+          right={scene.props.right}
+          theme={theme}
+        />
+      );
     case 'SmoothScroll': {
       const screenshotUrl = resolver(assets.screenshots.fullPage);
       if (!screenshotUrl) throw new Error('SmoothScroll requires assets.screenshots.fullPage');
